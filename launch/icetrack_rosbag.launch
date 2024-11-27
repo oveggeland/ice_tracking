@@ -3,7 +3,11 @@
     <rosparam file="$(find icetrack)/config/info.yaml" command="load"/>
 
     <!-- Launch the rosbag parser -->
-    <node name="rosbag_parser" pkg="icetrack" type="rosbag_parser_node" output="screen">
+    <node name="rosbag_parser_node" pkg="icetrack" type="rosbag_parser_node" output="screen">
+    </node>
+
+    <!-- Launch navigation node -->
+    <node name="navigation_node" pkg="icetrack" type="navigation_node" output="screen">
     </node>
 
 </launch>
