@@ -2,9 +2,8 @@
     <!-- Load parameters from YAML -->
     <rosparam file="$(find icetrack)/config/info.yaml" command="load"/>
 
-
-
-    <!-- Launch the node -->
+    <!-- Launch the rosbag parser -->
     <node name="rosbag_parser" pkg="icetrack" type="rosbag_parser_node" output="screen">
     </node>
+
 </launch>

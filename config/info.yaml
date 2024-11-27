@@ -1,2 +1,7 @@
 safe_delay: 0.5 # GNSS typically lagging 0.2 seconds
 bagpath: "/home/oskar/icetrack/data/long3_decompressed"
+
+topics:
+- "/safe/imu"
+- "/safe/gnss"
+- "/safe/pcl"

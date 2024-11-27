@@ -1,9 +1,6 @@
 /*
-This node is intended to receive messages, and distribute them in chronological order based on the header time stamps.
-
-Since we rely on timestamps that are recorded a long time ago, we do not use the system time for "safe time" generation.
-
-A safe time delay should be specified, such that the node waits the delay amount of time for new messages, in case the input is unsorted.
+This node reads a series of bagfiles and publishes the messages in chronological order.
+A safe time to wait before publishing is used to ensure that no prior messages are lagging behind.
 */
 
 #include <ros/ros.h>
@@ -20,54 +17,48 @@ A safe time delay should be specified, such that the node waits the delay amount
 #include <sensor_msgs/PointCloud2.h>
 
 
-void decompressBag(const std::string& compressed_bag, const std::string& decompressed_bag) {
-    // Decompress using system command for lz4 or bz2
-    std::string cmd = "lz4 -d " + compressed_bag + " " + decompressed_bag;
-    int ret = system(cmd.c_str());
-    if (ret != 0) {
-        throw std::runtime_error("Failed to decompress the bag file: " + compressed_bag);
-    }
-}
-
-
 class RosbagParser{
 public:
-    RosbagParser(ros::NodeHandle nh, std::filesystem::path bagpath, double safe_delay):
-        bagpath_(bagpath), nh_(nh), safe_delay_(safe_delay){
-            parseFiles();
+    RosbagParser(ros::NodeHandle nh, std::filesystem::path bagpath, double safe_delay, std::vector<std::string> topics):
+        safe_delay_(safe_delay){
+            imu_pub_ = nh.advertise<sensor_msgs::Imu>(topics[0], 100);
+            gnss_pub_ = nh.advertise<sensor_msgs::NavSatFix>(topics[1], 10);
+            pcl_pub_ = nh.advertise<sensor_msgs::PointCloud2>(topics[2], 10);
+
+            parseFiles(bagpath);
         }
 
 private:
-    ros::NodeHandle nh_;
-
-    std::filesystem::path bagpath_;
-
     ros::Time t_wall_;
     ros::Time t_head_;
     ros::Time t_safe_;
     double safe_delay_;
 
-    std::map<ros::Time, std::tuple<std::shared_ptr<void>, std::string>> message_buffer;
+    std::map<ros::Time, std::tuple<std::shared_ptr<void>, std::string>> message_buffer_;
+
+    ros::Publisher imu_pub_;
+    ros::Publisher gnss_pub_;
+    ros::Publisher pcl_pub_;
 
     void parseMessage(std::tuple<std::shared_ptr<void>, std::string> msg_tuple){
         std::string topic = std::get<1>(msg_tuple);
         
         if (topic == "sensor_msgs/Imu"){
             std::shared_ptr<sensor_msgs::Imu> msg = std::static_pointer_cast<sensor_msgs::Imu>(std::get<0>(msg_tuple));
-            ROS_INFO_STREAM(msg->header.stamp);
+            imu_pub_.publish(*msg);
         }
         else if (topic == "sensor_msgs/NavSatFix"){
             std::shared_ptr<sensor_msgs::NavSatFix> msg = std::static_pointer_cast<sensor_msgs::NavSatFix>(std::get<0>(msg_tuple));
-            ROS_INFO_STREAM(msg->header.stamp);
+            gnss_pub_.publish(*msg);
         }
         else if (topic == "sensor_msgs/PointCloud2"){
             std::shared_ptr<sensor_msgs::PointCloud2> msg = std::static_pointer_cast<sensor_msgs::PointCloud2>(std::get<0>(msg_tuple));
-            ROS_INFO_STREAM(msg->header.stamp);
+            pcl_pub_.publish(*msg);
         }
     }
 
     void parseMessageBuffer(){
-        for (auto msg = message_buffer.begin(); msg != message_buffer.end();){
+        for (auto msg = message_buffer_.begin(); msg != message_buffer_.end();){
             ros::Time ts = msg->first;
             if (ts < t_safe_){
                 if (ts < t_head_){
@@ -78,7 +69,7 @@ private:
                     t_head_ = ts;
                 }
 
-                message_buffer.erase(msg++);
+                message_buffer_.erase(msg++);
             }
             else{
                 ++msg;
@@ -87,7 +78,7 @@ private:
     }
 
     void parseBag(const std::filesystem::path& bagpath) {
-        std::cout << "Opening bag: " << bagpath << std::endl;
+        ROS_INFO_STREAM("Reading bag: " << bagpath);
         rosbag::Bag bag(bagpath.string());
 
         // Create a view of the bag that contains all the messages
@@ -122,16 +113,16 @@ private:
                 t_wall_ = ts;
                 t_safe_ = t_wall_ - ros::Duration(safe_delay_);
             }
-            message_buffer[ts] = std::make_tuple(message_ptr, data_type);
+            message_buffer_[ts] = std::make_tuple(message_ptr, data_type);
             parseMessageBuffer();
         }
 
         bag.close();  // Close the bag after processing
     }
 
-    void parseFiles(){
+    void parseFiles(const std::filesystem::path bagpath){
         std::vector<std::filesystem::path> files;
-        std::copy(std::filesystem::directory_iterator(bagpath_), std::filesystem::directory_iterator(), std::back_inserter(files));
+        std::copy(std::filesystem::directory_iterator(bagpath), std::filesystem::directory_iterator(), std::back_inserter(files));
         std::sort(files.begin(), files.end());
 
         for (const std::string& filename : files) {
@@ -162,6 +153,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    RosbagParser parser(nh, bagpath, safe_delay);
+    std::vector<std::string> topics;
+    if (!nh.getParam("/topics", topics)){
+        ROS_ERROR("Failed to retrieve topic names from parameter server.");
+        return 1;
+    }
+
+    RosbagParser parser(nh, bagpath, safe_delay, topics);
     return 0;
 }
