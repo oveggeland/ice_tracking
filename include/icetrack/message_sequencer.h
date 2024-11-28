@@ -14,20 +14,12 @@ public:
 
     template <typename MessageType>
     void subscriberCallback(const typename MessageType::ConstPtr& msg, std::function<void(const typename MessageType::ConstPtr&)> callback){
-        ros::Time ts = msg->header.stamp;
-        callback_buffer_[ts] = std::function<void()>(std::bind(callback, msg));
-        
-        if (ts > t_wall_){
-            t_wall_ = ts;
-            t_safe_ = t_wall_ - ros::Duration(safe_delay_);
-        }
-
-        pollCallbacks();
+        pushCallback(msg->header.stamp, std::function<void()>(std::bind(callback, msg)));
     }
 
     template <typename MessageType>
-    void attachCallback(const std::string& topic_name, int queue_size, std::function<void(const typename MessageType::ConstPtr&)> callback) {
-        ROS_INFO_STREAM("Add " << topic_name << " with queue size " << queue_size);
+    void attachSubscriber(const std::string& topic_name, int queue_size, std::function<void(const typename MessageType::ConstPtr&)> callback) {
+        ROS_INFO_STREAM("Attaching subscriber to topic: " << topic_name << " with queue size " << queue_size);
         // Using a lambda to bind the callback and pass the correct template type
         auto cb = [this, callback](const typename MessageType::ConstPtr& msg) {
             this->subscriberCallback<MessageType>(msg, callback); // Forward to the template function
@@ -36,6 +28,15 @@ public:
         // Create a subscriber and store it
         ros::Subscriber sub = nh_.subscribe<MessageType>(topic_name, queue_size, cb);
         subscribers_.push_back(sub);
+    }
+
+    void pushCallback(ros::Time ts, std::function<void()> cb){
+        if (ts > t_wall_){
+            t_wall_ = ts;
+            t_safe_ = t_wall_ - ros::Duration(safe_delay_);
+        }
+
+        callback_buffer_[ts] = cb;
     }
 
     void pollCallbacks(){
@@ -56,6 +57,21 @@ public:
             else{
                 it++;
             }
+        }
+    }
+
+    void flushCallbacks(){
+        for (auto it = callback_buffer_.begin(); it != callback_buffer_.end();){
+            ros::Time ts = it->first;
+            if (ts < t_head_){
+                ROS_WARN_STREAM("Timestamp before filter head");
+            }
+            else{
+                it->second();
+                t_head_ = ts;
+            }
+
+            callback_buffer_.erase(it++);
         }
     }
 
