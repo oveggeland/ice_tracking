@@ -8,7 +8,7 @@ This node plays back messages from a bag files in a folder.
 
 void playback(const std::filesystem::path& bagfile) {
     // Build command to launch playback node
-    std::string command = "rosbag play " + bagfile.string() + " -i";
+    std::string command = "rosbag play " + bagfile.string() + " -r 5";
     
     // Execute command
     int ret = std::system(command.c_str());
@@ -24,12 +24,14 @@ void parseBagFiles(const std::filesystem::path bagpath){
 
     for (const std::string& filename : files) {
         playback(filename);
-
+        break;
         if (!ros::ok()){
             break;
         }
     }
 }
+
+
 
 
 
