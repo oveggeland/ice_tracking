@@ -5,7 +5,10 @@ The states and covariances can optionally be written to an output csv file.
 
 #include "ros/ros.h"
 
+#include "icetrack/message_sequencer.h"
 #include "icetrack/navigation/icenav.h"
+
+
 
 int main(int argc, char **argv)
 {
@@ -22,9 +25,25 @@ int main(int argc, char **argv)
     // Initialize some navigation node
     IceNav nav_object = IceNav();
 
-    ros::Subscriber imu_sub = nh.subscribe(topics[0], 1000, &IceNav::imuCallback, &nav_object);
-    ros::Subscriber gnss_sub = nh.subscribe(topics[1], 100, &IceNav::gnssCallback, &nav_object);
-    ros::Subscriber pcl_sub = nh.subscribe(topics[2], 100, &IceNav::pclCallback, &nav_object);
+    // Initialize message sequencer
+    MessageSequencer sequencer(nh, 1.0);
+
+    // Attach callbacks for the relevant topics
+    sequencer.attachCallback<sensor_msgs::Imu>(
+        topics[0], 
+        1000, 
+        std::bind(&IceNav::imuCallback, &nav_object, std::placeholders::_1)
+    );
+    sequencer.attachCallback<sensor_msgs::NavSatFix>(
+        topics[1], 
+        100, 
+        std::bind(&IceNav::gnssCallback, &nav_object, std::placeholders::_1)
+    );
+    sequencer.attachCallback<sensor_msgs::PointCloud2>(
+        topics[2], 
+        100, 
+        std::bind(&IceNav::pclCallback, &nav_object, std::placeholders::_1)
+    );
 
     ros::spin();
     return 0;
