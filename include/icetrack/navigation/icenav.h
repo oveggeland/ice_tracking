@@ -37,5 +37,9 @@ private:
     GnssHandle gnss_handle_;
     ImuHandle imu_handle_;
 
+    // Private member functions
+    void initialize(double ts, Point2 initial_xy);
+    void update(double ts);
+
     void finish();
 };
