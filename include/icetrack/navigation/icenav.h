@@ -10,6 +10,8 @@
 #include "gtsam/nonlinear/NonlinearFactorGraph.h"
 #include "gtsam/navigation/AttitudeFactor.h"
 
+#include <gtsam/nonlinear/BatchFixedLagSmoother.h>
+
 #include "icetrack/navigation/gnss.h"
 #include "icetrack/navigation/imu.h"
 #include "icetrack/navigation/altitudeFactor.h"
@@ -26,14 +28,27 @@ public:
     bool isFinished(){return finished_;}
 
 private:
+    // Optimization
     NonlinearFactorGraph graph_; 
     Values values_;
 
+    double lag_;
+    BatchFixedLagSmoother smoother_;
+    FixedLagSmoother::KeyTimestampMap stamps_;
+
+    // Control
     bool init_ = false;
     bool finished_ = false;
     int correction_count_ = 0;
     std::vector<double> correction_stamps_;
 
+    Pose3 prev_pose_;
+    Point3 prev_vel_;
+    imuBias::ConstantBias prev_bias_;
+
+    std::ofstream f_out_;
+
+    // Sensors
     GnssHandle gnss_handle_;
     ImuHandle imu_handle_;
 

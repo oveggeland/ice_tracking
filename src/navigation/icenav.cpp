@@ -3,6 +3,14 @@
 
 // Constructor
 IceNav::IceNav(){
+    lag_ = 60.0;
+    smoother_ = BatchFixedLagSmoother(lag_);
+
+    // Outstream
+    f_out_ = std::ofstream("/home/oskar/icetrack/output/nav.csv");
+    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz";
+    f_out_ << std::endl << std::fixed; 
+
     // Add whatever initialization is required
     gnss_handle_ = GnssHandle();
     imu_handle_ = ImuHandle();
@@ -67,10 +75,18 @@ void IceNav::initialize(double ts, Point2 initial_xy){
     graph_.add(altitude_factor);
 
     // Add initial values
-    values_.insert(X(0), Pose3(imu_handle_.getPriorRot(), (Point3() << initial_xy, 0).finished()));
-    values_.insert(V(0), Point3());
-    values_.insert(B(0), imuBias::ConstantBias());
-    // values_.insert(L(0), Point3());
+    prev_pose_ = Pose3(imu_handle_.getPriorRot(), (Point3() << initial_xy, 0).finished());
+    prev_vel_ = Point3();
+    prev_bias_ = imuBias::ConstantBias();
+
+    values_.insert(X(0), prev_pose_);
+    values_.insert(V(0), prev_vel_);
+    values_.insert(B(0), prev_bias_);
+
+    // Fixed lag stuff
+    stamps_[X(0)] = ts;
+    stamps_[V(0)] = ts;
+    stamps_[B(0)] = ts;
 
     // Reset IMU preintegration
     imu_handle_.resetIntegration(ts, imuBias::ConstantBias());
@@ -88,59 +104,49 @@ void IceNav::update(double ts){
     graph_.add(altitude_factor);
 
     // Add new initial estimates
-    Pose3 pose0 = values_.at<Pose3>(X(correction_count_-1));
-    Vector3 v0 = values_.at<Vector3>(V(correction_count_-1));
-    imuBias::ConstantBias bias0 = values_.at<imuBias::ConstantBias>(B(correction_count_-1));
-    NavState state_pred = imu_handle_.predict(NavState(pose0, v0), bias0);
+    NavState state_pred = imu_handle_.predict(NavState(prev_pose_, prev_vel_), prev_bias_);
     
-    // Insert predictions
+    // Initial estimates
     values_.insert(X(correction_count_), state_pred.pose());
     values_.insert(V(correction_count_), state_pred.velocity());
-    values_.insert(B(correction_count_), bias0);
+    values_.insert(B(correction_count_), prev_bias_);
 
-    // At this point we can marginalize old stuff
-    
+    // Key timestamps
+    stamps_[X(correction_count_)] = ts;
+    stamps_[V(correction_count_)] = ts;
+    stamps_[B(correction_count_)] = ts;
 
-    // Optional optimization (every now and then)
-    if (correction_count_ < 50 || correction_count_ % 50 == 0){
-        LevenbergMarquardtOptimizer optimizer(graph_, values_);
-        values_ = optimizer.optimize();
-    }
+    // Add recent information to fixed lag smoother
+    smoother_.update(graph_, values_, stamps_);
+    stamps_.clear();
+    values_.clear();
+    graph_.resize(0);
+
+    // Update current state
+    prev_pose_ = smoother_.calculateEstimate<Pose3>(X(correction_count_));
+    prev_vel_ = smoother_.calculateEstimate<Point3>(V(correction_count_));
+    prev_bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(correction_count_));
+
+    // Write to file
+    f_out_ << ts << ",";
+    f_out_ << prev_pose_.translation()[0] << "," << prev_pose_.translation()[1] << "," << prev_pose_.translation()[2] << ",";
+    f_out_ << prev_vel_[0] << "," << prev_vel_[1] << "," << prev_vel_[2] << ",";
+    f_out_ << prev_pose_.rotation().ypr()[2] << "," << prev_pose_.rotation().ypr()[1] << "," << prev_pose_.rotation().ypr()[0] << ",";
+    f_out_ << prev_bias_.accelerometer()[0] << "," << prev_bias_.accelerometer()[1] << "," << prev_bias_.accelerometer()[2] << ",";
+    f_out_ << prev_bias_.gyroscope()[0] << "," << prev_bias_.gyroscope()[1] << "," << prev_bias_.gyroscope()[2];
+    f_out_ << std::endl;
+
 
     if (correction_count_ == 3000){
-        finish();
+        finished_ = true;
+        f_out_.close();
+        ROS_INFO("perkele");
     }
 
     // Reset IMU preintegration
-    imu_handle_.resetIntegration(ts, values_.at<imuBias::ConstantBias>(B(correction_count_)));
+    imu_handle_.resetIntegration(ts, prev_bias_);
 
     // Control parameters
     correction_stamps_.push_back(ts);
     correction_count_ ++;
-}
-
-
-void IceNav::finish(){
-    std::ofstream f("/home/oskar/icetrack/output/nav.csv");
-
-    f << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz";
-    f << std::endl << std::fixed; 
-
-    for (int i = 0; i < correction_count_; i++){
-        Pose3 pose = values_.at<Pose3>(X(i));
-        Vector3 x = pose.translation();
-        Vector3 ypr = pose.rotation().ypr();
-        Vector3 v = values_.at<Vector3>(V(i));
-        Vector6 b = values_.at<imuBias::ConstantBias>(B(i)).vector();
-
-        f << correction_stamps_[i] << ",";
-        f << x[0] << "," << x[1] << "," << x[2] << ",";
-        f << v[0] << "," << v[1] << "," << v[2] << ",";
-        f << ypr[2] << "," << ypr[1] << "," << ypr[0] << ",";
-        f << b[0] << "," << b[1] << "," << b[2] << "," << b[3] << "," << b[4] << "," << b[5];
-        f << std::endl;
-
-    }
-
-    finished_ = true;
 }

@@ -39,5 +39,6 @@ target_link_libraries(rosbag_parser_node
 target_link_libraries(navigation_node
   ${catkin_LIBRARIES}
   gtsam
+  gtsam_unstable
   proj
 )
