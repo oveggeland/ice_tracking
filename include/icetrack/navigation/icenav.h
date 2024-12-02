@@ -23,11 +23,14 @@ public:
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
+    bool isFinished(){return finished_;}
+
 private:
     NonlinearFactorGraph graph_; 
     Values values_;
 
     bool init_ = false;
+    bool finished_ = false;
     int correction_count_ = 0;
     std::vector<double> correction_stamps_;
 

@@ -60,6 +60,10 @@ public:
         }
     }
 
+    void clear(){
+        callback_buffer_.clear();
+    }
+
     void flushCallbacks(){
         for (auto it = callback_buffer_.begin(); it != callback_buffer_.end();){
             ros::Time ts = it->first;

@@ -59,12 +59,11 @@ int main(int argc, char **argv)
             sequencer.pollCallbacks();
         }
 
-        if (!ros::ok()){
+        if (!ros::ok() || nav_object.isFinished()){
+            sequencer.clear();
             break;
         }
     }
-    sequencer.flushCallbacks();
 
-    ros::spin();
     return 0;
 }
