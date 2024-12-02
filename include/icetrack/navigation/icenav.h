@@ -5,6 +5,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include "gtsam/nonlinear/LevenbergMarquardtOptimizer.h"
 #include "gtsam/nonlinear/NonlinearFactorGraph.h"
@@ -16,36 +17,32 @@
 #include "icetrack/navigation/imu.h"
 #include "icetrack/navigation/altitudeFactor.h"
 
-
 class IceNav{
 public:
-    IceNav();
+    IceNav(ros::NodeHandle nh, double lag);
 
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-
-    bool isFinished(){return finished_;}
 
 private:
     // Optimization
     NonlinearFactorGraph graph_; 
     Values values_;
 
-    double lag_;
     BatchFixedLagSmoother smoother_;
     FixedLagSmoother::KeyTimestampMap stamps_;
 
     // Control
     bool init_ = false;
-    bool finished_ = false;
     int correction_count_ = 0;
-    std::vector<double> correction_stamps_;
 
     Pose3 prev_pose_;
     Point3 prev_vel_;
     imuBias::ConstantBias prev_bias_;
 
+    // Output
+    ros::Publisher pose_pub_;
     std::ofstream f_out_;
 
     // Sensors

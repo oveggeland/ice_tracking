@@ -1,25 +1,42 @@
 #include "icetrack/navigation/icenav.h"
 
 
+geometry_msgs::Pose convertToRosPose(const gtsam::Pose3& pose) {
+    geometry_msgs::Pose ros_pose;
+
+    // Set the position
+    ros_pose.position.x = pose.x();
+    ros_pose.position.y = pose.y();
+    ros_pose.position.z = pose.z();
+
+    // Set the orientation
+    gtsam::Quaternion quat = pose.rotation().toQuaternion();
+    ros_pose.orientation.x = quat.x();
+    ros_pose.orientation.y = quat.y();
+    ros_pose.orientation.z = quat.z();
+    ros_pose.orientation.w = quat.w();
+
+    return ros_pose;
+}
+
 // Constructor
-IceNav::IceNav(){
-    lag_ = 60.0;
-    smoother_ = BatchFixedLagSmoother(lag_);
+IceNav::IceNav(ros::NodeHandle nh, double lag){
+    smoother_ = BatchFixedLagSmoother(lag);
 
     // Outstream
     f_out_ = std::ofstream("/home/oskar/icetrack/output/nav.csv");
     f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz";
     f_out_ << std::endl << std::fixed; 
 
-    // Add whatever initialization is required
+    // Pose publisher
+    pose_pub_ = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("pose_with_covariance", 10);
+
+    // Sensor handles
     gnss_handle_ = GnssHandle();
     imu_handle_ = ImuHandle();
 }
 
-
 void IceNav::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
-    if (finished_) return;
-
     if (init_){
         imu_handle_.integrate(msg);
     }
@@ -29,8 +46,6 @@ void IceNav::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
 }
 
 void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
-    if (finished_) return;
-
     // Retrieve timestamp and position
     double ts = msg->header.stamp.toSec();
     gtsam::Point2 xy = gnss_handle_.getMeasurement(msg);
@@ -92,7 +107,6 @@ void IceNav::initialize(double ts, Point2 initial_xy){
     imu_handle_.resetIntegration(ts, imuBias::ConstantBias());
 
     // Control parameters
-    correction_stamps_.push_back(ts);
     correction_count_ = 1;
     init_ = true;
 }
@@ -136,17 +150,16 @@ void IceNav::update(double ts){
     f_out_ << prev_bias_.gyroscope()[0] << "," << prev_bias_.gyroscope()[1] << "," << prev_bias_.gyroscope()[2];
     f_out_ << std::endl;
 
+    geometry_msgs::PoseWithCovarianceStamped msg;
+    msg.header.stamp = ros::Time(ts);
+    msg.header.frame_id = "IMU";
+    msg.pose.pose = convertToRosPose(prev_pose_);
 
-    if (correction_count_ == 3000){
-        finished_ = true;
-        f_out_.close();
-        ROS_INFO("perkele");
-    }
+    pose_pub_.publish(msg);
 
     // Reset IMU preintegration
     imu_handle_.resetIntegration(ts, prev_bias_);
 
     // Control parameters
-    correction_stamps_.push_back(ts);
     correction_count_ ++;
 }

@@ -19,18 +19,21 @@ int main(int argc, char **argv)
     // Initialize node
     ros::init(argc, argv, "navigation_node");
     ros::NodeHandle nh;
-    
+
+    // Extract info parameters
+    std::string bagpath; // Path to folder of bag files
+    double lag; // Fixed lag interval
+    double safe_delay; // Safe delay for message sequencer
+
+    nh.getParam("/bagpath", bagpath);
+    nh.getParam("/lag", lag);
+    nh.getParam("/safe_delay", safe_delay);
+
     // Initialize some navigation node
-    IceNav nav_object = IceNav();
+    IceNav nav_object = IceNav(nh, lag);
 
     // Initialize message sequencer
-    MessageSequencer sequencer(nh, 1.0);
-
-    std::string bagpath; // Path to folder of bag files
-    if (!nh.getParam("/bagpath", bagpath)){
-        ROS_ERROR("Failed to retrieve bag path.");
-        return 1;
-    }
+    MessageSequencer sequencer(nh, safe_delay);
 
     std::vector<std::filesystem::path> files;
     std::copy(std::filesystem::directory_iterator(bagpath), std::filesystem::directory_iterator(), std::back_inserter(files));
@@ -54,16 +57,24 @@ int main(int argc, char **argv)
                 auto gnss_callback = std::function<void()>(std::bind(&IceNav::gnssCallback, &nav_object, msg));
                 sequencer.pushCallback(msg->header.stamp, gnss_callback);
             }
+            else if (m.getDataType() == "sensor_msgs/PointCloud2") {
+                sensor_msgs::PointCloud2::ConstPtr msg = m.instantiate<sensor_msgs::PointCloud2>();
+
+                //auto pcl_callback = std::function<void()>(std::bind(&IceNav::pclCallback, &nav_object, msg));
+                //sequencer.pushCallback(msg->header.stamp, pcl_callback);
+            }
 
             // Poll callbacks continously
             sequencer.pollCallbacks();
-        }
 
-        if (!ros::ok() || nav_object.isFinished()){
-            sequencer.clear();
-            break;
+            if (!ros::ok()){
+                sequencer.clear();
+                break;
+            }
         }
     }
+
+    sequencer.flushCallbacks();
 
     return 0;
 }

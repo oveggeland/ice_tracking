@@ -1,7 +1,5 @@
 safe_delay: 0.5 # GNSS typically lagging 0.2 seconds
 bagpath: "/home/oskar/icetrack/data/long3_decompressed"
 
-topics:
-- "/arduino_node/imu"
-- "/arduino_node/gnss"
-- "/livox_lidar_node/pointcloud2"
+# Fixed lag setup
+lag: 120 # Lag interval
