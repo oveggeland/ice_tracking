@@ -28,7 +28,6 @@ ImuHandle::ImuHandle(){
 void ImuHandle::resetIntegration(double ts, imuBias::ConstantBias bias){
     ts_head_ = ts;
     preintegrated->resetIntegrationAndSetBias(bias);
-    ROS_INFO("IMU RESET INTEGRATION");
 }
 
 /**
@@ -51,8 +50,6 @@ void ImuHandle::integrate(const sensor_msgs::Imu::ConstPtr& msg){
  * When correction occurs, we should finish integration by extrapolating the last imu measurements, and return a IMU factor
  */
 CombinedImuFactor ImuHandle::finishIntegration(double ts_correction, int correction_count){
-    ROS_INFO_STREAM("IMU factor between: " << correction_count - 1 << " and " << correction_count);
-
     double dt = ts_correction - ts_head_;
     assert(dt > 0 && dt < 0.02);
 

@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Find packages ##
 find_package(GTSAM REQUIRED)
 find_package(PROJ REQUIRED)
+find_package(yaml-cpp REQUIRED)
+find_package(PCL REQUIRED)
 
 catkin_package()
 
@@ -43,7 +45,10 @@ add_library(maplib
   ${MAPPING_SOURCES}
 )
 target_include_directories(maplib PUBLIC include/mapping)
-target_link_libraries(navlib 
+target_link_libraries(maplib 
+  gtsam
+  yaml-cpp
+  ${PCL_LIBRARIES}
   ${catkin_LIBRARIES}
 )
 

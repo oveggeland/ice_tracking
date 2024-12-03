@@ -51,7 +51,6 @@ void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     gtsam::Point2 xy = gnss_handle_.getMeasurement(msg);
 
     if (init_){
-        ROS_INFO_STREAM("GNSS correction " << correction_count_ << ": " << std::fixed << xy[0] << ", " << xy[1]);
         // Add GNSS factor
         auto gnss_factor = gnss_handle_.getCorrectionFactor(xy, correction_count_);
         graph_.add(gnss_factor);
@@ -73,6 +72,12 @@ void IceNav::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
 }
 
 
+Pose3 IceNav::getLastPose(double& t_pose){
+    t_pose = prev_ts_;
+    return prev_pose_;
+}
+
+
 void IceNav::initialize(double ts, Point2 initial_xy){
     // Initialize instances 
     graph_ = NonlinearFactorGraph();
@@ -90,6 +95,7 @@ void IceNav::initialize(double ts, Point2 initial_xy){
     graph_.add(altitude_factor);
 
     // Add initial values
+    prev_ts_ = ts;
     prev_pose_ = Pose3(imu_handle_.getPriorRot(), (Point3() << initial_xy, 0).finished());
     prev_vel_ = Point3();
     prev_bias_ = imuBias::ConstantBias();
@@ -113,7 +119,7 @@ void IceNav::initialize(double ts, Point2 initial_xy){
 
 
 void IceNav::update(double ts){
-    // TODO: Add altitude constraint
+    // TODO: Fix Levered Altitude constraint
     auto altitude_factor = AltitudeFactor(X(correction_count_), 0, noiseModel::Isotropic::Sigma(1, 2));
     graph_.add(altitude_factor);
 
@@ -137,6 +143,7 @@ void IceNav::update(double ts){
     graph_.resize(0);
 
     // Update current state
+    prev_ts_ = ts;
     prev_pose_ = smoother_.calculateEstimate<Pose3>(X(correction_count_));
     prev_vel_ = smoother_.calculateEstimate<Point3>(V(correction_count_));
     prev_bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(correction_count_));

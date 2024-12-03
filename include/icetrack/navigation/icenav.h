@@ -26,6 +26,8 @@ public:
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
+    Pose3 getLastPose(double& t_pose); // Last pose variable
+
 private:
     // Optimization
     NonlinearFactorGraph graph_; 
@@ -38,6 +40,7 @@ private:
     bool init_ = false;
     int correction_count_ = 0;
 
+    double prev_ts_;
     Pose3 prev_pose_;
     Point3 prev_vel_;
     imuBias::ConstantBias prev_bias_;
