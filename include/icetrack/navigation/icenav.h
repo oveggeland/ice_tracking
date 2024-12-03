@@ -19,6 +19,7 @@
 
 class IceNav{
 public:
+    IceNav(){};
     IceNav(ros::NodeHandle nh, double lag);
 
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);

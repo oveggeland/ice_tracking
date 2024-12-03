@@ -26,19 +26,34 @@ include_directories(
 )
 
 ## Define executables ##
-add_executable(rosbag_parser_node src/rosbag_parser.cpp)
-
 file(GLOB NAVIGATION_SOURCES "src/navigation/*.cpp")
-add_executable(navigation_node ${NAVIGATION_SOURCES})
-
-## Link libraries ##
-target_link_libraries(rosbag_parser_node
+add_library(navlib 
+  ${NAVIGATION_SOURCES}
+)
+target_include_directories(navlib PUBLIC include/navigation)
+target_link_libraries(navlib 
+  gtsam 
+  gtsam_unstable 
+  proj
   ${catkin_LIBRARIES}
 )
 
-target_link_libraries(navigation_node
+file(GLOB MAPPING_SOURCES "src/mapping/*.cpp")
+add_library(maplib 
+  ${MAPPING_SOURCES}
+)
+target_include_directories(maplib PUBLIC include/mapping)
+target_link_libraries(navlib 
   ${catkin_LIBRARIES}
-  gtsam
-  gtsam_unstable
-  proj
+)
+
+
+add_executable(rosbag_tracking_node src/rosbag.cpp src/icetrack.cpp)
+
+
+## Link libraries ##
+target_link_libraries(rosbag_tracking_node
+  ${catkin_LIBRARIES}
+  navlib
+  maplib
 )

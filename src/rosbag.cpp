@@ -1,6 +1,5 @@
 /*
-Entry point for navigation node. This node subscribes to topics providing navigation measurements and publish a pose.
-The states and covariances can optionally be written to an output csv file.
+Entry point for icetrack node. This node use icenav and icemap to continously and create maps of the surrounding ice.
 */
 
 #include <ros/ros.h>
@@ -10,27 +9,23 @@ The states and covariances can optionally be written to an output csv file.
 #include <filesystem>
 
 #include "icetrack/message_sequencer.h"
-#include "icetrack/navigation/icenav.h"
-
-
+#include "icetrack/icetrack.h"
 
 int main(int argc, char **argv)
 {
     // Initialize node
-    ros::init(argc, argv, "navigation_node");
+    ros::init(argc, argv, "rosbag_icetrack_node");
     ros::NodeHandle nh;
 
     // Extract info parameters
     std::string bagpath; // Path to folder of bag files
-    double lag; // Fixed lag interval
     double safe_delay; // Safe delay for message sequencer
 
     nh.getParam("/bagpath", bagpath);
-    nh.getParam("/lag", lag);
     nh.getParam("/safe_delay", safe_delay);
 
     // Initialize some navigation node
-    IceNav nav_object = IceNav(nh, lag);
+    IceTrack nav_object = IceTrack(nh, 60);
 
     // Initialize message sequencer
     MessageSequencer sequencer(nh, safe_delay);
@@ -48,23 +43,23 @@ int main(int argc, char **argv)
             if (m.getDataType() == "sensor_msgs/Imu") {
                 sensor_msgs::Imu::ConstPtr msg = m.instantiate<sensor_msgs::Imu>();
 
-                auto imu_callback = std::function<void()>(std::bind(&IceNav::imuCallback, &nav_object, msg));
+                auto imu_callback = std::function<void()>(std::bind(&IceTrack::imuCallback, &nav_object, msg));
                 sequencer.pushCallback(msg->header.stamp, imu_callback);
             }
             else if (m.getDataType() == "sensor_msgs/NavSatFix") {
                 sensor_msgs::NavSatFix::ConstPtr msg = m.instantiate<sensor_msgs::NavSatFix>();
 
-                auto gnss_callback = std::function<void()>(std::bind(&IceNav::gnssCallback, &nav_object, msg));
+                auto gnss_callback = std::function<void()>(std::bind(&IceTrack::gnssCallback, &nav_object, msg));
                 sequencer.pushCallback(msg->header.stamp, gnss_callback);
             }
             else if (m.getDataType() == "sensor_msgs/PointCloud2") {
                 sensor_msgs::PointCloud2::ConstPtr msg = m.instantiate<sensor_msgs::PointCloud2>();
 
-                //auto pcl_callback = std::function<void()>(std::bind(&IceNav::pclCallback, &nav_object, msg));
-                //sequencer.pushCallback(msg->header.stamp, pcl_callback);
+                auto pcl_callback = std::function<void()>(std::bind(&IceTrack::pclCallback, &nav_object, msg));
+                sequencer.pushCallback(msg->header.stamp, pcl_callback);
             }
 
-            // Poll callbacks continously
+            // Check for "safe" callbacks at each iteration
             sequencer.pollCallbacks();
 
             if (!ros::ok()){
@@ -74,6 +69,7 @@ int main(int argc, char **argv)
         }
     }
 
+    // Flush all remaining callbacks
     sequencer.flushCallbacks();
 
     return 0;
