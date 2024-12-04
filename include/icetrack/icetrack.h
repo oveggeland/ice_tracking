@@ -11,6 +11,8 @@
 #include "icetrack/navigation/icenav.h"
 #include "icetrack/mapping/icemap.h"
 
+#include <sys/sysinfo.h>
+
 class IceTrack{
 public:
     IceTrack(ros::NodeHandle nh, double lag);
@@ -24,4 +26,18 @@ private:
     // Optimization
     IceNav nav_;
     IceMap map_;
+
+    // Diag stuff
+    std::ofstream f_diag_;
+
+    double diag_t0_wall_;
+    double diag_t1_wall_;
+    double diag_mem0_;
+    double diag_mem1_;
+    int diag_msg_type_;
+    double diag_msg_stamp_;
+
+    void diagStart(int msg_type, double ts);
+    void diagEnd();
+    void diagWrite();
 };
