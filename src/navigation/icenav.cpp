@@ -24,7 +24,7 @@ IceNav::IceNav(ros::NodeHandle nh, double lag){
     smoother_ = BatchFixedLagSmoother(lag);
 
     // Outstream
-    f_out_ = std::ofstream("/home/oskar/icetrack/output/nav.csv");
+    f_out_ = std::ofstream("/home/oskar/icetrack/output/nav/nav.csv");
     f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz";
     f_out_ << std::endl << std::fixed; 
 

@@ -56,7 +56,8 @@ if __name__ == "__main__":
     for msg_type, group in data.groupby('msg_type'):
         plt.scatter(group['t_stamp'], group['processing_time'], label=MSG_TYPES[msg_type], s=10)
     plt.xlabel('Timestamp')
-    plt.ylabel('Processing Time (t1_wall - t0_wall)')
+    plt.ylabel('Processing Time')
+    plt.yscale('log')
     plt.title('Per-frame Processing Time by Message Type')
     plt.grid()
     plt.legend()

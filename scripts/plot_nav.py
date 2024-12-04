@@ -67,10 +67,10 @@ def plot_navigation(nav_data):
     
 if __name__ == "__main__":
     # Extract navigation estimates
-    nav_data = pd.read_csv("/home/oskar/icetrack/output/nav.csv")
+    nav_data = pd.read_csv("/home/oskar/icetrack/output/nav/nav.csv")
 
     plot_navigation(nav_data)
-    plt.savefig("/home/oskar/icetrack/output/nav.png")
+    plt.savefig("/home/oskar/icetrack/output/nav/nav.png")
     plt.show()
     
     
