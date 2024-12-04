@@ -40,7 +40,7 @@ IceTrack::IceTrack(ros::NodeHandle nh, double lag){
     nav_ = IceNav(nh, lag);
     map_ = IceMap();
 
-    f_diag_ = std::ofstream("/home/oskar/icetrack/output/diag.csv");
+    f_diag_ = std::ofstream("/home/oskar/icetrack/output/diag/diag.csv");
     f_diag_ << "msg_type,t_stamp,t0_wall,t1_wall,mem0,mem1" << std::endl << std::fixed;
 }
 
