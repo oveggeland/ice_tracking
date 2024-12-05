@@ -63,8 +63,8 @@ CombinedImuFactor ImuHandle::finishIntegration(double ts_correction, int correct
         preint_imu);
 }
 
-NavState ImuHandle::predict(NavState prev_state, imuBias::ConstantBias prev_bias){
-    return preintegrated->predict(prev_state, prev_bias);
+NavState ImuHandle::predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias){
+    return preintegrated->predict(NavState(pose, vel), bias);
 }
 
 

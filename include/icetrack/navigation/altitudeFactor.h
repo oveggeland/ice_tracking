@@ -40,6 +40,41 @@ public:
 };
 
 
+// Constrained altitude factor
+class GaussMarkovAltitudeFactor : public NoiseModelFactor2<Pose3, Pose3> {
+private:
+
+    double dt_;
+    double tau_;
+
+    SharedGaussian discreteNoiseModel(double dt, double tau, double square_mean){
+        double sigma = sqrt(2*square_mean / tau);
+        return noiseModel::Isotropic::Sigma(1, sigma / sqrt(dt));
+    }
+
+public:
+    // Constructor
+    GaussMarkovAltitudeFactor(Key pose1Key, Key pose2Key, double dt, double tau, double square_mean)
+        : NoiseModelFactor2<Pose3, Pose3>(discreteNoiseModel(dt, tau, square_mean), pose1Key, pose2Key), dt_(dt), tau_(tau) {}
+
+    // Evaluate function
+    virtual Vector evaluateError(const Pose3& pose1, const Pose3& pose2, boost::optional<Matrix&> H1, boost::optional<Matrix&> H2) const override {
+        // Calculate altitude from pose
+        double z1 = pose1.translation(H1).z();
+        double z2 = pose1.translation(H2).z();
+
+        double alpha = exp(-dt_/tau_);
+
+        if (H1) *H1 = -alpha*H1->block(2, 0, 1, 6);
+        if (H2) *H2 = H2->block(2, 0, 1, 6);
+
+        return Vector1(z2 - alpha*z1);
+    }
+};
+
+
+
+
 
 
 class LeveredAltitudeFactor : public NoiseModelFactor2<Pose3, Point3> {

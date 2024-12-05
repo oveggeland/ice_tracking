@@ -20,12 +20,14 @@ int main(int argc, char **argv)
     // Extract info parameters
     std::string bagpath; // Path to folder of bag files
     double safe_delay; // Safe delay for message sequencer
+    double lag;             // Fixed lag in navigation
 
     nh.getParam("/bagpath", bagpath);
     nh.getParam("/safe_delay", safe_delay);
+    nh.getParam("/lag", lag);
 
     // Initialize some navigation node
-    IceTrack tracker = IceTrack(nh, 120);
+    IceTrack tracker = IceTrack(nh, lag);
 
     // Initialize message sequencer
     MessageSequencer sequencer(nh, safe_delay);

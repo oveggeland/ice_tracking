@@ -15,15 +15,28 @@ using namespace gtsam;
 
 
 class GnssHandle{
-    public:
-        GnssHandle();
+public:
+  GnssHandle();
 
-        Point2 getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
-        boost::shared_ptr<gtsam::NonlinearFactor> getCorrectionFactor(Point2 xy, int correction_count);
+  void init(const sensor_msgs::NavSatFix::ConstPtr& msg);
+  bool isInit();
 
-    private:
-        noiseModel::Isotropic::shared_ptr correction_noise_;
-        PJ* projection_;
+  Point3 getPriorPosition();
+  Point3 getPriorVelocity();
+
+  boost::shared_ptr<gtsam::NonlinearFactor> getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key);
+
+private:
+  double ts_ = 0.0;
+  Point2 xy_ = Point2::Zero();
+  Point2 v_xy_ = Point2::Zero();
+
+  bool init_ = false;
+
+  Point2 getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
+
+  noiseModel::Isotropic::shared_ptr correction_noise_;
+  PJ* projection_;
 };
 
 

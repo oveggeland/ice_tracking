@@ -17,6 +17,9 @@
 #include "icetrack/navigation/imu.h"
 #include "icetrack/navigation/altitudeFactor.h"
 
+#include "icetrack/navigation/angleNormFactor.h"
+#include "icetrack/navigation/vectorNormFactor.h"
+
 class IceNav{
 public:
     IceNav(){};
@@ -37,25 +40,25 @@ private:
     FixedLagSmoother::KeyTimestampMap stamps_;
 
     // Control
+    double lag_;
     bool init_ = false;
     int correction_count_ = 0;
 
-    double prev_ts_;
-    Pose3 prev_pose_;
-    Point3 prev_vel_;
-    imuBias::ConstantBias prev_bias_;
-
-    // Output
-    ros::Publisher pose_pub_;
-    std::ofstream f_out_;
+    // Current state
+    double ts_;
+    Pose3 pose_;
+    Point3 vel_;
+    imuBias::ConstantBias bias_;
 
     // Sensors
-    GnssHandle gnss_handle_;
-    ImuHandle imu_handle_;
+    GnssHandle gnss_;
+    ImuHandle imu_;
 
     // Private member functions
-    void initialize(double ts, Point2 initial_xy);
+    void initialize(double ts);
     void update(double ts);
-
-    void finish();
+    
+    // Output
+    std::ofstream f_out_;
+    void writeToFile();
 };

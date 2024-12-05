@@ -59,7 +59,6 @@ void IceMap::addCloud(double t0_cloud, pcl::PointCloud<pcl::PointXYZI> cloud){
 void IceMap::maintainGlobalCloud(){
     // Remove old points from global point buffer
     global_cloud_.removePointsBefore(t_head_ - cloud_interval_);
-    ROS_INFO_STREAM("GLOBAL BUFFER SIZE IS: " << global_cloud_.size());
 }
 
 

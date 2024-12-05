@@ -23,7 +23,7 @@ class ImuHandle{
         void resetIntegration(double ts, imuBias::ConstantBias bias);
 
         // Tools
-        NavState predict(NavState prev_state, imuBias::ConstantBias prev_bias);
+        NavState predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias);
         Rot3 getPriorRot();
         Unit3 getNz();
 
