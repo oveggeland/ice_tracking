@@ -86,7 +86,12 @@ void IceMap::evaluateWindow(){
         cloud_processor_.processCloud(t_head_, global_cloud_.getPoints());
         t_last_ = t_head_;
 
-        // Option to save cloud (only XYZI)
+        // Convert t_head_ (timestamp) to a string to use as the filename
+        std::stringstream fname;
+        fname << "/home/oskar/icetrack/output/clouds/" << std::fixed << static_cast<int64_t>(t_head_) << ".ply";
+
+        // Option to save cloud (only XYZI) using the timestamp as filename
+        pcl::io::savePLYFileBinary<pcl::PointXYZI>(fname.str(), *global_cloud_.toPCLCloud());
     }
 }
 

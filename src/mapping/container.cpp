@@ -59,16 +59,17 @@ void RingBuffer::removePointsBefore(double threshold) {
 pcl::PointCloud<pcl::PointXYZI>::Ptr RingBuffer::toPCLCloud() const {
     // Create a new PCL cloud
     auto cloud = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-
-    // Reserve space for the points
     cloud->points.resize(size_);
+
+    // Get zero-offset (PCL operates with single precision coordinates...)
+    point p0 = buffer_[(head_+capacity_-1) % capacity_];
 
     // Directly write into the points vector
     size_t tailIndex = (head_ - size_ + capacity_) % capacity_;
     for (size_t i = 0; i < size_; ++i) {
         const point& pt = buffer_[(tailIndex + i) % capacity_];
-        cloud->points[i].x = pt.x;
-        cloud->points[i].y = pt.y;
+        cloud->points[i].x = pt.x - p0.x;
+        cloud->points[i].y = pt.y - p0.y;
         cloud->points[i].z = pt.z;
         cloud->points[i].intensity = static_cast<float>(pt.intensity); // Convert intensity to float
     }
