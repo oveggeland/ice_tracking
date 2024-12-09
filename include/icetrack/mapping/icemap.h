@@ -9,6 +9,7 @@
 
 #include "icetrack/mapping/utils.h"
 #include "icetrack/mapping/container.h"
+#include "icetrack/mapping/processing.h"
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -26,7 +27,7 @@ public:
 private:
     void checkCloudBuffer(); // Check if incoming cloud buffer is ready for processing
     void addCloud(double t0_cloud, pcl::PointCloud<pcl::PointXYZI> cloud);
-    void maintainGlobalCloud();
+    void evaluateWindow();
 
     std::map<double, gtsam::Pose3> pose_map_;
     std::map<double, pcl::PointCloud<pcl::PointXYZI>> cloud_buffer_; // Incoming clouds
@@ -38,6 +39,12 @@ private:
 
     double min_x_dist_ = 5.0;           // Outlier rejection
     double point_interval_ = 5.0e-6;    // Interval between points in dual return mode
-    double cloud_interval_ = 10.0;      // Sliding window interval for global pointcloud
+
     double t_head_ = 0.0;               // Keep track of "head" of pointcloud 
+    double t_last_ = 0.0;                   // Starting point
+
+    double cloud_duration_ = 20.0;
+    double cloud_interval_ = 10.0;
+
+    CloudProcessor cloud_processor_;
 };

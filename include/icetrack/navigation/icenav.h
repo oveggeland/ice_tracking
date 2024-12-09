@@ -17,9 +17,6 @@
 #include "icetrack/navigation/imu.h"
 #include "icetrack/navigation/altitudeFactor.h"
 
-#include "icetrack/navigation/angleNormFactor.h"
-#include "icetrack/navigation/vectorNormFactor.h"
-
 class IceNav{
 public:
     IceNav(){};

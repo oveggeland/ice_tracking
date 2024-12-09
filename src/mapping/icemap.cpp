@@ -56,12 +56,6 @@ void IceMap::addCloud(double t0_cloud, pcl::PointCloud<pcl::PointXYZI> cloud){
 }
 
 
-void IceMap::maintainGlobalCloud(){
-    // Remove old points from global point buffer
-    global_cloud_.removePointsBefore(t_head_ - cloud_interval_);
-}
-
-
 void IceMap::checkCloudBuffer(){
     // Iterate through cloud buffer and check timestamp scopes
     for (auto it = cloud_buffer_.begin(); it != cloud_buffer_.end(); ){
@@ -84,6 +78,18 @@ void IceMap::checkCloudBuffer(){
     }
 }
 
+
+void IceMap::evaluateWindow(){
+    global_cloud_.removePointsBefore(t_head_ - cloud_duration_);
+
+    if (t_head_ - t_last_ > cloud_interval_){
+        cloud_processor_.processCloud(t_head_, global_cloud_.getPoints());
+        t_last_ = t_head_;
+
+        // Option to save cloud (only XYZI)
+    }
+}
+
 void IceMap::updatePoseMap(gtsam::Pose3 body_pose, double t_pose){
     // Normalize translation
     gtsam::Pose3 new_pose = body_pose.compose(bTl_);
@@ -102,6 +108,7 @@ void IceMap::updatePoseMap(gtsam::Pose3 body_pose, double t_pose){
         pose_map_.erase(it++); // Erase the current element and update the iterator
     }
 
+    
     checkCloudBuffer();
-    maintainGlobalCloud();
+    evaluateWindow();
 }
