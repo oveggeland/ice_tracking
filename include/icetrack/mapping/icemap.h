@@ -38,14 +38,15 @@ private:
     gtsam::Pose3 bTl_; // LiDAR to IMU
     gtsam::Point3 x0_ = gtsam::Point3(0, 0, 0); // For relative coordinates
 
-    double min_x_dist_ = 5.0;           // Outlier rejection
+    double min_dist_square_ = 15.0*15.0;             // Outlier rejection
+    double max_dist_square_ = 100.0*100.0;           // Outlier rejection
     double point_interval_ = 5.0e-6;    // Interval between points in dual return mode
 
     double t_head_ = 0.0;               // Keep track of "head" of pointcloud 
-    double t_last_ = 0.0;                   // Starting point
+    double t_last_ = 0.0;               // Starting point
 
-    double cloud_duration_ = 20.0;
-    double cloud_interval_ = 10.0;
+    double cloud_duration_ = 10.0;
+    double cloud_interval_ = 20.0;
 
     CloudProcessor cloud_processor_;
 };

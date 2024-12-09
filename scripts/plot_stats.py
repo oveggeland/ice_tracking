@@ -7,10 +7,10 @@ if __name__ == "__main__":
     df = pd.read_csv("/home/oskar/icetrack/output/stats/stats.csv")
 
     # Convert timestamp to datetime for easier plotting
-    df['ts'] = pd.to_datetime(df['ts'], unit='s')
+    #df['ts'] = pd.to_datetime(df['ts'], unit='s')
 
     # Plot 1: Time series plot for 'count'
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 4))
 
     plt.subplot(2, 1, 1)  # First subplot
     plt.plot(df['ts'], df['count'], label='Point count', color='b', marker='o', linestyle='-')
@@ -32,6 +32,10 @@ if __name__ == "__main__":
 
     # Fill between z_mean ± 1 standard deviation
     plt.fill_between(df['ts'], df['z_mean'] - std_dev, df['z_mean'] + std_dev, color='b', alpha=0.2, label='Variance')
+    
+    plt.plot(df['ts'], df['z_min'], linestyle='dashed', color='orange', label='Min')
+    plt.plot(df['ts'], df['z_max'], linestyle='dashed', color='purple', label='Max')
+    
 
     # Update ylabel to 'Elevation [m]'
     plt.ylabel('Elevation [m]')

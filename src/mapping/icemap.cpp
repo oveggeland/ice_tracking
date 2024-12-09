@@ -3,7 +3,7 @@
 
 IceMap::IceMap(){
     bTl_ = readExtrinsics('L', 'B', "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"); // TODO: Generalize yaml filename
-    global_cloud_ = RingBuffer((size_t) 200000*cloud_interval_);
+    global_cloud_ = RingBuffer((size_t) 200000*cloud_duration_);
 }
 
 
@@ -27,14 +27,15 @@ void IceMap::addCloud(double t0_cloud, pcl::PointCloud<pcl::PointXYZI> cloud){
     int point_cnt = 0;
     double int_step = (t1_cloud-t0_cloud) / cloud.size(); // Step size for interpolation coefficient
     for (const auto& point : cloud.points) {
-        if (point.x < min_x_dist_){ // Rough outlier rejection
+        double d_square = point.x*point.x + point.y*point.y + point.z*point.z;
+        if (d_square < min_dist_square_ || d_square > max_dist_square_){ // Rough outlier rejection
             point_cnt ++;
             continue;
         }
 
         // Get point stamp and pose
         double ts_point = t0_cloud + point_cnt*point_interval_;
-        gtsam::Pose3 wTl = T0.interpolateRt(T1, point_cnt*int_step); // TODO: Division is very inefficient
+        gtsam::Pose3 wTl = T0.interpolateRt(T1, point_cnt*int_step);
 
         // Transform to world frame
         gtsam::Point3 transformed_point = wTl.transformFrom(gtsam::Point3(point.x, point.y, point.z));
