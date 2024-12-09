@@ -4,7 +4,10 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-// This struct defines a LiDAR point
+
+
+#include <iterator>
+
 struct point {
     double x;
     double y;
@@ -12,6 +15,85 @@ struct point {
     uint8_t intensity;
     double ts;
 };
+
+// Template iterator to access any field of point
+template <typename Field>
+class FieldIterator {
+public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = typename std::remove_reference<Field>::type; // Value type of the field
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+
+    FieldIterator(std::vector<point>* points, std::size_t index) 
+        : points_(points), index_(index) {}
+
+    reference operator*() {
+        return get_field_at(index_);
+    }
+
+    pointer operator->() {
+        return &get_field_at(index_);
+    }
+
+    FieldIterator& operator++() {
+        ++index_;
+        return *this;
+    }
+
+    FieldIterator operator++(int) {
+        FieldIterator tmp = *this;
+        ++(*this);
+        return tmp;
+    }
+
+    bool operator==(const FieldIterator& other) const {
+        return index_ == other.index_;
+    }
+
+    bool operator!=(const FieldIterator& other) const {
+        return !(*this == other);
+    }
+
+    difference_type operator-(const FieldIterator& other) const {
+        return index_ - other.index_;
+    }
+
+    FieldIterator operator+(difference_type n) const {
+        return FieldIterator(points_, index_ + n);
+    }
+
+    FieldIterator operator-(difference_type n) const {
+        return FieldIterator(points_, index_ - n);
+    }
+
+private:
+    std::vector<point>* points_;
+    std::size_t index_;
+
+    // Get the value of the desired field at the current index
+    auto& get_field_at(std::size_t index) {
+        if constexpr (std::is_same_v<Field, double>) {
+            return (*points_)[index].z; // Field is z
+        } else if constexpr (std::is_same_v<Field, uint8_t>) {
+            return (*points_)[index].intensity; // Field is intensity
+        } else if constexpr (std::is_same_v<Field, double>) {
+            return (*points_)[index].x; // Field is x
+        } else if constexpr (std::is_same_v<Field, double>) {
+            return (*points_)[index].y; // Field is y
+        } else {
+            //static_assert(false, "Unsupported field type");
+        }
+    }
+};
+
+// Function to create an iterator to a specific field
+template <typename Field>
+FieldIterator<Field> make_field_iterator(std::vector<point>& points, std::size_t index) {
+    return FieldIterator<Field>(&points, index);
+}
+
 
 // Ring buffer class
 class RingBuffer {

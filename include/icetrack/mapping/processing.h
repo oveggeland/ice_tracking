@@ -3,7 +3,7 @@
 #include <ros/ros.h>
 
 #include <fstream>
-
+#include <random>
 #include "icetrack/mapping/container.h"
 
 
@@ -23,7 +23,8 @@ private:
     double z_mean_, z_var_, z_min_, z_max_;
     void calculateMoments();
 
-    
+    void meanElevationFilter();
+    void ransacElevationFilter();
 
     // Fnc 2
     
