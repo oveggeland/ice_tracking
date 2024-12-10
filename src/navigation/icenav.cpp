@@ -43,10 +43,7 @@ void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
         gnss_.init(msg);
 
         // The system is initialized here when sensors are ready
-        if (gnss_.isInit() and imu_.isInit()){
-            auto gnss_factor = gnss_.getCorrectionFactor(msg, X(0));
-            graph_.add(gnss_factor);
-
+        if (gnss_.isInit() && lidar_.isInit() && imu_.isInit()){
             initialize(msg->header.stamp.toSec());
         }
     } 
@@ -54,27 +51,39 @@ void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 
 
 void IceNav::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    // TODO (Optional): Add altitude measurement from lidar
+    if (init_){
+        // Try to get lidar factor
+        bool success;
+        auto lidar_factor = lidar_.getCorrectionFactor(msg, X(correction_count_), success);
+        if (success){
+            graph_.add(lidar_factor);
+            update(msg->header.stamp.toSec());
+        }
+    }
+    else{
+        lidar_.init(msg);
+    } 
 }
 
 
 void IceNav::initialize(double ts){
     // Initial state
     ts_ = ts;
-    pose_ = Pose3(imu_.getPriorRot(), gnss_.getPriorPosition());
-    vel_ = gnss_.getPriorVelocity();
-    bias_ = imuBias::ConstantBias(); //imuBias::ConstantBias(Point3(-0.03, 0.07, -0.14), Point3(-0.002, 0.002, -0.0024));
+
+    Point3 prior_pos = (Vector3() << gnss_.getPosition(), lidar_.getAltitude()).finished();
+    pose_ = Pose3(imu_.getPriorRot(), prior_pos);
+    
+    vel_ = (Vector3() << gnss_.getVelocity(), 0).finished();
+    bias_ = imuBias::ConstantBias(); //imuBias::ConstantBias(Point3(-0.03, 0.07, -0.14), Point3(-0.002, 0.002, -0.0024)); // In case I want to cheat
 
     writeToFile(); // Write initial values to file
 
     // Add prior factors
-    graph_.addPrior(B(0), bias_, noiseModel::Isotropic::Sigma(6, 0.1));
-    graph_.addPrior(V(0), vel_, noiseModel::Isotropic::Sigma(3, 1));
+    graph_.addPrior(B(0), bias_, noiseModel::Isotropic::Sigma(6, 0.1)); // Maybe we need this for convergence in the beginning (not sure though)
+    // graph_.addPrior(V(0), vel_, noiseModel::Isotropic::Sigma(3, 1)); // I don't think we need this
+    graph_.add(GPSFactor(X(0), prior_pos, noiseModel::Isotropic::Sigma(3, 2))); // GPS factor for position prior
 
-    auto altitude_factor = AltitudeFactor(X(0), 0, noiseModel::Isotropic::Sigma(1, 2));
-    graph_.add(altitude_factor);
-
-    // Add to values_
+    // Add to values
     values_.insert(X(0), pose_);
     values_.insert(V(0), vel_);
     values_.insert(B(0), bias_);
@@ -94,21 +103,29 @@ void IceNav::initialize(double ts){
 
 
 void IceNav::update(double ts){
-    ROS_INFO_STREAM(correction_count_);
+    //ROS_INFO_STREAM(correction_count_);
 
-    // Add IMU integration factor
-    auto imu_factor = imu_.finishIntegration(ts, correction_count_); // TODO: Make this take two keys instead as arguments
-    graph_.add(imu_factor);
-    
-    auto altitude_factor = AltitudeFactor(X(correction_count_), 0, noiseModel::Isotropic::Sigma(1, 2));
-    graph_.add(altitude_factor);
+    if (ts - ts_ > 0){ // Finish IMU integration factor
+        auto imu_factor = imu_.finishIntegration(ts, correction_count_); // TODO: Make this take two keys instead as arguments
+        graph_.add(imu_factor);
+    }
+    else{ // Edge case: if two consequtive updates have the exact same time stamp (very rare, but happens...)
+        ROS_WARN("Time difference between two updates is zero...");
+        graph_.add(BetweenFactor<Pose3>(
+            X(correction_count_-1), X(correction_count_), Pose3::Identity(), noiseModel::Isotropic::Sigma(6, 1.0e-6)
+        ));
+        graph_.add(BetweenFactor<Point3>(
+            V(correction_count_-1), V(correction_count_), Point3::Identity(), noiseModel::Isotropic::Sigma(3, 1.0e-6)
+        ));
+        graph_.add(BetweenFactor<imuBias::ConstantBias>(
+            B(correction_count_-1), B(correction_count_), imuBias::ConstantBias::Identity(), noiseModel::Isotropic::Sigma(6, 1.0e-6)
+        ));
+    }
 
     // Predict pose
     NavState pred_state = imu_.predict(pose_, vel_, bias_);
     pose_ = pred_state.pose();
     vel_ = pred_state.velocity();
-
-
 
     // Add to values_
     values_.insert(X(correction_count_), pose_);

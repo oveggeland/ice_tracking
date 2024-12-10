@@ -4,15 +4,10 @@
 #include <gtsam/geometry/Point2.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/nonlinear/NonlinearFactor.h>
-#include <gtsam/slam/BetweenFactor.h>
 
 #include <sensor_msgs/NavSatFix.h>
 
 #include "icetrack/navigation/common.h"
-
-
-using namespace gtsam;
-
 
 class GnssHandle{
 public:
@@ -21,8 +16,8 @@ public:
   void init(const sensor_msgs::NavSatFix::ConstPtr& msg);
   bool isInit();
 
-  Point3 getPriorPosition();
-  Point3 getPriorVelocity();
+  Point2 getPosition();
+  Point2 getVelocity();
 
   boost::shared_ptr<gtsam::NonlinearFactor> getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key);
 

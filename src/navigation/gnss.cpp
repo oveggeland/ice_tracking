@@ -36,10 +36,10 @@ Point2 GnssHandle::getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
 }
 
 
-Point3 GnssHandle::getPriorVelocity(){
-    return Point3(v_xy_.x(), v_xy_.y(), 0);
+Point2 GnssHandle::getVelocity(){
+    return v_xy_;
 }
 
-Point3 GnssHandle::getPriorPosition(){
-    return Point3(xy_.x(), xy_.y(), 0);
+Point2 GnssHandle::getPosition(){
+    return xy_;
 }
