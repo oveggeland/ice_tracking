@@ -72,6 +72,7 @@ void IceTrack::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 void IceTrack::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     diagStart(2, msg->header.stamp.toSec());
 
+    nav_.pclCallback(msg);
     map_.pclCallback(msg);
 
     diagEnd();

@@ -5,16 +5,17 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include "gtsam/nonlinear/LevenbergMarquardtOptimizer.h"
 #include "gtsam/nonlinear/NonlinearFactorGraph.h"
-#include "gtsam/navigation/AttitudeFactor.h"
-
 #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
+#include <gtsam/navigation/GPSFactor.h>
+#include <gtsam/slam/BetweenFactor.h>
 
 #include "icetrack/navigation/gnss.h"
 #include "icetrack/navigation/imu.h"
+#include "icetrack/navigation/lidar.h"
+
 #include "icetrack/navigation/altitudeFactor.h"
 
 class IceNav{
@@ -50,6 +51,7 @@ private:
     // Sensors
     GnssHandle gnss_;
     ImuHandle imu_;
+    LidarHandle lidar_;
 
     // Private member functions
     void initialize(double ts);

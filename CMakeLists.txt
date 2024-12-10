@@ -37,6 +37,7 @@ target_link_libraries(navlib
   gtsam 
   gtsam_unstable 
   proj
+  ${PCL_LIBRARIES}
   ${catkin_LIBRARIES}
 )
 
