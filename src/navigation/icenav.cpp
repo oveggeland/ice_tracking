@@ -53,11 +53,9 @@ void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 
 void IceNav::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     if (init_){
-        // Try to get lidar factor
-        bool success;
-        auto lidar_factor = lidar_.getCorrectionFactor(msg, X(correction_count_), success);
-        if (success){
-            graph_.add(lidar_factor);
+        if (lidar_.newFrame(msg)){
+            graph_.add(lidar_.getAltitudeFactor(X(correction_count_)));
+            graph_.add(lidar_.getAttitudeFactor(X(correction_count_)));
             update(msg->header.stamp.toSec());
         }
     }
@@ -85,6 +83,8 @@ void IceNav::initialize(double ts){
     graph_.addPrior(B(0), bias_, noiseModel::Isotropic::Sigma(6, 0.1)); // Maybe we need this for convergence in the beginning (not sure though)
     graph_.addPrior(V(0), vel_, noiseModel::Isotropic::Sigma(3, 1)); // I don't think we need this
     graph_.add(GPSFactor(X(0), prior_pos, noiseModel::Isotropic::Sigma(3, 2))); // GPS factor for position prior
+
+    graph_.add(lidar_.getAttitudeFactor(X(0)));
 
     // Lever arm priors
     auto lever_norm_factor = Point3NormConstraintFactor(L(0), 25, noiseModel::Isotropic::Sigma(1, 0.1));

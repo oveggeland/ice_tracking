@@ -102,29 +102,34 @@ bool LidarHandle::segmentPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Vector
     return true;
 }
 
-boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getCorrectionFactor(sensor_msgs::PointCloud2::ConstPtr msg, Key key, bool &success){
-    success = false; // Default to false
 
-    // Check if time for new measurement
+bool LidarHandle::newFrame(sensor_msgs::PointCloud2::ConstPtr msg){
     double t_msg = msg->header.stamp.toSec();
-    if (t_msg - ts_ < measurement_interval_){ // TODO: Consider the effect of timestamp delays. Stamps are given at start of LiDAR acquisition...
-        return nullptr;
+
+    // Check if time for new update
+    if (t_msg - ts_ > measurement_interval_){
+        // Try plane segmentation
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = msgToCloud(msg);
+        Vector4 plane_coeffs;
+        if (segmentPlane(cloud, plane_coeffs)){
+            ts_ = t_msg;
+            planeUpdate(plane_coeffs);
+
+            return true;
+        };
     }
-
-    // Try plane segmentation
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = msgToCloud(msg);
-    Vector4 plane_coeffs;
-    if (segmentPlane(cloud, plane_coeffs)){
-        ts_ = t_msg;
-        z_ = -abs(plane_coeffs[3]);
-        success=true;
-        return boost::make_shared<AltitudeFactor>(key, z_, noiseModel::Isotropic::Sigma(1, 1));
-    };
-
-    return nullptr;
+    return false;
 }
 
-bool LidarHandle::isInit(){
+boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getAltitudeFactor(Key key){
+    return boost::make_shared<AltitudeFactor>(key, z_, noiseModel::Isotropic::Sigma(1, 1));
+}
+
+boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getAttitudeFactor(Key key){
+    return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, 0.1), bZ_);
+}
+
+bool LidarHandle::isInit(){ 
     return init_;
 }
 
@@ -137,7 +142,18 @@ void LidarHandle::init(sensor_msgs::PointCloud2::ConstPtr msg){
     Vector4 plane_coeffs;
     if (segmentPlane(cloud, plane_coeffs)){
         ts_ = msg->header.stamp.toSec();
-        z_ = -abs(plane_coeffs[3]);
+        planeUpdate(plane_coeffs);
+
         init_ = true;
+    }
+}
+
+
+void LidarHandle::planeUpdate(Vector4 coeffs){
+    z_ = -abs(coeffs[3]);
+
+    bZ_ = Unit3(coeffs.head<3>());
+    if (bTl_.rotation().inverse().rotate(bZ_).point3().x() < 0){ // Assert normal vector has positive x in LiDAR frame (pointing down in world frame)
+        bZ_ = Unit3(-bZ_.point3());
     }
 }

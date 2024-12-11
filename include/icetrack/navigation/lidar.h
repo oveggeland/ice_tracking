@@ -16,6 +16,8 @@
 #include "icetrack/navigation/altitudeFactor.h"
 #include "icetrack/navigation/common.h"
 
+#include <gtsam/navigation/AttitudeFactor.h>
+
 class LidarHandle{
 public: 
     LidarHandle();
@@ -24,7 +26,10 @@ public:
     bool isInit();
     
     double getAltitude();
-    boost::shared_ptr<gtsam::NonlinearFactor> getCorrectionFactor(sensor_msgs::PointCloud2::ConstPtr msg, Key key, bool &success);
+
+    bool newFrame(sensor_msgs::PointCloud2::ConstPtr msg);
+    boost::shared_ptr<gtsam::NonlinearFactor> getAltitudeFactor(Key key);
+    boost::shared_ptr<gtsam::NonlinearFactor> getAttitudeFactor(Key key);
 
 private:
     Pose3 bTl_;
@@ -32,6 +37,7 @@ private:
     bool init_ = false;
     double ts_ = 0.0;
     double z_ = 0.0;
+    Unit3 bZ_; // Body frame normal vector of ice sheet
 
     double measurement_interval_;
     double measurement_sigma_;
@@ -42,4 +48,5 @@ private:
     
     pcl::PointCloud<pcl::PointXYZ>::Ptr msgToCloud(const sensor_msgs::PointCloud2::ConstPtr& msg);
     bool segmentPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Vector4 &plane_coeffs);
+    void planeUpdate(Vector4 coeffs);
 };
