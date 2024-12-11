@@ -14,6 +14,7 @@ IceNav::IceNav(ros::NodeHandle nh, double lag): lag_(lag){
     // Outstream
     f_out_ = std::ofstream("/home/oskar/icetrack/output/nav/nav.csv");
     f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz";
+    f_out_ << ",Lx,Ly,Lz";
     f_out_ << std::endl << std::fixed; 
 
     // Sensor handles
@@ -76,6 +77,8 @@ void IceNav::initialize(double ts){
     vel_ = (Vector3() << gnss_.getVelocity(), 0).finished();
     bias_ = imuBias::ConstantBias(); //imuBias::ConstantBias(Point3(-0.03, 0.07, -0.14), Point3(-0.002, 0.002, -0.0024)); // In case I want to cheat
 
+    lever_arm_ = pose_.rotation().inverse().rotate((Point3() << 0, 0, -lidar_.getAltitude()).finished());
+
     writeToFile(); // Write initial values to file
 
     // Add prior factors
@@ -83,10 +86,19 @@ void IceNav::initialize(double ts){
     graph_.addPrior(V(0), vel_, noiseModel::Isotropic::Sigma(3, 1)); // I don't think we need this
     graph_.add(GPSFactor(X(0), prior_pos, noiseModel::Isotropic::Sigma(3, 2))); // GPS factor for position prior
 
+    // Lever arm priors
+    auto lever_norm_factor = Point3NormConstraintFactor(L(0), 25, noiseModel::Isotropic::Sigma(1, 0.1));
+    graph_.add(lever_norm_factor);
+
+    auto lever_angle_norm_factor = AngularConstraintFactor(L(0), imu_.getNz(), DEG2RAD(90), noiseModel::Isotropic::Sigma(1, 0.01));
+    graph_.add(lever_angle_norm_factor);
+
+
     // Add to values
     values_.insert(X(0), pose_);
     values_.insert(V(0), vel_);
     values_.insert(B(0), bias_);
+    values_.insert(L(0), lever_arm_);
 
     // Key timestamps
     stamps_[X(0)] = ts;
@@ -103,7 +115,10 @@ void IceNav::initialize(double ts){
 
 
 void IceNav::update(double ts){
-    //ROS_INFO_STREAM(correction_count_);
+    ROS_INFO_STREAM(correction_count_);
+    // Add altitude constraint factor
+    auto levered_factor = LeveredAltitudeFactor(X(correction_count_), L(0), noiseModel::Isotropic::Sigma(1, 1));
+    graph_.add(levered_factor);
 
     if (ts - ts_ > 0){ // Finish IMU integration factor
         auto imu_factor = imu_.finishIntegration(ts, correction_count_); // TODO: Make this take two keys instead as arguments
@@ -148,6 +163,7 @@ void IceNav::update(double ts){
     pose_ = smoother_.calculateEstimate<Pose3>(X(correction_count_));
     vel_ = smoother_.calculateEstimate<Point3>(V(correction_count_));
     bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(correction_count_));
+    lever_arm_ = smoother_.calculateEstimate<Point3>(L(0));
 
     writeToFile();
 
@@ -166,6 +182,7 @@ void IceNav::writeToFile(){
     f_out_ << pose_.rotation().ypr()[2] << "," << pose_.rotation().ypr()[1] << "," << pose_.rotation().ypr()[0] << ",";
     f_out_ << bias_.accelerometer()[0] << "," << bias_.accelerometer()[1] << "," << bias_.accelerometer()[2] << ",";
     f_out_ << bias_.gyroscope()[0] << "," << bias_.gyroscope()[1] << "," << bias_.gyroscope()[2];
+    f_out_ << "," << lever_arm_.x() << "," << lever_arm_.y() << "," << lever_arm_.z();
     f_out_ << std::endl;
 }
 

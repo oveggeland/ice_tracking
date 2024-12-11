@@ -17,6 +17,8 @@
 #include "icetrack/navigation/lidar.h"
 
 #include "icetrack/navigation/altitudeFactor.h"
+#include "icetrack/navigation/vectorNormFactor.h"
+#include "icetrack/navigation/angleNormFactor.h"
 
 class IceNav{
 public:
@@ -47,6 +49,7 @@ private:
     Pose3 pose_;
     Point3 vel_;
     imuBias::ConstantBias bias_;
+    Point3 lever_arm_;
 
     // Sensors
     GnssHandle gnss_;

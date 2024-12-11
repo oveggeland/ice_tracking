@@ -115,10 +115,8 @@ boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getCorrectionFactor(senso
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = msgToCloud(msg);
     Vector4 plane_coeffs;
     if (segmentPlane(cloud, plane_coeffs)){
-        ROS_INFO_STREAM(std::fixed << t_msg << ": Altitude measurement of " << plane_coeffs[3]);
-
         ts_ = t_msg;
-        z_ = plane_coeffs[3];
+        z_ = -abs(plane_coeffs[3]);
         success=true;
         return boost::make_shared<AltitudeFactor>(key, z_, noiseModel::Isotropic::Sigma(1, 1));
     };
@@ -139,7 +137,7 @@ void LidarHandle::init(sensor_msgs::PointCloud2::ConstPtr msg){
     Vector4 plane_coeffs;
     if (segmentPlane(cloud, plane_coeffs)){
         ts_ = msg->header.stamp.toSec();
-        z_ = plane_coeffs[3];
+        z_ = -abs(plane_coeffs[3]);
         init_ = true;
     }
 }

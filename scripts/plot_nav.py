@@ -62,6 +62,10 @@ def plot_navigation(nav_data):
     plt.tight_layout(pad=3.0)
 
 
+    plt.figure()
+    plt.plot(nav_data['ts'].values, nav_data[["Lx", "Ly", "Lz"]], label=["Lx", "Ly", "Lz"])
+    plt.legend()
+    plt.tight_layout()
 
 
     
