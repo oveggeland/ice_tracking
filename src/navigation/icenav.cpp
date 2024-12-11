@@ -13,17 +13,32 @@ IceNav::IceNav(ros::NodeHandle nh, double lag): lag_(lag){
 
     // Outstream
     f_out_ = std::ofstream("/home/oskar/icetrack/output/nav/nav.csv");
-    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz";
-    f_out_ << ",Lx,Ly,Lz";
+    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
     f_out_ << std::endl << std::fixed; 
 
     // Sensor handles
-    gnss_ = GnssHandle();
     imu_ = ImuHandle();
+    gnss_ = GnssHandle();
+    lidar_ = LidarHandle();
 }
 
 
-void IceNav::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
+void IceNav::checkCallbackBuffer(){
+    for (auto it = callback_buffer_.begin(); it != callback_buffer_.end();){
+        double t_msg = it->first;
+
+        if (t_msg > t_safe_)
+            break;
+        
+        it->second(); // Callback 
+
+        it = callback_buffer_.erase(it);
+        t_head_ = t_msg; // Maybe this should be done in callback?
+    }
+}
+
+
+void IceNav::imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
     if (init_){
         imu_.integrate(msg);
     }
@@ -33,7 +48,7 @@ void IceNav::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
 }
 
 
-void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
     if (init_){
         auto gnss_factor = gnss_.getCorrectionFactor(msg, X(correction_count_));
         graph_.add(gnss_factor);
@@ -51,7 +66,7 @@ void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 }
 
 
-void IceNav::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+void IceNav::pclMeasurement(const sensor_msgs::PointCloud2::ConstPtr& msg){
     if (init_){
         if (lidar_.newFrame(msg)){
             graph_.add(lidar_.getAltitudeFactor(X(correction_count_)));
@@ -62,6 +77,36 @@ void IceNav::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     else{
         lidar_.init(msg);
     } 
+}
+
+
+void IceNav::addCallback(double ts, std::function<void()> cb){
+    // Is message even valid?
+    if (ts < t_head_){
+        ROS_WARN("Message older than filter head!");
+        return; // Discard measurement
+    }
+
+    // Add to buffer
+    callback_buffer_[ts] = cb;
+
+    // Check if safe time should be updated
+    if (ts - safe_delay_ > t_safe_){
+        t_safe_ = ts - safe_delay_;
+        checkCallbackBuffer();
+    }
+}
+
+void IceNav::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
+    addCallback(msg->header.stamp.toSec(), std::bind(&IceNav::imuMeasurement, this, msg));
+}
+
+void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+    addCallback(msg->header.stamp.toSec(), std::bind(&IceNav::gnssMeasurement, this, msg));
+}
+
+void IceNav::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    addCallback(msg->header.stamp.toSec(), std::bind(&IceNav::pclMeasurement, this, msg));
 }
 
 
@@ -184,10 +229,4 @@ void IceNav::writeToFile(){
     f_out_ << bias_.gyroscope()[0] << "," << bias_.gyroscope()[1] << "," << bias_.gyroscope()[2];
     f_out_ << "," << lever_arm_.x() << "," << lever_arm_.y() << "," << lever_arm_.z();
     f_out_ << std::endl;
-}
-
-
-Pose3 IceNav::getLastPose(double& t_pose){
-    t_pose = ts_;
-    return pose_;
 }

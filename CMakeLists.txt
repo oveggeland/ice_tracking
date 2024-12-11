@@ -53,7 +53,7 @@ target_link_libraries(maplib
   ${catkin_LIBRARIES}
 )
 
-add_executable(rosbag_tracking_node src/main_rosbag.cpp src/icetrack.cpp)
+add_executable(rosbag_tracking_node src/rosbag_node.cpp)
 
 ## Link libraries ##
 target_link_libraries(rosbag_tracking_node

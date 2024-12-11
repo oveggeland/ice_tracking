@@ -29,8 +29,6 @@ public:
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    Pose3 getLastPose(double& t_pose); // Last pose variable
-
 private:
     // Optimization
     NonlinearFactorGraph graph_; 
@@ -39,7 +37,17 @@ private:
     BatchFixedLagSmoother smoother_;
     FixedLagSmoother::KeyTimestampMap stamps_;
 
-    // Control
+    // Time control
+    double t_head_ = 0.0;       // Last processed message
+    double t_safe_ = 0.0;       // Earliest time allowed for processing a message
+    double safe_delay_ = 0.5;   // Delay between latest incoming message timestamp and t_safe_
+
+    // Saving incoming measurements in buffer and process in chronological time after safe_delay has expired
+    std::map<double, std::function<void()>> callback_buffer_;
+    void addCallback(double ts, std::function<void()> cb);
+    void checkCallbackBuffer();
+
+    // Filter control 
     double lag_;
     bool init_ = false;
     int correction_count_ = 0;
@@ -59,6 +67,10 @@ private:
     // Private member functions
     void initialize(double ts);
     void update(double ts);
+
+    void imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg);
+    void gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
+    void pclMeasurement(const sensor_msgs::PointCloud2::ConstPtr& msg);
     
     // Output
     std::ofstream f_out_;
