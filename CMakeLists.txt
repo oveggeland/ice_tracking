@@ -18,6 +18,7 @@ find_package(GTSAM REQUIRED)
 find_package(PROJ REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(PCL REQUIRED)
+message(STATUS "PCL version: ${PCL_VERSION}")
 
 catkin_package()
 
@@ -28,7 +29,7 @@ include_directories(
 )
 
 ## Define executables ##
-file(GLOB NAVIGATION_SOURCES "src/navigation/*.cpp")
+file(GLOB NAVIGATION_SOURCES "src/navigation/*.cpp" "src/mapping/container.cpp")
 add_library(navlib 
   ${NAVIGATION_SOURCES}
 )
@@ -37,21 +38,22 @@ target_link_libraries(navlib
   gtsam 
   gtsam_unstable 
   proj
-  ${PCL_LIBRARIES}
-  ${catkin_LIBRARIES}
-)
-
-file(GLOB MAPPING_SOURCES "src/mapping/*.cpp")
-add_library(maplib 
-  ${MAPPING_SOURCES}
-)
-target_include_directories(maplib PUBLIC include/mapping)
-target_link_libraries(maplib 
-  gtsam
   yaml-cpp
   ${PCL_LIBRARIES}
   ${catkin_LIBRARIES}
 )
+
+# file(GLOB MAPPING_SOURCES "src/mapping/*.cpp")
+# add_library(maplib 
+#   ${MAPPING_SOURCES}
+# )
+# target_include_directories(maplib PUBLIC include/mapping)
+# target_link_libraries(maplib 
+#   gtsam
+#   yaml-cpp
+#   ${PCL_LIBRARIES}
+#   ${catkin_LIBRARIES}
+# )
 
 add_executable(rosbag_tracking_node src/rosbag_node.cpp)
 
@@ -59,5 +61,5 @@ add_executable(rosbag_tracking_node src/rosbag_node.cpp)
 target_link_libraries(rosbag_tracking_node
   ${catkin_LIBRARIES}
   navlib
-  maplib
+  # maplib
 )
