@@ -67,16 +67,18 @@ void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
 
 
 void IceNav::pclMeasurement(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    if (init_){
-        if (lidar_.newFrame(msg)){
-            graph_.add(lidar_.getAltitudeFactor(X(correction_count_)));
-            graph_.add(lidar_.getAttitudeFactor(X(correction_count_)));
-            update(msg->header.stamp.toSec());
-        }
-    }
-    else{
-        lidar_.init(msg);
-    } 
+    double ts = msg->header.stamp.toSec();
+    lidar_.addFrame(msg);
+
+    if (!init_)
+        lidar_.init(ts);
+    else if(request_lidar_correction_ && lidar_.generatePlane(ts_)){
+        // Sucessful plane fit, add altitude and attitude factors
+        graph_.add(lidar_.getAltitudeFactor(X(correction_count_-1)));
+        graph_.add(lidar_.getAttitudeFactor(X(correction_count_-1)));
+        
+        request_lidar_correction_ = false;
+    }    
 }
 
 
@@ -116,9 +118,9 @@ void IceNav::initialize(double ts){
 
     Point3 prior_pos = (Vector3() << gnss_.getPosition(), lidar_.getAltitude()).finished();
     pose_ = Pose3(imu_.getPriorRot(), prior_pos);
-    
+
     vel_ = (Vector3() << gnss_.getVelocity(), 0).finished();
-    bias_ = imuBias::ConstantBias(); //imuBias::ConstantBias(Point3(-0.03, 0.07, -0.14), Point3(-0.002, 0.002, -0.0024)); // In case I want to cheat
+    bias_ = imuBias::ConstantBias(); // imuBias::ConstantBias(Vector3(-0.03, 0.07, -0.14), Vector3(-0.002, 0.002, -0.0024)); // In case I want to cheat
 
     lever_arm_ = pose_.rotation().inverse().rotate((Point3() << 0, 0, -lidar_.getAltitude()).finished());
 
@@ -165,22 +167,12 @@ void IceNav::update(double ts){
     auto levered_factor = LeveredAltitudeFactor(X(correction_count_), L(0), noiseModel::Isotropic::Sigma(1, 1));
     graph_.add(levered_factor);
 
-    if (ts - ts_ > 0){ // Finish IMU integration factor
-        auto imu_factor = imu_.finishIntegration(ts, correction_count_); // TODO: Make this take two keys instead as arguments
-        graph_.add(imu_factor);
-    }
-    else{ // Edge case: if two consequtive updates have the exact same time stamp (very rare, but happens...)
-        ROS_WARN("Time difference between two updates is zero...");
-        graph_.add(BetweenFactor<Pose3>(
-            X(correction_count_-1), X(correction_count_), Pose3::Identity(), noiseModel::Isotropic::Sigma(6, 1.0e-6)
-        ));
-        graph_.add(BetweenFactor<Point3>(
-            V(correction_count_-1), V(correction_count_), Point3::Identity(), noiseModel::Isotropic::Sigma(3, 1.0e-6)
-        ));
-        graph_.add(BetweenFactor<imuBias::ConstantBias>(
-            B(correction_count_-1), B(correction_count_), imuBias::ConstantBias::Identity(), noiseModel::Isotropic::Sigma(6, 1.0e-6)
-        ));
-    }
+    // Flag that LiDAR can add correction when ready
+    request_lidar_correction_ = true;
+
+    // Finish IMU integration factor
+    auto imu_factor = imu_.finishIntegration(ts, correction_count_); // TODO: Make this take two keys instead as arguments
+    graph_.add(imu_factor);
 
     // Predict pose
     NavState pred_state = imu_.predict(pose_, vel_, bias_);

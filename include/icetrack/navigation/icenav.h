@@ -52,6 +52,8 @@ private:
     bool init_ = false;
     int correction_count_ = 0;
 
+    bool request_lidar_correction_ = false;
+
     // Current state
     double ts_;
     Pose3 pose_;

@@ -29,11 +29,7 @@ Pose3 readExt(const std::string& filename){
 LidarHandle::LidarHandle(){
     bTl_ = readExt("/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml");
 
-    measurement_interval_ = 5;
-    measurement_sigma_ =  1;
-    min_x_distance_ = 5;
-    min_inlier_count_ = 100;
-
+    point_buffer_ = PointCloudBuffer(1.0 / point_interval_); // Allocate enough memory for roughly 1 seconds worth of points
 
     double ransac_threshold_ = 0.5;
     double ransac_prob_ = 0.99;
@@ -44,81 +40,56 @@ LidarHandle::LidarHandle(){
     seg_.setProbability(ransac_prob_);
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr LidarHandle::msgToCloud(const sensor_msgs::PointCloud2::ConstPtr& msg) {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    // Convert from sensor_msgs/PointCloud2 to PCL point cloud
-    pcl::fromROSMsg(*msg, *cloud);
-
-    // Create a new point cloud to store filtered and transformed data
-    pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-
-    // Get the rotation (R) and translation (t) from the gtsam::Pose3 object
-    gtsam::Matrix3 R = bTl_.rotation().matrix();  // 3x3 rotation matrix
-    gtsam::Point3 t = bTl_.translation();         // Translation vector
-
-    // Iterate over points, transform and filter points with x > 10
-    for (const auto& point : cloud->points) {
-        if (point.x < min_x_distance_) {
-            continue;
-        }
-
-        // Apply the transformation to the point
-        Eigen::Vector3d p(point.x, point.y, point.z);  // Original point in Eigen form
-        Eigen::Vector3d p_transformed = R * p + Eigen::Vector3d(t.x(), t.y(), t.z());  // Transformed point
-
-        pcl::PointXYZ new_point;
-        new_point.x = p_transformed.x();
-        new_point.y = p_transformed.y();
-        new_point.z = p_transformed.z();
-        transformed_cloud->points.push_back(new_point);
-    }
-
-    transformed_cloud->width = transformed_cloud->points.size();
-    transformed_cloud->height = 1; // Unorganized point cloud
-    transformed_cloud->is_dense = true;
-
-    return transformed_cloud;
-}
-
-bool LidarHandle::segmentPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Vector4 &plane_coeffs){
+bool LidarHandle::segmentPlane(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud){
     if (cloud->size() < min_inlier_count_){
         return false;
     }
 
-    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::ModelCoefficients::Ptr coeffs(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
 
     seg_.setInputCloud(cloud);
-    seg_.segment(*inliers, *coefficients);
+    seg_.segment(*inliers, *coeffs);
 
     if (inliers->indices.size() < min_inlier_count_) {
         return false;
     }
     
-    for (int i = 0; i < 4; i++)
-        plane_coeffs[i] = coefficients->values[i];
+    // Set some parameters based on segmented plane
+    z_ = -abs(coeffs->values[3]);
+    bZ_ = Unit3(coeffs->values[0], coeffs->values[1], coeffs->values[2]);
+    if (bTl_.rotation().inverse().rotate(bZ_).point3().x() < 0){ // Assert normal vector has positive x in LiDAR frame (pointing down in world frame)
+        bZ_ = Unit3(-bZ_.point3());
+    }
 
     return true;
 }
 
 
-bool LidarHandle::newFrame(sensor_msgs::PointCloud2::ConstPtr msg){
-    double t_msg = msg->header.stamp.toSec();
+/*
+Efficient parsing of pointcloud msg. Removing rough outliers on the fly. Emplacement into ringbuffer. 
+PointCloud2 message is assumed structured such that each point is (x, y, z, intensity) where all are floating values.
+*/
+void LidarHandle::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
+    double ts_point = msg->header.stamp.toSec(); // Header stamp is valid for the first point
+    for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
+        if (it[0] > min_x_distance_){
+            // Emplace writing to buffer
+            PointXYZIT* p = point_buffer_.addPoint();
+            
+            // Update the other fields
+            p->intensity = it[3];
+            p->ts = ts_point;
 
-    // Check if time for new update
-    if (t_msg - ts_ > measurement_interval_){
-        // Try plane segmentation
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = msgToCloud(msg);
-        Vector4 plane_coeffs;
-        if (segmentPlane(cloud, plane_coeffs)){
-            ts_ = t_msg;
-            planeUpdate(plane_coeffs);
+            // Transform the point and directly update the ring buffer
+            *reinterpret_cast<Point3*>(p) = bTl_.transformFrom(Point3(it[0], it[1], it[2]));
+        }
 
-            return true;
-        };
+        ts_point += point_interval_;
     }
-    return false;
+
+    // point_buffer_.removePointsBefore(ts_point - 1);
 }
 
 boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getAltitudeFactor(Key key){
@@ -137,23 +108,21 @@ double LidarHandle::getAltitude(){
     return z_;
 }
 
-void LidarHandle::init(sensor_msgs::PointCloud2::ConstPtr msg){
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = msgToCloud(msg);
-    Vector4 plane_coeffs;
-    if (segmentPlane(cloud, plane_coeffs)){
-        ts_ = msg->header.stamp.toSec();
-        planeUpdate(plane_coeffs);
+bool LidarHandle::generatePlane(double ts){
+    // Timestamp bounds for lidar points to use
+    double t0 = ts - 0.5*measurement_interval_;
+    double t1 = ts + 0.5*measurement_interval_;
 
-        init_ = true;
-    }
+    // Find tail
+    auto cloud_ptr = point_buffer_.getPointsWithin(t0, t1);
+    if (segmentPlane(cloud_ptr)){
+        return true;
+    };
+
+    return false;
 }
 
-
-void LidarHandle::planeUpdate(Vector4 coeffs){
-    z_ = -abs(coeffs[3]);
-
-    bZ_ = Unit3(coeffs.head<3>());
-    if (bTl_.rotation().inverse().rotate(bZ_).point3().x() < 0){ // Assert normal vector has positive x in LiDAR frame (pointing down in world frame)
-        bZ_ = Unit3(-bZ_.point3());
-    }
+void LidarHandle::init(double ts){
+    if (generatePlane(ts))
+        init_ = true;
 }

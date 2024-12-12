@@ -33,7 +33,7 @@ private:
     std::map<double, gtsam::Pose3> pose_map_;
     std::map<double, pcl::PointCloud<pcl::PointXYZI>> cloud_buffer_; // Incoming clouds
 
-    RingBuffer global_cloud_; // Container for the global pointcloud
+    PointCloudBuffer global_cloud_; // Container for the global pointcloud
 
     gtsam::Pose3 bTl_; // LiDAR to IMU
     gtsam::Point3 x0_ = gtsam::Point3(0, 0, 0); // For relative coordinates
