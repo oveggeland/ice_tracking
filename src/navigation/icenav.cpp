@@ -131,7 +131,7 @@ void IceNav::initialize(double ts){
     graph_.addPrior(V(0), vel_, noiseModel::Isotropic::Sigma(3, 1)); // I don't think we need this
     graph_.add(GPSFactor(X(0), prior_pos, noiseModel::Isotropic::Sigma(3, 2))); // GPS factor for position prior
 
-    graph_.add(lidar_.getAttitudeFactor(X(0)));
+    graph_.add(imu_.getAttitudeFactor(X(0))); // IMU is more robust here
 
     // Lever arm priors
     auto lever_norm_factor = Point3NormConstraintFactor(L(0), 25, noiseModel::Isotropic::Sigma(1, 0.1));

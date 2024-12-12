@@ -2,6 +2,7 @@
 
 #include <gtsam/base/Vector.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
+#include <gtsam/navigation/AttitudeFactor.h>
 
 #include "ros/ros.h"
 #include "sensor_msgs/Imu.h"
@@ -25,6 +26,7 @@ class ImuHandle{
         // Tools
         NavState predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias);
         Rot3 getPriorRot();
+        boost::shared_ptr<gtsam::NonlinearFactor> getAttitudeFactor(Key key);
         Unit3 getNz();
 
         // Control

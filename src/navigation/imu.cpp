@@ -78,6 +78,12 @@ Unit3 ImuHandle::getNz(){
     return Unit3(-prev_acc_);
 }
 
+
+boost::shared_ptr<gtsam::NonlinearFactor> ImuHandle::getAttitudeFactor(Key key){
+    return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, 0.1), getNz());
+}
+
+
 // Estimate attitude from last acceleration measurement
 Rot3 ImuHandle::getPriorRot(){
     Unit3 nA = Unit3(-prev_acc_);
