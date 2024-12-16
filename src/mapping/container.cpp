@@ -23,11 +23,43 @@ void PointCloudBuffer::addPoint(const PointXYZIT& new_point) {
 }
 
 
-pcl::PointCloud<pcl::PointXYZI>::Ptr PointCloudBuffer::getPointsWithin(double t0, double t1){
+int PointCloudBuffer::idxDiff(int idx0, int idx1) const{
+    return (idx1 - idx0 + capacity_) % capacity_;
+}
+
+int PointCloudBuffer::idxAdd(int idx, int offset) const{
+    return (idx + offset + capacity_) % capacity_;
+}
+
+/*
+Binary search for lower bound index based on timestamp. Used for efficient look up of specific time intervals.
+*/
+int PointCloudBuffer::idxLowerBound(double ts) const{    
+    int tail = getTail();
+    if (buffer_[tail].ts > ts)
+        return -1; // Not points match this
+
+    int low = tail;
+    int high = idxAdd(head_, -1);
+    while (idxDiff(low, high) > 0){
+        int mid = (low + idxDiff(low, high)/2 + 1) % capacity_;
+
+        if (buffer_[mid].ts > ts)
+            high = idxAdd(mid, -1);
+        else
+            low = mid;
+    } 
+    
+    assert(ts >= buffer_[high].ts);
+    return high;
+}
+
+
+pcl::PointCloud<pcl::PointXYZI>::Ptr PointCloudBuffer::getPointsWithin(double t0, double t1) const{
     auto cloud = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     cloud->reserve(capacity_); // There is no way more capacity is needed
 
-    int idx = getTail();
+    int idx = idxLowerBound(t0);
     while (idx != head_){
         const PointXYZIT& pt = buffer_[idx];
 
@@ -58,9 +90,9 @@ std::vector<PointXYZIT> PointCloudBuffer::getPoints() const {
     std::vector<PointXYZIT> points(size_);
 
     int idx = getTail();
-    // for (size_t i = 0; i < size_; ++i) {
-    //     points[i] = buffer_[(idx + i) % capacity_];  // Direct assignment
-    // }
+    for (size_t i = 0; i < size_; ++i) {
+        points[i] = buffer_[(idx + i) % capacity_];  // Direct assignment
+    }
 
     return points;
 }
@@ -86,11 +118,10 @@ int PointCloudBuffer::getTail() const {
 }
 
 void PointCloudBuffer::removePointsBefore(double threshold) {
-    int tail = getTail();
-    while (size_ > 0 && buffer_[tail].ts < threshold) {
-        increment(tail);
-        --size_;
-    }
+    int lb = idxLowerBound(threshold);
+    size_ -= (idxDiff(getTail(), lb) + 1); // Add one because lower bound should also be deleted
+
+    assert(size_ >= 0);
 }
 
 void PointCloudBuffer::increment(int& idx) const{

@@ -29,7 +29,6 @@ public:
     bool isInit();
     
     double getAltitude();
-    double getFrameInterval(){ return 10.0e-3; }
 
     bool generatePlane(double ts);
 
@@ -42,19 +41,19 @@ private:
 
     PointCloudBuffer point_buffer_;
 
-    int correction_count_; // Keep track of the last corrected state
-
     bool init_ = false;
-    double ts_ = 0.0;
-    double z_ = 0.0;
-    Unit3 bZ_; // Body frame normal vector of ice sheet
+
+    // From plane measurements (given in body-frame)
+    double z_ = 0.0;    // Distance from ice sheet
+    Unit3 bZ_;          // Body frame normal vector of ice sheet
 
     double measurement_interval_ = 0.2;
     double measurement_sigma_ =  1;
     double min_x_distance_ = 5;
     double min_inlier_count_ = 100;
 
-    double point_interval_ = 5.0e-6;
+    double point_interval_ = 5.0e-6;    // Temporal distance between measurements (We use half the interval because of dual return mode)
+    double cloud_interval_ = 10.0;      // Size of sliding window point cloud
 
     pcl::SACSegmentation<pcl::PointXYZI> seg_;
 

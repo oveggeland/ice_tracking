@@ -29,15 +29,12 @@ Pose3 readExt(const std::string& filename){
 LidarHandle::LidarHandle(){
     bTl_ = readExt("/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml");
 
-    point_buffer_ = PointCloudBuffer(1.0 / point_interval_); // Allocate enough memory for roughly 1 seconds worth of points
-
-    double ransac_threshold_ = 0.5;
-    double ransac_prob_ = 0.99;
+    point_buffer_ = PointCloudBuffer(cloud_interval_ / point_interval_); // Allocate enough memory for a full sliding window
 
     seg_.setModelType(pcl::SACMODEL_PLANE); // Set the model you want to fit
     seg_.setMethodType(pcl::SAC_RANSAC);    // Use RANSAC to estimate the plane
-    seg_.setDistanceThreshold(ransac_threshold_);        // Set a distance threshold for points to be considered inliers)
-    seg_.setProbability(ransac_prob_);
+    seg_.setDistanceThreshold(0.5);        // Set a distance threshold for points to be considered inliers)
+    seg_.setProbability(0.99);
 }
 
 
@@ -89,7 +86,7 @@ void LidarHandle::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
         ts_point += point_interval_;
     }
 
-    // point_buffer_.removePointsBefore(ts_point - 1);
+    point_buffer_.removePointsBefore(ts_point - cloud_interval_);
 }
 
 boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getAltitudeFactor(Key key){

@@ -4,9 +4,7 @@
 #include <stdint.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/register_point_struct.h>
 
-#include <pcl/segmentation/sac_segmentation.h>
 
 struct PointXYZIT {
     double x;
@@ -31,7 +29,7 @@ public:
     std::vector<PointXYZIT> getPoints() const;
     
     // Time interval query
-    pcl::PointCloud<pcl::PointXYZI>::Ptr getPointsWithin(double t0, double t1);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr getPointsWithin(double t0, double t1) const;
 
     // Get the current size of the buffer (number of points stored)
     size_t size() const;
@@ -60,6 +58,10 @@ private:
 
     void increment(int& idx) const;
     void decrement(int& idx) const;
+
+    int idxAdd(int idx, int offset) const;
+    int idxDiff(int idx0, int idx1) const;
+    int idxLowerBound(double ts) const;
 
     int getTail() const;
 };
