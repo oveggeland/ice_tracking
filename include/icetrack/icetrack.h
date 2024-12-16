@@ -15,6 +15,7 @@
 #include "icetrack/gnss.h"
 #include "icetrack/imu.h"
 #include "icetrack/lidar.h"
+#include "icetrack/diagnostics.h"
 
 #include "icetrack/altitudeFactor.h"
 #include "icetrack/vectorNormFactor.h"
@@ -65,6 +66,8 @@ private:
     GnssHandle gnss_;
     ImuHandle imu_;
     LidarHandle lidar_;
+
+    Diagnostics diag_;
     
     // Private member functions
     void initialize(double ts);

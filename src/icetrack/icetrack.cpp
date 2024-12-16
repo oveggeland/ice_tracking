@@ -20,6 +20,8 @@ IceTrack::IceTrack(ros::NodeHandle nh, double lag): lag_(lag){
     imu_ = ImuHandle();
     gnss_ = GnssHandle();
     lidar_ = LidarHandle();
+
+    diag_ = Diagnostics("/home/oskar/icetrack/output/diag/diag.csv");
 }
 
 
@@ -113,6 +115,8 @@ void IceTrack::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
 
 
 void IceTrack::initialize(double ts){
+    diag_.diagStart(ts);
+
     // Initial state
     ts_ = ts;
 
@@ -209,6 +213,9 @@ void IceTrack::update(double ts){
 
     // Control parameters
     correction_count_ ++;
+
+    // Step at the end of the update
+    diag_.diagStep(ts);
 }
 
 
