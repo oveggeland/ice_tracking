@@ -1,7 +1,7 @@
-#include "icetrack/navigation/icenav.h"
+#include "icetrack/icetrack.h"
 
 // Constructor
-IceNav::IceNav(ros::NodeHandle nh, double lag): lag_(lag){
+IceTrack::IceTrack(ros::NodeHandle nh, double lag): lag_(lag){
     // Initialize instances 
     graph_ = NonlinearFactorGraph();
     values_ = Values();
@@ -12,9 +12,9 @@ IceNav::IceNav(ros::NodeHandle nh, double lag): lag_(lag){
     smoother_ = BatchFixedLagSmoother(lag_, p);
 
     // Outstream
-    f_out_ = std::ofstream("/home/oskar/icetrack/output/nav/nav.csv");
-    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
-    f_out_ << std::endl << std::fixed; 
+    f_nav_ = std::ofstream("/home/oskar/icetrack/output/nav/nav.csv");
+    f_nav_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
+    f_nav_ << std::endl << std::fixed; 
 
     // Sensor handles
     imu_ = ImuHandle();
@@ -23,7 +23,7 @@ IceNav::IceNav(ros::NodeHandle nh, double lag): lag_(lag){
 }
 
 
-void IceNav::checkCallbackBuffer(){
+void IceTrack::checkCallbackBuffer(){
     for (auto it = callback_buffer_.begin(); it != callback_buffer_.end();){
         double t_msg = it->first;
 
@@ -38,7 +38,7 @@ void IceNav::checkCallbackBuffer(){
 }
 
 
-void IceNav::imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
+void IceTrack::imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
     if (init_){
         imu_.integrate(msg);
     }
@@ -48,7 +48,7 @@ void IceNav::imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
 }
 
 
-void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
+void IceTrack::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
     if (init_){
         auto gnss_factor = gnss_.getCorrectionFactor(msg, X(correction_count_));
         graph_.add(gnss_factor);
@@ -66,7 +66,7 @@ void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
 }
 
 
-void IceNav::pclMeasurement(const sensor_msgs::PointCloud2::ConstPtr& msg){
+void IceTrack::pclMeasurement(const sensor_msgs::PointCloud2::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
     lidar_.addFrame(msg);
 
@@ -82,7 +82,7 @@ void IceNav::pclMeasurement(const sensor_msgs::PointCloud2::ConstPtr& msg){
 }
 
 
-void IceNav::addCallback(double ts, std::function<void()> cb){
+void IceTrack::addCallback(double ts, std::function<void()> cb){
     // Is message even valid?
     if (ts < t_head_){
         ROS_WARN("Message older than filter head!");
@@ -99,20 +99,20 @@ void IceNav::addCallback(double ts, std::function<void()> cb){
     }
 }
 
-void IceNav::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
-    addCallback(msg->header.stamp.toSec(), std::bind(&IceNav::imuMeasurement, this, msg));
+void IceTrack::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
+    addCallback(msg->header.stamp.toSec(), std::bind(&IceTrack::imuMeasurement, this, msg));
 }
 
-void IceNav::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
-    addCallback(msg->header.stamp.toSec(), std::bind(&IceNav::gnssMeasurement, this, msg));
+void IceTrack::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+    addCallback(msg->header.stamp.toSec(), std::bind(&IceTrack::gnssMeasurement, this, msg));
 }
 
-void IceNav::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    addCallback(msg->header.stamp.toSec(), std::bind(&IceNav::pclMeasurement, this, msg));
+void IceTrack::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    addCallback(msg->header.stamp.toSec(), std::bind(&IceTrack::pclMeasurement, this, msg));
 }
 
 
-void IceNav::initialize(double ts){
+void IceTrack::initialize(double ts){
     // Initial state
     ts_ = ts;
 
@@ -161,7 +161,7 @@ void IceNav::initialize(double ts){
 }
 
 
-void IceNav::update(double ts){
+void IceTrack::update(double ts){
     ROS_INFO_STREAM(correction_count_);
     // Add altitude constraint factor
     auto levered_factor = LeveredAltitudeFactor(X(correction_count_), L(0), noiseModel::Isotropic::Sigma(1, 1));
@@ -212,13 +212,13 @@ void IceNav::update(double ts){
 }
 
 
-void IceNav::writeToFile(){
-    f_out_ << ts_ << ",";
-    f_out_ << pose_.translation()[0] << "," << pose_.translation()[1] << "," << pose_.translation()[2] << ",";
-    f_out_ << vel_[0] << "," << vel_[1] << "," << vel_[2] << ",";
-    f_out_ << pose_.rotation().ypr()[2] << "," << pose_.rotation().ypr()[1] << "," << pose_.rotation().ypr()[0] << ",";
-    f_out_ << bias_.accelerometer()[0] << "," << bias_.accelerometer()[1] << "," << bias_.accelerometer()[2] << ",";
-    f_out_ << bias_.gyroscope()[0] << "," << bias_.gyroscope()[1] << "," << bias_.gyroscope()[2];
-    f_out_ << "," << lever_arm_.x() << "," << lever_arm_.y() << "," << lever_arm_.z();
-    f_out_ << std::endl;
+void IceTrack::writeToFile(){
+    f_nav_ << ts_ << ",";
+    f_nav_ << pose_.translation()[0] << "," << pose_.translation()[1] << "," << pose_.translation()[2] << ",";
+    f_nav_ << vel_[0] << "," << vel_[1] << "," << vel_[2] << ",";
+    f_nav_ << pose_.rotation().ypr()[2] << "," << pose_.rotation().ypr()[1] << "," << pose_.rotation().ypr()[0] << ",";
+    f_nav_ << bias_.accelerometer()[0] << "," << bias_.accelerometer()[1] << "," << bias_.accelerometer()[2] << ",";
+    f_nav_ << bias_.gyroscope()[0] << "," << bias_.gyroscope()[1] << "," << bias_.gyroscope()[2];
+    f_nav_ << "," << lever_arm_.x() << "," << lever_arm_.y() << "," << lever_arm_.z();
+    f_nav_ << std::endl;
 }

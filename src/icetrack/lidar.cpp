@@ -1,4 +1,4 @@
-#include "icetrack/navigation/lidar.h"
+#include "icetrack/lidar.h"
 
 // Read lidar to body transformation
 Pose3 readExt(const std::string& filename){

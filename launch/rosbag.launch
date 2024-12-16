@@ -4,6 +4,6 @@
 
     <!-- Launch navigation node -->
     <node 
-        name="rosbag_tracking_node" pkg="icetrack" type="rosbag_tracking_node" output="screen">
+        name="rosbag_node" pkg="icetrack" type="rosbag_node" output="screen">
     </node>
 </launch>

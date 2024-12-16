@@ -18,7 +18,6 @@ find_package(GTSAM REQUIRED)
 find_package(PROJ REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(PCL REQUIRED)
-message(STATUS "PCL version: ${PCL_VERSION}")
 
 catkin_package()
 
@@ -28,13 +27,13 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Define executables ##
-file(GLOB NAVIGATION_SOURCES "src/navigation/*.cpp" "src/mapping/container.cpp")
-add_library(navlib 
-  ${NAVIGATION_SOURCES}
+## Define icetrack library ##
+file(GLOB ICETRACK_SOURCES "src/icetrack/*.cpp")
+add_library(icetracklib 
+  ${ICETRACK_SOURCES}
 )
-target_include_directories(navlib PUBLIC include/navigation)
-target_link_libraries(navlib 
+target_include_directories(icetracklib PUBLIC include/icetrack)
+target_link_libraries(icetracklib 
   gtsam 
   gtsam_unstable 
   proj
@@ -43,23 +42,16 @@ target_link_libraries(navlib
   ${catkin_LIBRARIES}
 )
 
-# file(GLOB MAPPING_SOURCES "src/mapping/*.cpp")
-# add_library(maplib 
-#   ${MAPPING_SOURCES}
-# )
-# target_include_directories(maplib PUBLIC include/mapping)
-# target_link_libraries(maplib 
-#   gtsam
-#   yaml-cpp
-#   ${PCL_LIBRARIES}
-#   ${catkin_LIBRARIES}
-# )
+## Executables ##
+add_executable(rosbag_node src/rosbag_node.cpp)     # Track based on rosbag parsing
+add_executable(rostopic_node src/rostopic_node.cpp) # Subscribe and track (real-time)
 
-add_executable(rosbag_tracking_node src/rosbag_node.cpp)
-
-## Link libraries ##
-target_link_libraries(rosbag_tracking_node
+## Link executables ##
+target_link_libraries(rosbag_node
   ${catkin_LIBRARIES}
-  navlib
-  # maplib
+  icetracklib
+)
+target_link_libraries(rostopic_node
+  ${catkin_LIBRARIES}
+  icetracklib
 )

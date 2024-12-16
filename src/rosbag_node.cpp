@@ -1,14 +1,10 @@
-/*
-Entry point for icetrack node. This node use icenav and icemap to continously and create maps of the surrounding ice.
-*/
-
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
 #include <filesystem>
 
-#include "icetrack/navigation/icenav.h"
+#include "icetrack/icetrack.h"
 
 int main(int argc, char **argv)
 {
@@ -26,7 +22,7 @@ int main(int argc, char **argv)
     nh.getParam("/lag", lag);
 
     // Initialize some navigation node
-    IceNav tracker = IceNav(nh, lag);
+    IceTrack tracker = IceTrack(nh, lag);
 
     std::vector<std::filesystem::path> files;
     std::copy(std::filesystem::directory_iterator(bagpath), std::filesystem::directory_iterator(), std::back_inserter(files));
