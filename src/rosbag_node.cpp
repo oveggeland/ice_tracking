@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     nh.getParam("/lag", lag);
 
     // Initialize some navigation node
-    IceTrack tracker = IceTrack(nh, lag);
+    IceTrack tracker = IceTrack();
 
     std::vector<std::filesystem::path> files;
     std::copy(std::filesystem::directory_iterator(bagpath), std::filesystem::directory_iterator(), std::back_inserter(files));
