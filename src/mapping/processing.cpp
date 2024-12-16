@@ -1,4 +1,4 @@
-#include "icetrack/mapping/processing.h"
+#include "icetrack/processing.h"
 
 CloudProcessor::CloudProcessor(){
     // Setup output file

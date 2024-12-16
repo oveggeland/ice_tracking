@@ -14,10 +14,10 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "icetrack/navigation/altitudeFactor.h"
-#include "icetrack/navigation/common.h"
+#include "icetrack/altitudeFactor.h"
+#include "icetrack/common.h"
 
-#include "icetrack/mapping/container.h"
+#include "icetrack/container.h"
 
 #include <gtsam/navigation/AttitudeFactor.h>
 

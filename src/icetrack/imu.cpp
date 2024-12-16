@@ -1,4 +1,4 @@
-#include "icetrack/navigation/imu.h"
+#include "icetrack/imu.h"
 
 // Extract accelerometer vector from Imu message
 Vector3 getAcc(const sensor_msgs::Imu::ConstPtr& msg){

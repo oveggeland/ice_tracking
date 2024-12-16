@@ -8,7 +8,7 @@ Entry point for icetrack node. This node use icenav and icemap to continously an
 
 #include <filesystem>
 
-#include "icetrack/navigation/icenav.h"
+#include "icetrack/icenav.h"
 
 int main(int argc, char **argv)
 {

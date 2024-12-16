@@ -7,7 +7,7 @@
 
 #include <sensor_msgs/NavSatFix.h>
 
-#include "icetrack/navigation/common.h"
+#include "icetrack/common.h"
 
 class GnssHandle{
 public:

@@ -12,13 +12,13 @@
 #include <gtsam/navigation/GPSFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
 
-#include "icetrack/navigation/gnss.h"
-#include "icetrack/navigation/imu.h"
-#include "icetrack/navigation/lidar.h"
+#include "icetrack/gnss.h"
+#include "icetrack/imu.h"
+#include "icetrack/lidar.h"
 
-#include "icetrack/navigation/altitudeFactor.h"
-#include "icetrack/navigation/vectorNormFactor.h"
-#include "icetrack/navigation/angleNormFactor.h"
+#include "icetrack/altitudeFactor.h"
+#include "icetrack/vectorNormFactor.h"
+#include "icetrack/angleNormFactor.h"
 
 class IceNav{
 public:

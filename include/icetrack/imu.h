@@ -8,7 +8,7 @@
 #include "sensor_msgs/Imu.h"
 
 
-#include "icetrack/navigation/common.h"
+#include "icetrack/common.h"
 
 Vector3 getAcc(const sensor_msgs::Imu::ConstPtr& msg);
 Vector3 getRate(const sensor_msgs::Imu::ConstPtr& msg);

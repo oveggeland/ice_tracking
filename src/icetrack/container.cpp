@@ -1,4 +1,4 @@
-#include "icetrack/mapping/container.h"
+#include "icetrack/container.h"
 
 PointCloudBuffer::PointCloudBuffer() : capacity_(0), head_(0), size_(0) {}
 

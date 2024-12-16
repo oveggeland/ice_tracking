@@ -1,4 +1,4 @@
-#include "icetrack/navigation/gnss.h"
+#include "icetrack/gnss.h"
 
 GnssHandle::GnssHandle(){
     // Noise

@@ -1,4 +1,4 @@
-#include "icetrack/navigation/icenav.h"
+#include "icetrack/icenav.h"
 
 // Constructor
 IceNav::IceNav(ros::NodeHandle nh, double lag): lag_(lag){
