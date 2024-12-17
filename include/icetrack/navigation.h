@@ -21,11 +21,14 @@
 
 class IceNav{
 public:
-    IceNav(){};
-    IceNav(std::shared_ptr<LidarHandle> p_lidar);
+    IceNav();
+    IceNav(std::shared_ptr<LidarHandle> lidar);
 
     void imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
+
+    bool isInit();
+    Pose3 getPose();
 
 private:
     // Optimization
@@ -51,7 +54,7 @@ private:
     // Sensors
     GnssHandle gnss_;
     ImuHandle imu_;
-    std::shared_ptr<LidarHandle> p_lidar_;
+    std::shared_ptr<LidarHandle> lidar_;
 
     // Private member functions
     void initialize(double ts);

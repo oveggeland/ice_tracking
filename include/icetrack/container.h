@@ -18,36 +18,25 @@ struct PointXYZIT {
 class PointCloudBuffer {
 public:
     // Constructors
-    PointCloudBuffer();
+    PointCloudBuffer(){};
     PointCloudBuffer(size_t capacity);
 
     // Add a new element the ring buffer
     PointXYZIT* addPoint();
     void addPoint(const PointXYZIT& new_point);
     
-    // Get the current points in the buffer (from oldest to newest)
-    std::vector<PointXYZIT> getPoints() const;
-    
     // Time interval query
-    pcl::PointCloud<pcl::PointXYZI>::Ptr getPointsWithin(double t0, double t1) const;
-
-    // Get the current size of the buffer (number of points stored)
-    size_t size() const;
-
-    // Get the capacity of the buffer (maximum number of points the buffer can hold)
-    size_t capacity() const;
-
-    // Check if the buffer is full
-    bool isFull() const;
-
-    // Check if the buffer is empty
-    bool isEmpty() const;
+    std::vector<PointXYZIT> getPointsWithin(double t0, double t1) const;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr getPclWithin(double t0, double t1) const;
 
     // Remove points with timestamp less than a threshold
     void removePointsBefore(double threshold);
 
-    // Create a PCL cloud from the points in the buffer
-    pcl::PointCloud<pcl::PointXYZI>::Ptr toPCLCloud() const;
+    // Getters
+    size_t size() const;
+    size_t capacity() const;
+    bool isFull() const;
+    bool isEmpty() const;
 
 private:
     size_t capacity_;              // Maximum number of points the buffer can hold

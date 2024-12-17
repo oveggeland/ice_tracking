@@ -28,8 +28,13 @@ public:
     void init(double ts);
     bool isInit();
     
-    double getAltitude();
+    double getPointInterval(){return point_interval_;}
 
+    std::shared_ptr<PointCloudBuffer> getSharedBufferPointer(){
+        return point_buffer_;
+    }
+
+    double getAltitude();
     bool generatePlane(double ts);
 
     void addFrame(sensor_msgs::PointCloud2::ConstPtr msg);
@@ -39,7 +44,7 @@ public:
 private:
     Pose3 bTl_;
 
-    PointCloudBuffer point_buffer_;
+    std::shared_ptr<PointCloudBuffer> point_buffer_;
 
     bool init_ = false;
 
@@ -49,11 +54,11 @@ private:
 
     double measurement_interval_ = 0.2;
     double measurement_sigma_ =  1;
-    double min_x_distance_ = 5;
+    double min_x_ = 10; // Minimum x-value for acceptance of a point
     double min_inlier_count_ = 100;
 
     double point_interval_ = 5.0e-6;    // Temporal distance between measurements (We use half the interval because of dual return mode)
-    double cloud_interval_ = 10.0;      // Size of sliding window point cloud
+    double buffer_period_ = 2.0;       // Keep track of only most recent points
 
     pcl::SACSegmentation<pcl::PointXYZI> seg_;
 

@@ -5,6 +5,7 @@
 #include <sensor_msgs/PointCloud2.h>
 
 #include "icetrack/navigation.h"
+#include "icetrack/cloud_manager.h"
 #include "icetrack/lidar.h"
 #include "icetrack/diagnostics.h"
 
@@ -28,8 +29,11 @@ private:
     void checkCallbackBuffer();
 
     // Submodules
+    std::shared_ptr<LidarHandle> lidar_;
+
     IceNav nav_;
-    std::shared_ptr<LidarHandle> p_lidar_;
+    CloudManager cloud_manager_;
+    
     Diagnostics diag_;
     
     // Safe callback functions

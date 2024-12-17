@@ -2,9 +2,11 @@
 
 // Constructor
 IceTrack::IceTrack(){
-    p_lidar_ = std::make_shared<LidarHandle>();
-    nav_ = IceNav(p_lidar_);
+    lidar_ = std::make_shared<LidarHandle>();
 
+    nav_ = IceNav(lidar_);
+    cloud_manager_ = CloudManager(lidar_);
+    
     diag_ = Diagnostics("/home/oskar/icetrack/output/diag/diag.csv");
 }
 
@@ -14,13 +16,16 @@ void IceTrack::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
 
 void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     nav_.gnssMeasurement(msg);
+
+    if (nav_.isInit())
+        cloud_manager_.newPose(msg->header.stamp.toSec(), nav_.getPose());
 }
 
 void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    p_lidar_->addFrame(msg);
-
-    if (!p_lidar_->isInit()) // Initialize lidar if necessary
-        p_lidar_->init(msg->header.stamp.toSec());
+    lidar_->addFrame(msg);
+    
+    if (!lidar_->isInit())
+        lidar_->init(msg->header.stamp.toSec()); // TODO: Look at how lidar is initialized
 }
 
 void IceTrack::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){

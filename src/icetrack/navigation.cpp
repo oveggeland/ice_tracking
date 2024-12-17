@@ -1,7 +1,11 @@
 #include "icetrack/navigation.h"
 
 // Constructors
-IceNav::IceNav(std::shared_ptr<LidarHandle> lidar): p_lidar_(lidar){
+IceNav::IceNav(){
+    IceNav(std::make_shared<LidarHandle>());
+}
+
+IceNav::IceNav(std::shared_ptr<LidarHandle> lidar): lidar_(lidar){
     // Initialize instances 
     graph_ = NonlinearFactorGraph();
     values_ = Values();
@@ -41,22 +45,30 @@ void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
         gnss_.init(msg);
 
         // The system is initialized here when sensors are ready
-        if (gnss_.isInit() && p_lidar_->isInit() && imu_.isInit())
+        if (gnss_.isInit() && lidar_->isInit() && imu_.isInit())
             initialize(msg->header.stamp.toSec());
     } 
+}
+
+bool IceNav::isInit(){
+    return init_;
+}
+
+Pose3 IceNav::getPose(){
+    return pose_;
 }
 
 void IceNav::initialize(double ts){
     // Initial state
     ts_ = ts;
 
-    Point3 prior_pos = (Vector3() << gnss_.getPosition(), p_lidar_->getAltitude()).finished();
+    Point3 prior_pos = (Vector3() << gnss_.getPosition(), lidar_->getAltitude()).finished();
     pose_ = Pose3(imu_.getPriorRot(), prior_pos);
 
     vel_ = (Vector3() << gnss_.getVelocity(), 0).finished();
     bias_ = imuBias::ConstantBias(); // imuBias::ConstantBias(Vector3(-0.03, 0.07, -0.14), Vector3(-0.002, 0.002, -0.0024)); // In case I want to cheat
 
-    lever_arm_ = pose_.rotation().inverse().rotate((Point3() << 0, 0, -p_lidar_->getAltitude()).finished());
+    lever_arm_ = pose_.rotation().inverse().rotate((Point3() << 0, 0, -lidar_->getAltitude()).finished());
 
     writeToFile(); // Write initial values to file
 
@@ -99,9 +111,9 @@ void IceNav::update(double ts){
     ROS_INFO_STREAM(correction_count_);
 
     // Let us check if LiDAR measurement is available for the previous time step!
-    if (p_lidar_->generatePlane(ts_)){
-        graph_.add(p_lidar_->getAltitudeFactor(X(correction_count_-1)));
-        graph_.add(p_lidar_->getAttitudeFactor(X(correction_count_-1)));
+    if (lidar_->generatePlane(ts_)){
+        graph_.add(lidar_->getAltitudeFactor(X(correction_count_-1)));
+        graph_.add(lidar_->getAttitudeFactor(X(correction_count_-1)));
     }
 
     // Add altitude constraint factor

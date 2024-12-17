@@ -29,7 +29,7 @@ Pose3 readExt(const std::string& filename){
 LidarHandle::LidarHandle(){
     bTl_ = readExt("/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml");
 
-    point_buffer_ = PointCloudBuffer(cloud_interval_ / point_interval_); // Allocate enough memory for a full sliding window
+    point_buffer_ = std::make_shared<PointCloudBuffer>(buffer_period_ / point_interval_); // Allocate a point buffer (ringbuffer)
 
     seg_.setModelType(pcl::SACMODEL_PLANE); // Set the model you want to fit
     seg_.setMethodType(pcl::SAC_RANSAC);    // Use RANSAC to estimate the plane
@@ -52,7 +52,6 @@ bool LidarHandle::segmentPlane(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud){
     if (inliers->indices.size() < min_inlier_count_) {
         return false;
     }
-    
     // Set some parameters based on segmented plane
     z_ = -abs(coeffs->values[3]);
     bZ_ = Unit3(coeffs->values[0], coeffs->values[1], coeffs->values[2]);
@@ -71,9 +70,9 @@ PointCloud2 message is assumed structured such that each point is (x, y, z, inte
 void LidarHandle::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
     double ts_point = msg->header.stamp.toSec(); // Header stamp is valid for the first point
     for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
-        if (it[0] > min_x_distance_){
+        if (it[0] > min_x_){
             // Emplace writing to buffer
-            PointXYZIT* p = point_buffer_.addPoint();
+            PointXYZIT* p = point_buffer_->addPoint();
             
             // Update the other fields
             p->intensity = it[3];
@@ -85,8 +84,6 @@ void LidarHandle::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
 
         ts_point += point_interval_;
     }
-
-    point_buffer_.removePointsBefore(ts_point - cloud_interval_);
 }
 
 boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getAltitudeFactor(Key key){
@@ -111,7 +108,7 @@ bool LidarHandle::generatePlane(double ts){
     double t1 = ts + 0.5*measurement_interval_;
 
     // Find tail
-    auto cloud_ptr = point_buffer_.getPointsWithin(t0, t1);
+    auto cloud_ptr = point_buffer_->getPclWithin(t0, t1);
     if (segmentPlane(cloud_ptr)){
         return true;
     };
