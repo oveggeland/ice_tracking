@@ -13,6 +13,8 @@ PointXYZIT* PointCloudBuffer::addPoint(){
 }
 
 void PointCloudBuffer::addPoint(const PointXYZIT& new_point) {
+    assert(new_point.ts > buffer_[idxAdd(head_, -1)].ts);
+
     buffer_[head_] = new_point;
     if (++size_ > capacity_)
         size_ = capacity_;
@@ -30,23 +32,22 @@ int PointCloudBuffer::idxAdd(int idx, int offset) const{
 /*
 Binary search for lower bound index based on timestamp. Used for efficient look up of specific time intervals.
 */
-int PointCloudBuffer::idxLowerBound(double ts) const{    
-    int tail = getTail();
-    if (buffer_[tail].ts > ts)
-        return -1; // Not points match this
+int PointCloudBuffer::idxLowerBound(double ts) const{
+    if (buffer_[idxAdd(head_, -1)].ts < ts || size_ == 0)
+        return -1; // ts is ouf of scope of the buffer
 
-    int low = tail;
+    int low = getTail();
     int high = idxAdd(head_, -1);
-    while (idxDiff(low, high) > 0){
-        int mid = (low + idxDiff(low, high)/2 + 1) % capacity_;
+    while (low != high){
+        int mid = idxAdd(low, idxDiff(low, high)/2);
 
-        if (buffer_[mid].ts > ts)
-            high = idxAdd(mid, -1);
+        if (buffer_[mid].ts >= ts)
+            high = mid;
         else
-            low = mid;
+            low = idxAdd(mid, 1);
     } 
     
-    assert(ts >= buffer_[high].ts);
+    assert(ts <= buffer_[high].ts);
     return high;
 }
 
@@ -88,6 +89,26 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr PointCloudBuffer::getPclWithin(double t0, d
     return cloud;
 }
 
+// Return iterator to the first valid element
+PointCloudBufferIterator PointCloudBuffer::begin() {
+    return PointCloudBufferIterator(buffer_, capacity_, getTail());
+}
+
+// Return iterator representing the end
+PointCloudBufferIterator PointCloudBuffer::end() {
+    return PointCloudBufferIterator(buffer_, capacity_, head_);
+}
+
+// Return iterator to the first element with timestamp bigger than ts
+PointCloudBufferIterator PointCloudBuffer::iteratorLowerBound(double ts) {
+    int lb_idx = idxLowerBound(ts);
+
+    if (lb_idx < 0)
+        return end();
+
+    return PointCloudBufferIterator(buffer_, capacity_, lb_idx);
+}
+
 std::vector<PointXYZIT> PointCloudBuffer::getPointsWithin(double t0, double t1) const{
     std::vector<PointXYZIT> cloud;
     cloud.reserve(size_);
@@ -105,6 +126,8 @@ std::vector<PointXYZIT> PointCloudBuffer::getPointsWithin(double t0, double t1) 
         increment(idx);
     }
 
+    assert(cloud.begin()->ts >= t0);
+    assert(cloud.end()->ts < t1);
     return cloud;
 }
 
@@ -113,7 +136,7 @@ void PointCloudBuffer::removePointsBefore(double threshold) {
     if (lb < 0)
         return;
     
-    size_ -= (idxDiff(getTail(), lb) + 1);
+    size_ -= idxDiff(getTail(), lb);
     assert(size_ >= 0);
 }
 

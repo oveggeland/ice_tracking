@@ -5,36 +5,45 @@ CloudManager::CloudManager(std::shared_ptr<LidarHandle> lidar): point_buffer_(li
 }
 
 void CloudManager::newPose(double ts, Pose3 pose){
-    double dt = ts - ts_prev_; 
-
-    // Query points from last interval
-    auto points = point_buffer_->getPointsWithin(ts_prev_, ts);
-
-    for (auto p: points){
-        Pose3 wTb = pose_prev_.interpolateRt(pose, (p.ts - ts_prev_) / dt); // Excellent, we have a pose
-        
-        // Awesome, now add these points efficiently to cloud_ buffer
-        PointXYZIT* p_world = cloud_.addPoint();
-        p_world->ts = p.ts;
-        p_world->intensity = p.intensity;
-        
-        *reinterpret_cast<Point3*>(p_world) = wTb.transformFrom(*reinterpret_cast<Point3*>(&p));
-
-        if (x0_ == 0.0){
-            x0_ = p_world->x;
-            y0_ = p_world->y;
-        }
-        p_world->x -= x0_;
-        p_world->y -= y0_;
+    if (ts_prev_ == 0.0){
+        ts_prev_ = ts;
+        x0_ = pose.translation().x();
+        y0_ = pose.translation().y();
+        pose_prev_ = Pose3(pose.rotation(), pose.translation() - Point3(x0_, y0_, 0));
+        return;
     }
 
-    // ROS_INFO_STREAM("Cloud manager: Size is " << cloud_.size());
+    pose = Pose3(pose.rotation(), pose.translation() - Point3(x0_, y0_, 0));
+
+
+
+    double dt = ts - ts_prev_;
+    assert(dt > 0);
+
+    for (auto it = point_buffer_->iteratorLowerBound(ts_prev_); it != point_buffer_->iteratorLowerBound(ts); ++it){
+        double ts_point = it->ts;
+    
+        assert(ts_point >= ts_prev_);
+        assert(ts_point < ts);
+
+        Pose3 wTb = pose_prev_.interpolateRt(pose, (ts_point - ts_prev_) / dt); // Excellent, we have a pose
+        Point3 vec_world = wTb.transformFrom(Point3(it->x, it->y, it->z));
+
+        PointXYZIT p {
+            vec_world.x(),
+            vec_world.y(),
+            vec_world.z(),
+            it->intensity,
+            ts_point
+        };
+        cloud_.addPoint(p);    
+    }
 
     ts_prev_ = ts;
     pose_prev_ = pose;
 
     // analyseWindow();
-    // saveCloud();
+    saveCloud();
 }
 
 
@@ -80,5 +89,5 @@ void CloudManager::analyseWindow(){
 void CloudManager::saveCloud(){
     std::stringstream fname;
     fname << "/home/oskar/icetrack/output/clouds/" << std::fixed << static_cast<int64_t>(ts_prev_) << ".ply";
-    //pcl::io::savePLYFileBinary<pcl::PointXYZI>(fname.str(), *cloud_.toPCLCloud());
+    pcl::io::savePLYFileBinary<pcl::PointXYZI>(fname.str(), *cloud_.getPclWithin(ts_prev_ - window_size_, ts_prev_));
 };

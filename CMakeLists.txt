@@ -3,6 +3,9 @@ project(icetrack)
 
 set(CMAKE_CXX_STANDARD 17)
 
+## Define debug macro if assertions are used ##
+# add_compile_definitions(NDEBUG)
+
 ## Find catkin macros and libraries ##
 find_package(catkin REQUIRED COMPONENTS
   roscpp

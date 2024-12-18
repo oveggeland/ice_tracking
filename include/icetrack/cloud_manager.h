@@ -21,7 +21,7 @@ private:
     double z_mean_, z_var_;
 
     // Keep track of previous pose
-    double ts_prev_;
+    double ts_prev_ = 0.0;
     Pose3 pose_prev_;
 
     double x0_ = 0.0;
