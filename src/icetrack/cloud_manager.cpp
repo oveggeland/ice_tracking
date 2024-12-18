@@ -4,46 +4,64 @@ CloudManager::CloudManager(std::shared_ptr<LidarHandle> lidar): point_buffer_(li
     cloud_ = PointCloudBuffer(window_size_ / lidar->getPointInterval());
 }
 
+
+bool CloudManager::isInit(){
+    return init_;
+}
+
+
+Pose3 CloudManager::shiftPose(Pose3 pose){
+    return Pose3(pose.rotation(), pose.translation() - Point3(x0_, y0_, 0));
+}
+
+
+void CloudManager::initialize(double t0, Pose3 pose0){
+    ts_prev_ = t0;
+    x0_ = pose0.translation().x();
+    y0_ = pose0.translation().y();
+    pose_prev_ = shiftPose(pose0);
+    init_ = true;
+}
+
+
 void CloudManager::newPose(double ts, Pose3 pose){
-    if (ts_prev_ == 0.0){
-        ts_prev_ = ts;
-        x0_ = pose.translation().x();
-        y0_ = pose.translation().y();
-        pose_prev_ = Pose3(pose.rotation(), pose.translation() - Point3(x0_, y0_, 0));
+    if (!isInit()){
+        initialize(ts, pose);
         return;
     }
 
-    pose = Pose3(pose.rotation(), pose.translation() - Point3(x0_, y0_, 0));
+    // Normalize XY-coordinates
+    pose = shiftPose(pose);
 
-
-
+    // Assert time stamp correctness
     double dt = ts - ts_prev_;
     assert(dt > 0);
 
-    for (auto it = point_buffer_->iteratorLowerBound(ts_prev_); it != point_buffer_->iteratorLowerBound(ts); ++it){
-        double ts_point = it->ts;
-    
-        assert(ts_point >= ts_prev_);
-        assert(ts_point < ts);
+    auto start = point_buffer_->iteratorLowerBound(ts_prev_);
+    auto end = point_buffer_->iteratorLowerBound(ts);
 
-        Pose3 wTb = pose_prev_.interpolateRt(pose, (ts_point - ts_prev_) / dt); // Excellent, we have a pose
-        Point3 vec_world = wTb.transformFrom(Point3(it->x, it->y, it->z));
+    for (auto it = start; it != end; ++it){
+        // Check time stamp
+        assert(it->ts >= ts_prev_);
+        assert(it->ts < ts);
 
-        PointXYZIT p {
-            vec_world.x(),
-            vec_world.y(),
-            vec_world.z(),
-            it->intensity,
-            ts_point
-        };
-        cloud_.addPoint(p);    
+        // Interpolate pose
+        Pose3 wTb = pose_prev_.interpolateRt(pose, (it->ts - ts_prev_) / dt);
+        Point3 r_world = wTb.transformFrom(Point3(it->x, it->y, it->z));
+
+        cloud_.addPoint({
+            r_world.x(),
+            r_world.y(),
+            r_world.z(),
+            it->intensity, 
+            it->ts
+        });
     }
 
     ts_prev_ = ts;
     pose_prev_ = pose;
 
-    // analyseWindow();
-    saveCloud();
+    //saveCloud();
 }
 
 

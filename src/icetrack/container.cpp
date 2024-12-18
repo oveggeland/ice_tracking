@@ -12,10 +12,10 @@ PointXYZIT* PointCloudBuffer::addPoint(){
     return p;
 }
 
-void PointCloudBuffer::addPoint(const PointXYZIT& new_point) {
-    assert(new_point.ts > buffer_[idxAdd(head_, -1)].ts);
+void PointCloudBuffer::addPoint(const PointXYZIT& p) {
+    assert(p.ts > last()->ts);
 
-    buffer_[head_] = new_point;
+    buffer_[head_] = p;
     if (++size_ > capacity_)
         size_ = capacity_;
     increment(head_);
@@ -29,13 +29,24 @@ int PointCloudBuffer::idxAdd(int idx, int offset) const{
     return (idx + offset + capacity_) % capacity_;
 }
 
+const PointXYZIT* PointCloudBuffer::first() const{
+    return &buffer_[getTail()];
+}
+
+const PointXYZIT* PointCloudBuffer::last() const{
+    return &buffer_[idxAdd(head_, -1)];
+}
+
+
 /*
-Binary search for lower bound index based on timestamp. Used for efficient look up of specific time intervals.
+Get the index of the first element with stamp higher than or equal to ts. 
+Binary search is used for efficient look up (assuming big buffer).
 */
 int PointCloudBuffer::idxLowerBound(double ts) const{
-    if (buffer_[idxAdd(head_, -1)].ts < ts || size_ == 0)
+    if (last()->ts < ts || size_ == 0)
         return -1; // ts is ouf of scope of the buffer
 
+    // Binary search
     int low = getTail();
     int high = idxAdd(head_, -1);
     while (low != high){
@@ -43,10 +54,11 @@ int PointCloudBuffer::idxLowerBound(double ts) const{
 
         if (buffer_[mid].ts >= ts)
             high = mid;
-        else
-            low = idxAdd(mid, 1);
+        else{
+            low = mid;
+            increment(low);
+        }
     } 
-    
     assert(ts <= buffer_[high].ts);
     return high;
 }

@@ -5,7 +5,6 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-
 // Forward declarations 
 class PointCloudBufferIterator;
 class PointCloudBuffer;
@@ -33,6 +32,9 @@ public:
     // Add a new element the ring buffer
     PointXYZIT* addPoint();
     void addPoint(const PointXYZIT& new_point);
+
+    const PointXYZIT* first() const;
+    const PointXYZIT* last() const;
     
     // Time interval query
     std::vector<PointXYZIT> getPointsWithin(double t0, double t1) const;
