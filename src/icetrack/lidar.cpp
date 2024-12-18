@@ -70,20 +70,22 @@ PointCloud2 message is assumed structured such that each point is (x, y, z, inte
 void LidarHandle::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
     double ts_point = msg->header.stamp.toSec(); // Header stamp is valid for the first point
     for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
-        if (it[0] > min_x_){
-            // Emplace writing to buffer
-            PointXYZIT* p = point_buffer_->addPoint();
-            
-            // Update the other fields
-            p->intensity = it[3];
-            p->ts = ts_point;
-
+        if (it[0] > min_x_ && ts_point > ts_head_){
             // Transform the point and directly update the ring buffer
-            *reinterpret_cast<Point3*>(p) = bTl_.transformFrom(Point3(it[0], it[1], it[2]));
-        }
+            Point3 vec_body = bTl_.transformFrom(Point3(it[0], it[1], it[2]));
 
+            PointXYZIT p {
+                vec_body.x(),
+                vec_body.y(),
+                vec_body.z(),
+                it[3],
+                ts_point
+            };
+            point_buffer_->addPoint(p);        
+        }
         ts_point += point_interval_;
     }
+    ts_head_ = ts_point; // Only need to update this at end-of-frame. (All points inside a single frame is sequential)
 }
 
 boost::shared_ptr<gtsam::NonlinearFactor> LidarHandle::getAltitudeFactor(Key key){

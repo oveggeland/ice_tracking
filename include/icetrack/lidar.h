@@ -47,6 +47,7 @@ private:
     std::shared_ptr<PointCloudBuffer> point_buffer_;
 
     bool init_ = false;
+    double ts_head_ = 0.0; // Track the latest point stamp to assert chronological order on insertion
 
     // From plane measurements (given in body-frame)
     double z_ = 0.0;    // Distance from ice sheet
