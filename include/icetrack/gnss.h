@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ros/ros.h"
+
 #include <proj.h>
 #include <gtsam/geometry/Point2.h>
 #include <gtsam/geometry/Pose3.h>
@@ -8,10 +10,12 @@
 #include <sensor_msgs/NavSatFix.h>
 
 #include "icetrack/common.h"
+#include "icetrack/factors/GNSSFactor.h"
 
 class GnssHandle{
 public:
   GnssHandle();
+  GnssHandle(ros::NodeHandle nh);
 
   void init(const sensor_msgs::NavSatFix::ConstPtr& msg);
   bool isInit();
@@ -22,37 +26,24 @@ public:
   boost::shared_ptr<gtsam::NonlinearFactor> getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key);
 
 private:
+  ros::NodeHandle nh_;
+
+  // Control 
+  bool init_ = false;
+
   double ts_ = 0.0;
   Point2 xy_ = Point2::Zero();
   Point2 v_xy_ = Point2::Zero();
 
-  bool init_ = false;
-
-  Point2 getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
-
+  // Noise
+  double gnss_sigma_;
   noiseModel::Isotropic::shared_ptr correction_noise_;
+
+  // Projection
+  std::string crs_source_;
+  std::string crs_target_;
   PJ* projection_;
+
+  // Private functions
+  Point2 getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
 };
-
-
-class GNSSFactor: public NoiseModelFactor1<Pose3> {
-  private:
-    Point2 measured_; /** The measurement */
-  public:
-    /** Constructor */
-    GNSSFactor(Key posekey, const Point2 measured,
-        const SharedNoiseModel& model) :
-      NoiseModelFactor1<Pose3>(model, posekey), measured_(measured) {
-    }
-
-    /** vector of errors */
-    Vector evaluateError(const Pose3& pose,
-        boost::optional<Matrix&> H) const override {
-
-      if (H){
-        H->resize(2,6); // jacobian wrt pose
-        (*H) << Z_3x3.block(0, 0, 2, 3),  pose.rotation().matrix().block(0, 0, 2, 3);
-      }
-      return pose.translation().head<2>() - measured_;
-    }
-  }; // \class GNSSFactor

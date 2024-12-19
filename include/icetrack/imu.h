@@ -7,7 +7,6 @@
 #include "ros/ros.h"
 #include "sensor_msgs/Imu.h"
 
-
 #include "icetrack/common.h"
 
 Vector3 getAcc(const sensor_msgs::Imu::ConstPtr& msg);
@@ -17,6 +16,7 @@ class ImuHandle{
     public:
         // Constructor
         ImuHandle();
+        ImuHandle(ros::NodeHandle nh);
 
         // Integration
         void integrate(const sensor_msgs::Imu::ConstPtr& msg);
@@ -32,7 +32,10 @@ class ImuHandle{
         // Control
         void init(const sensor_msgs::Imu::ConstPtr& msg);
         bool isInit(){return is_init_;};
+
     private:
+        ros::NodeHandle nh_;
+        
         // Preintegration classes
         std::shared_ptr<PreintegrationType> preintegrated;
         boost::shared_ptr<gtsam::PreintegrationCombinedParams> getPreintegrationParams();
@@ -45,10 +48,12 @@ class ImuHandle{
         Vector3 prev_rate_;
 
         // Tunable parameters
-        double gravity_norm_ = 9.831;
+        double gravity_norm_;
 
-        double accel_noise_sigma_ = 1.0e-3;
-        double gyro_noise_sigma_ = 1.0e-4;
-        double accel_bias_rw_sigma_ = 1.0e-4;
-        double gyro_bias_rw_sigma_ = 1.0e-5;
+        double accel_noise_sigma_;
+        double gyro_noise_sigma_;
+        double accel_bias_rw_sigma_;
+        double gyro_bias_rw_sigma_;
+
+        double imu_attitude_sigma_;
 };

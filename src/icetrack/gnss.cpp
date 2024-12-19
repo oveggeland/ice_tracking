@@ -1,9 +1,16 @@
 #include "icetrack/gnss.h"
 
-GnssHandle::GnssHandle(){
-    // Noise
-    correction_noise_ = noiseModel::Isotropic::Sigma(2, 1.0);
-    projection_ = proj_create_crs_to_crs(proj_context_create(), "EPSG:4326", "EPSG:6052", NULL);
+GnssHandle::GnssHandle(){}
+
+GnssHandle::GnssHandle(ros::NodeHandle nh): nh_(nh){
+    // Get config
+    getParamOrThrow(nh_, "/nav/gnss_sigma_", gnss_sigma_);
+    getParamOrThrow(nh_, "/nav/gnss_sigma_", gnss_sigma_);
+    getParamOrThrow(nh_, "/nav/gnss_crs_source", crs_source_);
+    getParamOrThrow(nh_, "/nav/gnss_crs_target", crs_target_);
+
+    correction_noise_ = noiseModel::Isotropic::Sigma(2, gnss_sigma_);
+    projection_ = proj_create_crs_to_crs(proj_context_create(), crs_source_.c_str(), crs_target_.c_str(), NULL);
 }
 
 boost::shared_ptr<gtsam::NonlinearFactor> GnssHandle::getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key){

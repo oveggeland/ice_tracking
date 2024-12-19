@@ -4,38 +4,38 @@
 IceNav::IceNav(){}
 
 IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar): nh_(nh), lidar_(lidar){
+    // Sensor handles
+    imu_ = ImuHandle(nh);
+    gnss_ = GnssHandle(nh);
+
     // Initialize instances 
     graph_ = NonlinearFactorGraph();
     values_ = Values();
 
-    nh_.getParam("/nav/fixed_lag", fixed_lag_);
+    getParamOrThrow(nh_, "/nav/fixed_lag", fixed_lag_);
     smoother_ = BatchFixedLagSmoother(fixed_lag_);
 
     // Tunable parameters
-    nh_.getParam("/nav/initial_bias_sigma", initial_bias_sigma_);
-    nh_.getParam("/nav/initial_velocity_sigma", initial_velocity_sigma_);
-    nh_.getParam("/nav/initial_position_sigma", initial_position_sigma_);
+    getParamOrThrow(nh_, "/nav/initial_bias_sigma", initial_bias_sigma_);
+    getParamOrThrow(nh_, "/nav/initial_velocity_sigma", initial_velocity_sigma_);
+    getParamOrThrow(nh_, "/nav/initial_position_sigma", initial_position_sigma_);
     
-    nh_.getParam("/nav/lever_norm_threshold", lever_norm_threshold_);
-    nh_.getParam("/nav/lever_angle_threshold", lever_angle_threshold_);
-    nh_.getParam("/nav/lever_norm_sigma", lever_norm_sigma_);
-    nh_.getParam("/nav/lever_angle_sigma", lever_angle_sigma_);
-    nh_.getParam("/nav/lever_altitude_sigma", lever_altitude_sigma_);
+    getParamOrThrow(nh_, "/nav/lever_norm_threshold", lever_norm_threshold_);
+    getParamOrThrow(nh_, "/nav/lever_angle_threshold", lever_angle_threshold_);
+    getParamOrThrow(nh_, "/nav/lever_norm_sigma", lever_norm_sigma_);
+    getParamOrThrow(nh_, "/nav/lever_angle_sigma", lever_angle_sigma_);
+    getParamOrThrow(nh_, "/nav/lever_altitude_sigma", lever_altitude_sigma_);
 
 
     // Outstream
     std::string out_path;
-    nh_.getParam("/outpath", out_path);
+    getParamOrThrow(nh_, "/outpath", out_path);
     std::string nav_path = joinPath(out_path, "nav/nav.csv");
     makePath(nav_path);
 
     f_nav_ = std::ofstream(nav_path);
     f_nav_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
     f_nav_ << std::endl << std::fixed; 
-
-    // Sensor handles
-    imu_ = ImuHandle();
-    gnss_ = GnssHandle();
 }
 
 void IceNav::imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg){

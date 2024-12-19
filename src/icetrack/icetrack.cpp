@@ -10,7 +10,7 @@ IceTrack::IceTrack(ros::NodeHandle nh): nh_(nh){
     cloud_manager_ = CloudManager(lidar_);
     
     std::string outpath;
-    nh_.getParam("/outpath", outpath);
+    getParamOrThrow(nh_, "/outpath", outpath);
 
     std::string diag_file = joinPath(outpath, "diag/diag.csv");
     makePath(diag_file);

@@ -18,7 +18,17 @@ Vector3 getRate(const sensor_msgs::Imu::ConstPtr& msg){
     );
 }
 
-ImuHandle::ImuHandle(){
+ImuHandle::ImuHandle(){}
+
+ImuHandle::ImuHandle(ros::NodeHandle nh): nh_(nh){
+    // Get config
+    getParamOrThrow(nh_, "/nav/gravity_norm", gravity_norm_);
+    getParamOrThrow(nh_, "/nav/accel_noise_sigma", accel_noise_sigma_);
+    getParamOrThrow(nh_, "/nav/gyro_noise_sigma", gyro_noise_sigma_);
+    getParamOrThrow(nh_, "/nav/accel_bias_rw_sigma", accel_bias_rw_sigma_);
+    getParamOrThrow(nh_, "/nav/gyro_bias_rw_sigma", gyro_bias_rw_sigma_);
+    getParamOrThrow(nh_, "/nav/imu_attitude_sigma", imu_attitude_sigma_);
+
     auto p = getPreintegrationParams();
 
     preintegrated = std::make_shared<PreintegratedCombinedMeasurements>(p);
@@ -80,7 +90,7 @@ Unit3 ImuHandle::getNz(){
 
 
 boost::shared_ptr<gtsam::NonlinearFactor> ImuHandle::getAttitudeFactor(Key key){
-    return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, 0.1), getNz());
+    return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, imu_attitude_sigma_), getNz());
 }
 
 
