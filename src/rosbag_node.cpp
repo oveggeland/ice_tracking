@@ -13,13 +13,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     // Extract info parameters
-    std::string bagpath; // Path to folder of bag files
-    double safe_delay; // Safe delay for message sequencer
-    double lag;             // Fixed lag in navigation
-
-    nh.getParam("/bagpath", bagpath);
-    nh.getParam("/safe_delay", safe_delay);
-    nh.getParam("/lag", lag);
+    std::string bagpath = getParamOrThrow<std::string>(nh, "/bagpath");
 
     // Initialize some navigation node
     IceTrack tracker = IceTrack(nh);

@@ -8,14 +8,9 @@ IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar): nh_(nh),
     imu_ = ImuHandle(nh);
     gnss_ = GnssHandle(nh);
 
-    // Initialize instances 
-    graph_ = NonlinearFactorGraph();
-    values_ = Values();
-
+    // Config
     getParamOrThrow(nh_, "/nav/fixed_lag", fixed_lag_);
-    smoother_ = BatchFixedLagSmoother(fixed_lag_);
 
-    // Tunable parameters
     getParamOrThrow(nh_, "/nav/initial_bias_sigma", initial_bias_sigma_);
     getParamOrThrow(nh_, "/nav/initial_velocity_sigma", initial_velocity_sigma_);
     getParamOrThrow(nh_, "/nav/initial_position_sigma", initial_position_sigma_);
@@ -26,10 +21,14 @@ IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar): nh_(nh),
     getParamOrThrow(nh_, "/nav/lever_angle_sigma", lever_angle_sigma_);
     getParamOrThrow(nh_, "/nav/lever_altitude_sigma", lever_altitude_sigma_);
 
+    // Initialize instances 
+    graph_ = NonlinearFactorGraph();
+    values_ = Values();
+
+    smoother_ = BatchFixedLagSmoother(fixed_lag_);
 
     // Outstream
-    std::string out_path;
-    getParamOrThrow(nh_, "/outpath", out_path);
+    std::string out_path = getParamOrThrow<std::string>(nh_, "/outpath");
     std::string nav_path = joinPath(out_path, "nav/nav.csv");
     makePath(nav_path);
 
