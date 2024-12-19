@@ -22,7 +22,7 @@ CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lida
     makePath(stats_path_);
 
     f_stats_ = std::ofstream(stats_path_);
-    f_stats_ << "ts,count,z_mean,z_var,i_mean,i_var";
+    f_stats_ << "ts,count,z_mean,z_var,i_mean,i_var,z_exp_mean,z_exp_var";
     f_stats_ << std::endl << std::fixed;
 }
 
@@ -69,7 +69,7 @@ void CloudManager::newPose(double ts, Pose3 pose){
         assert(it->ts < ts);
 
         // Interpolate pose
-        Pose3 wTb = pose_prev_.interpolateRt(pose, (it->ts - ts_prev_) / dt);
+        Pose3 wTb = pose_prev_.interpolateRt(pose, (it->ts - ts_prev_) / dt); // TODO: Make more efficient (Logmap() in interpolation can be done before the loop)
         Point3 r_world = wTb.transformFrom(Point3(it->x, it->y, it->z));
 
         if (r_world.z() < z_lower_bound_ || r_world.z() > z_upper_bound_)
@@ -82,6 +82,18 @@ void CloudManager::newPose(double ts, Pose3 pose){
             it->intensity, 
             it->ts
         });
+
+        // Adjust moving average
+        assert(it->ts > ts_exp_);
+
+        double alpha = exp(-exp_decay_rate_*(it->ts - ts_exp_));
+        assert(alpha >= 0 && alpha <= 1);
+
+        z_exp_mean_ = alpha*z_exp_mean_ + (1 - alpha)*r_world.z();
+        double z_dev = z_exp_mean_ - r_world.z();
+        z_exp_var_ = alpha*z_exp_var_ + (1 - alpha)*(z_dev*z_dev);
+
+        ts_exp_ = it->ts;
     }
 
     ts_prev_ = ts;
@@ -89,6 +101,8 @@ void CloudManager::newPose(double ts, Pose3 pose){
 
     if (ts_prev_ - ts_analysis_ > window_interval_)
         analyseWindow();
+
+    writeStatistics();
 }
 
 
@@ -125,6 +139,7 @@ void CloudManager::writeStatistics(){
     f_stats_ << "," << count_;
     f_stats_ << "," << z_mean_ << "," << z_var_;
     f_stats_ << "," << i_mean_ << "," << i_var_;
+    f_stats_ << "," << z_exp_mean_ << "," << z_exp_var_;
     f_stats_ << std::endl;
 }
 
@@ -132,7 +147,6 @@ void CloudManager::writeStatistics(){
 void CloudManager::analyseWindow(){
     // Do cloud analysis
     calculateMoments();
-    writeStatistics();
 
     if (save_cloud_)
         saveCloud();

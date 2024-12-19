@@ -57,6 +57,11 @@ private:
     double z_mean_, z_var_;
     double i_mean_, i_var_;
 
+    double ts_exp_ = 0.0;
+    double z_exp_mean_ = 0;
+    double z_exp_var_ = 0;
+    double exp_decay_rate_ = 0.1; // Time constant of 10 seconds
+
     // Saving
     bool save_cloud_;
     void saveCloud();

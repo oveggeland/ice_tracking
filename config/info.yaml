@@ -51,8 +51,8 @@ lidar/measurement_interval: 0.2
 lidar/measurement_sigma: 1
 
 # Cloud manager
-cloud/window_size: 5
-cloud/window_interval: 5
+cloud/window_size: 20
+cloud/window_interval: 20
 cloud/save_cloud: false
 
 cloud/z_lower_bound: -3
