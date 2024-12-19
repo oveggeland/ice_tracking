@@ -1,5 +1,18 @@
-safe_delay: 0.5 # GNSS typically lagging 0.2 seconds
+# System
 bagpath: "/home/oskar/icetrack/data/long3_decompressed"
+outpath: "/home/oskar/icetrack/output/"
 
-# Fixed lag setup
-lag: 20 # Lag interval
+safe_delay: 0.5 # Wait this period for possible sensor lag
+
+# Navigation
+/nav/fixed_lag: 145.0 # Lag interval
+
+/nav/initial_bias_sigma: 0.1
+/nav/initial_velocity_sigma: 1
+/nav/initial_position_sigma: 2
+  
+/nav/lever_norm_threshold: 25
+/nav/lever_angle_threshold: 90
+/nav/lever_norm_sigma: 1.0e-1
+/nav/lever_angle_sigma: 1.0e-2
+/nav/lever_altitude_sigma: 1

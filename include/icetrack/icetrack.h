@@ -9,15 +9,20 @@
 #include "icetrack/lidar.h"
 #include "icetrack/diagnostics.h"
 
+#include "icetrack/file_system.h"
+
 class IceTrack{
 public:
     IceTrack();
+    IceTrack(ros::NodeHandle nh);
 
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
 private:
+    ros::NodeHandle nh_;
+
     // Time control
     double t_head_ = 0.0;       // Last processed message
     double t_safe_ = 0.0;       // Earliest time allowed for processing a message

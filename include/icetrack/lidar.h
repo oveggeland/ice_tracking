@@ -14,11 +14,10 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "icetrack/altitudeFactor.h"
 #include "icetrack/common.h"
-
 #include "icetrack/container.h"
 
+#include "icetrack/factors/AltitudeFactor.h"
 #include <gtsam/navigation/AttitudeFactor.h>
 
 class LidarHandle{

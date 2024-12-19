@@ -1,12 +1,17 @@
-#include <gtsam/nonlinear/NonlinearFactor.h>
-#include <gtsam/geometry/Point3.h>
+#pragma once
 
-class Point3NormConstraintFactor : public gtsam::NoiseModelFactor1<gtsam::Point3> {
+#include <gtsam/geometry/Point3.h>
+#include <gtsam/nonlinear/NonlinearFactor.h>
+
+using namespace gtsam;
+
+
+class NormConstraintFactor : public gtsam::NoiseModelFactor1<gtsam::Point3> {
 private:
   double maxNorm_;
 
 public:
-  Point3NormConstraintFactor(gtsam::Key key, double maxNorm, const gtsam::SharedNoiseModel& noiseModel)
+  NormConstraintFactor(gtsam::Key key, double maxNorm, const gtsam::SharedNoiseModel& noiseModel)
     : NoiseModelFactor1<gtsam::Point3>(noiseModel, key), maxNorm_(maxNorm) {}
 
   gtsam::Vector evaluateError(const gtsam::Point3& point,

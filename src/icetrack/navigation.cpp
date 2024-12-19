@@ -1,22 +1,35 @@
 #include "icetrack/navigation.h"
 
 // Constructors
-IceNav::IceNav(){
-    IceNav(std::make_shared<LidarHandle>());
-}
+IceNav::IceNav(){}
 
-IceNav::IceNav(std::shared_ptr<LidarHandle> lidar): lidar_(lidar){
+IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar): nh_(nh), lidar_(lidar){
     // Initialize instances 
     graph_ = NonlinearFactorGraph();
     values_ = Values();
 
-    LevenbergMarquardtParams p;
-    p.maxIterations = 25;
-    p.useFixedLambdaFactor = false;
-    smoother_ = BatchFixedLagSmoother(30, p);
+    nh_.getParam("/nav/fixed_lag", fixed_lag_);
+    smoother_ = BatchFixedLagSmoother(fixed_lag_);
+
+    // Tunable parameters
+    nh_.getParam("/nav/initial_bias_sigma", initial_bias_sigma_);
+    nh_.getParam("/nav/initial_velocity_sigma", initial_velocity_sigma_);
+    nh_.getParam("/nav/initial_position_sigma", initial_position_sigma_);
+    
+    nh_.getParam("/nav/lever_norm_threshold", lever_norm_threshold_);
+    nh_.getParam("/nav/lever_angle_threshold", lever_angle_threshold_);
+    nh_.getParam("/nav/lever_norm_sigma", lever_norm_sigma_);
+    nh_.getParam("/nav/lever_angle_sigma", lever_angle_sigma_);
+    nh_.getParam("/nav/lever_altitude_sigma", lever_altitude_sigma_);
+
 
     // Outstream
-    f_nav_ = std::ofstream("/home/oskar/icetrack/output/nav/nav.csv");
+    std::string out_path;
+    nh_.getParam("/outpath", out_path);
+    std::string nav_path = joinPath(out_path, "nav/nav.csv");
+    makePath(nav_path);
+
+    f_nav_ = std::ofstream(nav_path);
     f_nav_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
     f_nav_ << std::endl << std::fixed; 
 
@@ -73,18 +86,18 @@ void IceNav::initialize(double ts){
     writeToFile(); // Write initial values to file
 
     // Add prior factors
-    graph_.addPrior(B(0), bias_, noiseModel::Isotropic::Sigma(6, 0.1)); // Maybe we need this for convergence in the beginning (not sure though)
-    graph_.addPrior(V(0), vel_, noiseModel::Isotropic::Sigma(3, 1)); // I don't think we need this
-    graph_.add(GPSFactor(X(0), prior_pos, noiseModel::Isotropic::Sigma(3, 2))); // GPS factor for position prior
+    graph_.addPrior(B(0), bias_, noiseModel::Isotropic::Sigma(6, initial_bias_sigma_)); // Maybe we need this for convergence in the beginning (not sure though)
+    graph_.addPrior(V(0), vel_, noiseModel::Isotropic::Sigma(3, initial_velocity_sigma_)); // I don't think we need this
+    graph_.add(GPSFactor(X(0), prior_pos, noiseModel::Isotropic::Sigma(3, initial_position_sigma_))); // GPS factor for position prior
 
     graph_.add(imu_.getAttitudeFactor(X(0))); // IMU is more robust here
 
     // Lever arm priors
-    auto lever_norm_factor = Point3NormConstraintFactor(L(0), 25, noiseModel::Isotropic::Sigma(1, 0.1));
+    auto lever_norm_factor = NormConstraintFactor(L(0), lever_norm_threshold_, noiseModel::Isotropic::Sigma(1, lever_norm_sigma_));
     graph_.add(lever_norm_factor);
 
-    auto lever_angle_norm_factor = AngularConstraintFactor(L(0), imu_.getNz(), DEG2RAD(90), noiseModel::Isotropic::Sigma(1, 0.01));
-    graph_.add(lever_angle_norm_factor);
+    auto lever_angle_factor = AngularConstraintFactor(L(0), imu_.getNz(), DEG2RAD(lever_angle_threshold_), noiseModel::Isotropic::Sigma(1, lever_angle_sigma_));
+    graph_.add(lever_angle_factor);
 
 
     // Add to values
@@ -117,7 +130,7 @@ void IceNav::update(double ts){
     }
 
     // Add altitude constraint factor
-    auto levered_factor = LeveredAltitudeFactor(X(correction_count_), L(0), noiseModel::Isotropic::Sigma(1, 1));
+    auto levered_factor = LeveredAltitudeFactor(X(correction_count_), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
     graph_.add(levered_factor);
 
     // Finish IMU integration factor

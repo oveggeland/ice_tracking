@@ -15,14 +15,16 @@
 #include "icetrack/imu.h"
 #include "icetrack/lidar.h"
 
-#include "icetrack/altitudeFactor.h"
-#include "icetrack/vectorNormFactor.h"
-#include "icetrack/angleNormFactor.h"
+#include "icetrack/factors/NormConstraintFactor.h"
+#include "icetrack/factors/AngularConstraintFactor.h"
+#include "icetrack/factors/LeveredAltitudeFactor.h"
+
+#include "icetrack/file_system.h"
 
 class IceNav{
 public:
     IceNav();
-    IceNav(std::shared_ptr<LidarHandle> lidar);
+    IceNav(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar);
 
     void imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
@@ -31,18 +33,19 @@ public:
     Pose3 getPose();
 
 private:
+    ros::NodeHandle nh_;
+    
     // Optimization
     NonlinearFactorGraph graph_; 
     Values values_;
 
     BatchFixedLagSmoother smoother_;
     FixedLagSmoother::KeyTimestampMap stamps_;
+    double fixed_lag_;
 
     // Filter control 
     bool init_ = false;
     int correction_count_ = 0;
-
-    bool request_lidar_correction_ = false;
 
     // Current state
     double ts_;
@@ -60,6 +63,17 @@ private:
     void initialize(double ts);
     void update(double ts);
     
+    double initial_bias_sigma_;
+    double initial_velocity_sigma_;
+    double initial_position_sigma_;
+    
+    double lever_norm_threshold_; 
+    double lever_angle_threshold_; // In deg
+    double lever_norm_sigma_;
+    double lever_angle_sigma_;
+    double lever_altitude_sigma_;
+
+
     // Output
     std::ofstream f_nav_;
     void writeToFile();
