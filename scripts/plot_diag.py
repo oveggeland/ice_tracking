@@ -29,7 +29,7 @@ if __name__ == "__main__":
     data = pd.read_csv(filename)
 
     # Calculate rolling differences for t_stamp and t0_wall
-    window_size = 1
+    window_size = 500
     data['rolling_delta_t_stamp'] = data['t_stamp'].diff(window_size)
     data['rolling_delta_t0_wall'] = data['t0_wall'].diff(window_size)
 
