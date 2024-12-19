@@ -36,7 +36,15 @@ LidarHandle::LidarHandle(ros::NodeHandle nh): nh_(nh){
     getParamOrThrow(nh_, "/lidar/ransac_threshold", ransac_threshold_);
     getParamOrThrow(nh_, "/lidar/ransac_prob", ransac_prob_);
     getParamOrThrow(nh_, "/lidar/plane_min_inlier_count", min_inlier_count_);
-    getParamOrThrow(nh_, "/lidar/min_x", min_x_);
+
+    double min_dist = getParamOrThrow<double>(nh_, "/lidar/min_dist");
+    min_dist_square_ = min_dist * min_dist;
+
+    double max_dist = getParamOrThrow<double>(nh_, "/lidar/max_dist");
+    max_dist_square_ = max_dist * max_dist;
+
+    getParamOrThrow(nh_, "/lidar/min_intensity", min_intensity_);
+
     getParamOrThrow(nh_, "/lidar/measurement_interval", measurement_interval_);
     getParamOrThrow(nh_, "/lidar/measurement_sigma", measurement_sigma_);
 
@@ -80,21 +88,34 @@ Efficient parsing of pointcloud msg. Removing rough outliers on the fly. Emplace
 PointCloud2 message is assumed structured such that each point is (x, y, z, intensity) where all are floating values.
 */
 void LidarHandle::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
-    double ts_point = msg->header.stamp.toSec(); // Header stamp is valid for the first point
+    double ts_point = msg->header.stamp.toSec() - point_interval_; // Header stamp is valid for the first point
     for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
-        if (it[0] > min_x_ && ts_point > ts_head_){
-            // Transform the point and directly update the ring buffer
-            Point3 r_body = bTl_.transformFrom(Point3(it[0], it[1], it[2]));
-
-            point_buffer_->addPoint({
-                r_body.x(),
-                r_body.y(),
-                r_body.z(),
-                it[3],
-                ts_point
-            });        
-        }
         ts_point += point_interval_;
+
+        // Initial rejection tests
+        if (
+            it[0] == 0.0 ||             // Empty point
+            it[3] < min_intensity_ ||   // Outlier
+            ts_point <= ts_head_        // Time error
+            )
+            continue;
+
+
+        // Assert distance range
+        double d2 = it[0]*it[0] + it[1]*it[1] + it[2]*it[2];
+        if (d2 < min_dist_square_ || d2 > max_dist_square_)
+            continue;
+
+        // Transform to body frame and add to buffer
+        Point3 r_body = bTl_.transformFrom(Point3(it[0], it[1], it[2]));
+
+        point_buffer_->addPoint({
+            r_body.x(),
+            r_body.y(),
+            r_body.z(),
+            it[3],
+            ts_point
+        });        
     }
     ts_head_ = ts_point; // Only need to update this at end-of-frame. (All points inside a single frame is sequential)
 }

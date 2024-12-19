@@ -4,17 +4,21 @@ IceTrack::IceTrack(){}
 
 // Constructor
 IceTrack::IceTrack(ros::NodeHandle nh): nh_(nh){
+    // Lidar object (reads the incoming point clouds)
     lidar_ = std::make_shared<LidarHandle>(nh_);
 
+    // Navigation object
     nav_ = IceNav(nh_, lidar_);
-    cloud_manager_ = CloudManager(lidar_);
-    
-    std::string outpath = getParamOrThrow<std::string>(nh_, "/outpath");
 
+    // Cloud managing object
+    cloud_manager_ = CloudManager(nh_, lidar_);
+    
+    // Diagnostics file and object
+    std::string outpath = getParamOrThrow<std::string>(nh_, "/outpath");
     std::string diag_file = joinPath(outpath, "diag/diag.csv");
     makePath(diag_file);
 
-    diag_ = Diagnostics(diag_file);
+    diag_ = Diagnostics(joinPath(outpath, "diag/diag.csv"));
 }
 
 void IceTrack::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){

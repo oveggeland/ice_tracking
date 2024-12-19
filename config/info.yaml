@@ -8,42 +8,52 @@ safe_delay: 0.5 # Wait this period for possible sensor lag
 ##### Navigation #####
 
 # General
-/nav/gravity_norm: 9.831
-/nav/fixed_lag: 30 # Lag interval
+nav/gravity_norm: 9.831
+nav/fixed_lag: 30 # Lag interval
 
 # Prior covariance
-/nav/initial_bias_sigma: 0.1
-/nav/initial_velocity_sigma: 1
-/nav/initial_position_sigma: 2
+nav/initial_bias_sigma: 0.1
+nav/initial_velocity_sigma: 1
+nav/initial_position_sigma: 2
 
 # Lever arm stuff  
-/nav/lever_norm_threshold: 25
-/nav/lever_angle_threshold: 90
-/nav/lever_norm_sigma: 1.0e-1
-/nav/lever_angle_sigma: 1.0e-2
-/nav/lever_altitude_sigma: 1
+nav/lever_norm_threshold: 25
+nav/lever_angle_threshold: 90
+nav/lever_norm_sigma: 1.0e-1
+nav/lever_angle_sigma: 1.0e-2
+nav/lever_altitude_sigma: 1
 
 # GNSS
-/nav/gnss_sigma_: 1.0
-/nav/gnss_crs_source: "EPSG:4326"
-/nav/gnss_crs_target: "EPSG:6052"
-/nav/gnss_planar_offset: true # TODO
+nav/gnss_sigma_: 1.0
+nav/gnss_crs_source: "EPSG:4326"
+nav/gnss_crs_target: "EPSG:6052"
+nav/gnss_planar_offset: true # TODO
 
 # IMU
-/nav/imu_max_integration_time: 1.1 # TODO
-/nav/imu_attitude_sigma: 0.1
+nav/imu_max_integration_time: 1.1 # TODO
+nav/imu_attitude_sigma: 0.1
 
-/nav/accel_noise_sigma: 1.0e-3
-/nav/gyro_noise_sigma: 1.0e-4
-/nav/accel_bias_rw_sigma: 1.0e-4
-/nav/gyro_bias_rw_sigma: 1.0e-5
+nav/accel_noise_sigma: 1.0e-3
+nav/gyro_noise_sigma: 1.0e-4
+nav/accel_bias_rw_sigma: 1.0e-4
+nav/gyro_bias_rw_sigma: 1.0e-5
 
 # LIDAR
-/lidar/buffer_period: 2.0
-/lidar/point_interval: 5.0e-6
-/lidar/ransac_threshold: 0.5
-/lidar/ransac_prob: 0.99
-/lidar/plane_min_inlier_count: 50
-/lidar/min_x: 10
-/lidar/measurement_interval: 0.2
-/lidar/measurement_sigma: 1
+lidar/buffer_period: 2.0
+lidar/point_interval: 5.0e-6
+lidar/ransac_threshold: 0.5
+lidar/ransac_prob: 0.99
+lidar/plane_min_inlier_count: 50
+lidar/min_intensity: 1
+lidar/min_dist: 15
+lidar/max_dist: 150
+lidar/measurement_interval: 0.2
+lidar/measurement_sigma: 1
+
+# Cloud manager
+cloud/window_size: 5
+cloud/window_interval: 5
+cloud/save_cloud: false
+
+cloud/z_lower_bound: -3
+cloud/z_upper_bound: 1

@@ -57,7 +57,8 @@ private:
 
     double measurement_interval_;
     double measurement_sigma_;
-    double min_x_; // Minimum x-value for acceptance of a point
+    double min_intensity_;
+    double min_dist_square_, max_dist_square_; // Square range for initial outlier rejection
     double min_inlier_count_;
 
     double point_interval_;    // Temporal distance between measurements (We use half the interval because of dual return mode)
