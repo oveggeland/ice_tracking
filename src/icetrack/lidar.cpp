@@ -1,6 +1,6 @@
 #include "icetrack/lidar.h"
 
-// Read lidar to body transformation
+// Read lidar to body transformation TODO: Generalize and move to other file
 Pose3 readExt(const std::string& filename){
     YAML::Node config = YAML::LoadFile(filename);
 
@@ -25,16 +25,28 @@ Pose3 readExt(const std::string& filename){
     return pose3cb.inverse().compose(pose3lc.inverse());
 }
 
+LidarHandle::LidarHandle(){}
 
-LidarHandle::LidarHandle(){
-    bTl_ = readExt("/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml");
+LidarHandle::LidarHandle(ros::NodeHandle nh): nh_(nh){
+    std::string ext_file = getParamOrThrow<std::string>(nh_, "/ext_file");
+    bTl_ = readExt(ext_file);
 
-    point_buffer_ = std::make_shared<PointCloudBuffer>(buffer_period_ / point_interval_); // Allocate a point buffer (ringbuffer)
+    getParamOrThrow(nh_, "/lidar/buffer_period", buffer_period_);
+    getParamOrThrow(nh_, "/lidar/point_interval", point_interval_);
+    getParamOrThrow(nh_, "/lidar/ransac_threshold", ransac_threshold_);
+    getParamOrThrow(nh_, "/lidar/ransac_prob", ransac_prob_);
+    getParamOrThrow(nh_, "/lidar/plane_min_inlier_count", min_inlier_count_);
+    getParamOrThrow(nh_, "/lidar/min_x", min_x_);
+    getParamOrThrow(nh_, "/lidar/measurement_interval", measurement_interval_);
+    getParamOrThrow(nh_, "/lidar/measurement_sigma", measurement_sigma_);
+
+
+    point_buffer_ = std::make_shared<PointCloudBuffer>(buffer_period_ / point_interval_); // Allocate a ringbuffer for incoming points
 
     seg_.setModelType(pcl::SACMODEL_PLANE); // Set the model you want to fit
     seg_.setMethodType(pcl::SAC_RANSAC);    // Use RANSAC to estimate the plane
-    seg_.setDistanceThreshold(0.5);        // Set a distance threshold for points to be considered inliers)
-    seg_.setProbability(0.99);
+    seg_.setDistanceThreshold(ransac_threshold_);        // Set a distance threshold for points to be considered inliers)
+    seg_.setProbability(ransac_prob_);
 }
 
 

@@ -23,6 +23,7 @@
 class LidarHandle{
 public: 
     LidarHandle();
+    LidarHandle(ros::NodeHandle nh);
 
     void init(double ts);
     bool isInit();
@@ -41,6 +42,8 @@ public:
     boost::shared_ptr<gtsam::NonlinearFactor> getAttitudeFactor(Key key);
 
 private:
+    ros::NodeHandle nh_;
+
     Pose3 bTl_;
 
     std::shared_ptr<PointCloudBuffer> point_buffer_;
@@ -52,14 +55,16 @@ private:
     double z_ = 0.0;    // Distance from ice sheet
     Unit3 bZ_;          // Body frame normal vector of ice sheet
 
-    double measurement_interval_ = 0.2;
-    double measurement_sigma_ =  1;
-    double min_x_ = 10; // Minimum x-value for acceptance of a point
-    double min_inlier_count_ = 100;
+    double measurement_interval_;
+    double measurement_sigma_;
+    double min_x_; // Minimum x-value for acceptance of a point
+    double min_inlier_count_;
 
-    double point_interval_ = 5.0e-6;    // Temporal distance between measurements (We use half the interval because of dual return mode)
-    double buffer_period_ = 2.0;       // Keep track of only most recent points
+    double point_interval_;    // Temporal distance between measurements (We use half the interval because of dual return mode)
+    double buffer_period_ ;       // Keep track of only most recent points
 
+    double ransac_threshold_;
+    double ransac_prob_;
     pcl::SACSegmentation<pcl::PointXYZI> seg_;
 
     bool segmentPlane(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud);

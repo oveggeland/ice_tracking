@@ -4,7 +4,7 @@ IceTrack::IceTrack(){}
 
 // Constructor
 IceTrack::IceTrack(ros::NodeHandle nh): nh_(nh){
-    lidar_ = std::make_shared<LidarHandle>();
+    lidar_ = std::make_shared<LidarHandle>(nh_);
 
     nav_ = IceNav(nh_, lidar_);
     cloud_manager_ = CloudManager(lidar_);

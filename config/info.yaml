@@ -1,5 +1,6 @@
 # System
 bagpath: "/home/oskar/icetrack/data/long3_decompressed"
+ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
 outpath: "/home/oskar/icetrack/output/"
 
 safe_delay: 0.5 # Wait this period for possible sensor lag
@@ -36,3 +37,13 @@ safe_delay: 0.5 # Wait this period for possible sensor lag
 /nav/gyro_noise_sigma: 1.0e-4
 /nav/accel_bias_rw_sigma: 1.0e-4
 /nav/gyro_bias_rw_sigma: 1.0e-5
+
+# LIDAR
+/lidar/buffer_period: 2.0
+/lidar/point_interval: 5.0e-6
+/lidar/ransac_threshold: 0.5
+/lidar/ransac_prob: 0.99
+/lidar/plane_min_inlier_count: 50
+/lidar/min_x: 10
+/lidar/measurement_interval: 0.2
+/lidar/measurement_sigma: 1
