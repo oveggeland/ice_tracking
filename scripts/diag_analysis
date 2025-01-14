@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+import os
+import rospy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,9 +12,6 @@ MSG_TYPES = [
     "GNSS",
     "LiDAR"
 ]
-
-DIAG_DIR = "/home/oskar/icetrack/output/diag/"
-
 
 def reset_cumsum(arr):
     sum = 0
@@ -24,8 +25,11 @@ def reset_cumsum(arr):
 
 
 if __name__ == "__main__":
+    rospy.init_node("diag_analysis_node")
     # Read the CSV file into a pandas DataFrame
-    filename = DIAG_DIR + "diag.csv"  # Replace with your file path if necessary
+    outpath = rospy.get_param('outpath')
+    diag_path = os.path.join(outpath, "diag")
+    filename = os.path.join(diag_path, "diag.csv")
     data = pd.read_csv(filename)
 
     # Calculate rolling differences for t_stamp and t0_wall
@@ -39,7 +43,7 @@ if __name__ == "__main__":
     # Calculate per-frame processing time (t1_wall - t0_wall)
     data['processing_time'] = data['t1_wall'] - data['t0_wall']
 
-    # Plot 1: Real Time Factor as a time series
+    # Plot: Real Time Factor as a time series
     plt.figure(figsize=(10, 6))
     plt.plot(data['t_stamp'], data['real_time_factor'], label='RTF', color='blue')
     plt.xlabel('Timestamp')
@@ -48,34 +52,10 @@ if __name__ == "__main__":
     plt.grid()
     plt.legend()
     plt.tight_layout()
-    plt.savefig(DIAG_DIR + "rtf.pdf")
+    plt.savefig(os.path.join(diag_path, "real_time_factor.pdf"))
 
-    # # Plot 2: Per-frame processing time, grouped by msg_type
-    # plt.figure(figsize=(10, 6))
-    # for msg_type, group in data.groupby('msg_type'):
-    #     plt.scatter(group['t_stamp'], group['processing_time'], label=MSG_TYPES[msg_type], s=10)
-    # plt.xlabel('Timestamp')
-    # plt.ylabel('Processing Time')
-    # plt.yscale('log')
-    # plt.title('Per-frame Processing Time by Message Type')
-    # plt.grid()
-    # plt.legend()
-    # plt.tight_layout()
-    # plt.savefig(DIAG_DIR + "processing_time.pdf")
-
-    # # Plot 3: RAM as a time series
-    # plt.figure(figsize=(10, 6))
-    # plt.plot(data['t_stamp'], data['mem0'], label='RAM0', color='green')
-    # plt.plot(data['t_stamp'], data['mem1'], label='RAM1', color='purple')
-    # plt.xlabel('Timestamp')
-    # plt.ylabel('Memory Usage (MB)')
-    # plt.title('RAM Usage over Time')
-    # plt.grid()
-    # plt.legend()
-    # plt.tight_layout()
-    # plt.savefig(DIAG_DIR + "ram_usage.pdf")
     
-    # Plot 4: Latency
+    # Plot: Latency
     data['delta_t_stamp'] = data['t_stamp'].diff()
     data['delta_t0_wall'] = data['t0_wall'].diff()
     
@@ -91,6 +71,6 @@ if __name__ == "__main__":
     plt.title('Output latency')
     plt.grid()
     plt.tight_layout()
-    plt.savefig(DIAG_DIR + "latency.pdf")
+    plt.savefig(os.path.join(diag_path, "latency.pdf"))
     
     plt.show()

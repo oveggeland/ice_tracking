@@ -1,0 +1,17 @@
+<launch>
+    <!-- Load parameters from YAML -->
+    <rosparam file="$(find icetrack)/config/info.yaml" command="load"/>
+
+    <!-- Launch analysis scripts -->
+    <node 
+        name="diag_analysis_node" pkg="icetrack" type="diag_analysis" output="screen">
+    </node>
+
+    <node 
+        name="stats_analysis_node" pkg="icetrack" type="stats_analysis" output="screen">
+    </node>
+    
+    <node 
+        name="nav_analysis_node" pkg="icetrack" type="nav_analysis" output="screen">
+    </node>
+</launch>

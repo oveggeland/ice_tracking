@@ -58,3 +58,11 @@ target_link_libraries(rostopic_node
   ${catkin_LIBRARIES}
   icetracklib
 )
+
+
+catkin_install_python(PROGRAMS
+    scripts/diag_analysis
+    scripts/stats_analysis
+    scripts/nav_analysis
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
