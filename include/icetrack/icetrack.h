@@ -5,10 +5,10 @@
 #include <sensor_msgs/PointCloud2.h>
 
 #include "icetrack/navigation.h"
-#include "icetrack/cloud_manager.h"
 #include "icetrack/lidar.h"
 #include "icetrack/diagnostics.h"
 
+#include "icetrack/SensorSystem.h"
 #include "icetrack/file_system.h"
 
 class IceTrack{
@@ -34,10 +34,10 @@ private:
     void checkCallbackBuffer();
 
     // Submodules
-    std::shared_ptr<LidarHandle> lidar_;
+    std::shared_ptr<SensorSystem> sensors_;
 
     IceNav nav_;
-    CloudManager cloud_manager_;
+    // CloudManager cloud_manager_;
     
     Diagnostics diag_;
     

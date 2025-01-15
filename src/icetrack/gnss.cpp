@@ -1,8 +1,8 @@
 #include "icetrack/gnss.h"
 
-GnssHandle::GnssHandle(){}
+Gnss::Gnss(){}
 
-GnssHandle::GnssHandle(ros::NodeHandle nh): nh_(nh){
+Gnss::Gnss(ros::NodeHandle nh): nh_(nh){
     // Get config
     getParamOrThrow(nh_, "/nav/gnss_sigma_", gnss_sigma_);
     getParamOrThrow(nh_, "/nav/gnss_sigma_", gnss_sigma_);
@@ -13,12 +13,12 @@ GnssHandle::GnssHandle(ros::NodeHandle nh): nh_(nh){
     projection_ = proj_create_crs_to_crs(proj_context_create(), crs_source_.c_str(), crs_target_.c_str(), NULL);
 }
 
-boost::shared_ptr<gtsam::NonlinearFactor> GnssHandle::getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key){
+boost::shared_ptr<gtsam::NonlinearFactor> Gnss::getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key){
     return boost::make_shared<GNSSFactor>(key, getMeasurement(msg), correction_noise_);
 }
 
 
-void GnssHandle::init(const sensor_msgs::NavSatFix::ConstPtr& msg){
+void Gnss::init(const sensor_msgs::NavSatFix::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
     Point2 xy = getMeasurement(msg);
 
@@ -31,11 +31,11 @@ void GnssHandle::init(const sensor_msgs::NavSatFix::ConstPtr& msg){
     xy_ = xy;
 }
 
-bool GnssHandle::isInit(){
+bool Gnss::isInit(){
     return init_;
 };
 
-Point2 GnssHandle::getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
+Point2 Gnss::getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
     PJ_COORD input_coords = proj_coord(msg->latitude, msg->longitude, 0, 0);
     PJ_COORD output_coords = proj_trans(projection_, PJ_FWD, input_coords);
     
@@ -43,10 +43,10 @@ Point2 GnssHandle::getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
 }
 
 
-Point2 GnssHandle::getVelocity(){
+Point2 Gnss::getVelocity(){
     return v_xy_;
 }
 
-Point2 GnssHandle::getPosition(){
+Point2 Gnss::getPosition(){
     return xy_;
 }

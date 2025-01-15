@@ -3,10 +3,14 @@
 // Constructors
 IceNav::IceNav(){}
 
-IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar): nh_(nh), lidar_(lidar){
+IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors): nh_(nh), sensors_(sensors){
+
+    // lidar_ = make_shared<Lidar>(sensors_.lidar());
+    surface_estimator_ = SurfaceEstimator(nh, sensors);
+
     // Sensor handles
-    imu_ = ImuHandle(nh);
-    gnss_ = GnssHandle(nh);
+    imu_ = Imu(nh);
+    gnss_ = Gnss(nh);
 
     // Config
     getParamOrThrow(nh_, "/nav/fixed_lag", fixed_lag_);
@@ -57,7 +61,7 @@ void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
         gnss_.init(msg);
 
         // The system is initialized here when sensors are ready
-        if (gnss_.isInit() && lidar_->isInit() && imu_.isInit())
+        if (gnss_.isInit() && imu_.isInit())// && surface_estimator_.isInit())
             initialize(msg->header.stamp.toSec());
     } 
 }
@@ -74,13 +78,14 @@ void IceNav::initialize(double ts){
     // Initial state
     ts_ = ts;
 
-    Point3 prior_pos = (Vector3() << gnss_.getPosition(), lidar_->getAltitude()).finished();
+    double prior_z = -17;//surface_estimator_.getAltitude();
+    Point3 prior_pos = (Vector3() << gnss_.getPosition(), prior_z).finished();
     pose_ = Pose3(imu_.getPriorRot(), prior_pos);
 
     vel_ = (Vector3() << gnss_.getVelocity(), 0).finished();
     bias_ = imuBias::ConstantBias(); // imuBias::ConstantBias(Vector3(-0.03, 0.07, -0.14), Vector3(-0.002, 0.002, -0.0024)); // In case I want to cheat
 
-    lever_arm_ = pose_.rotation().inverse().rotate((Point3() << 0, 0, -lidar_->getAltitude()).finished());
+    lever_arm_ = pose_.rotation().inverse().rotate((Point3() << 0, 0, -prior_z).finished());
 
     writeToFile(); // Write initial values to file
 
@@ -94,9 +99,6 @@ void IceNav::initialize(double ts){
     // Lever arm priors
     auto lever_norm_factor = NormConstraintFactor(L(0), lever_norm_threshold_, noiseModel::Isotropic::Sigma(1, lever_norm_sigma_));
     graph_.add(lever_norm_factor);
-
-    auto lever_angle_factor = AngularConstraintFactor(L(0), imu_.getNz(), DEG2RAD(lever_angle_threshold_), noiseModel::Isotropic::Sigma(1, lever_angle_sigma_));
-    graph_.add(lever_angle_factor);
 
 
     // Add to values
@@ -119,13 +121,16 @@ void IceNav::initialize(double ts){
 }
 
 
+/*
+This is a generic uppdate function, called when a new state variable is added. 
+*/
 void IceNav::update(double ts){
     ROS_INFO_STREAM(correction_count_);
 
     // Let us check if LiDAR measurement is available for the previous time step!
-    if (lidar_->generatePlane(ts_)){
-        graph_.add(lidar_->getAltitudeFactor(X(correction_count_-1)));
-        graph_.add(lidar_->getAttitudeFactor(X(correction_count_-1)));
+    if (surface_estimator_.generatePlane(ts_)){
+        graph_.add(surface_estimator_.getAltitudeFactor(X(correction_count_-1)));
+        graph_.add(surface_estimator_.getAttitudeFactor(X(correction_count_-1)));
     }
 
     // Add altitude constraint factor

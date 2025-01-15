@@ -1,7 +1,7 @@
 #include "icetrack/cloud_manager.h"
 
-CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar): 
-        nh_(nh), point_buffer_(lidar->getSharedBufferPointer())
+CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors): 
+        nh_(nh), point_buffer_(sensors->lidar()->getPointBuffer())
 {
     // Get config
     getParamOrThrow(nh_, "/cloud/window_size", window_size_);
@@ -10,7 +10,7 @@ CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lida
     getParamOrThrow(nh_, "/cloud/z_lower_bound", z_lower_bound_);
     getParamOrThrow(nh_, "/cloud/z_upper_bound", z_upper_bound_);
 
-    cloud_ = PointCloudBuffer(window_size_ / lidar->getPointInterval());
+    cloud_ = StampedRingBuffer<PointDetailed>(window_size_ / sensors->lidar()->getPointInterval());
 
     // Set output paths
     std::string out_path = getParamOrThrow<std::string>(nh_, "/outpath");
@@ -18,14 +18,18 @@ CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lida
     cloud_path_ = joinPath(out_path, "clouds/");
     makePath(cloud_path_, true);
 
+    elev_path_ = joinPath(out_path, "elev/");
+    makePath(elev_path_, true);
+
     stats_path_ = joinPath(out_path, "stats/stats.csv");
     makePath(stats_path_);
 
     f_stats_ = std::ofstream(stats_path_);
-    f_stats_ << "ts,count,z_mean,z_var,i_mean,i_var,z_exp_mean,z_exp_var";
+    f_stats_ << "ts,count,z_mean,z_var,z_exp_mean,z_exp_var";
     f_stats_ << std::endl << std::fixed;
-}
 
+    distance_ref_ = sensors->lidar()->getMaxDistance();
+}
 
 bool CloudManager::isInit(){
     return init_;
@@ -64,36 +68,49 @@ void CloudManager::newPose(double ts, Pose3 pose){
     auto end = point_buffer_->iteratorLowerBound(ts);
 
     for (auto it = start; it != end; ++it){
+        double p_ts = it->first;
+
         // Check time stamp
-        assert(it->ts >= ts_prev_);
-        assert(it->ts < ts);
+        assert(p_ts >= ts_prev_);
+        assert(p_ts < ts);
 
         // Interpolate pose
-        Pose3 wTb = pose_prev_.interpolateRt(pose, (it->ts - ts_prev_) / dt); // TODO: Make more efficient (Logmap() in interpolation can be done before the loop)
-        Point3 r_world = wTb.transformFrom(Point3(it->x, it->y, it->z));
+        Pose3 wTb = pose_prev_.interpolateRt(pose, (p_ts - ts_prev_) / dt);
 
-        if (r_world.z() < z_lower_bound_ || r_world.z() > z_upper_bound_)
+        // Transform to world coordinates
+        Point3 lPlp = Point3(it->second.x, it->second.y, it->second.z);
+        Point3 wPlp = wTb.rotation().rotate(lPlp);
+        Point3 wPwp = wPlp + wTb.translation();
+
+        if (wPwp.z() < z_lower_bound_ || wPwp.z() > z_upper_bound_)
             continue; // Outlier
 
-        cloud_.addPoint({
-            r_world.x(),
-            r_world.y(),
-            r_world.z(),
-            it->intensity, 
-            it->ts
+        float p_dist = lPlp.norm();
+        float corrected_intensity = it->second.i*(p_dist*p_dist)/(distance_ref_*distance_ref_);
+    
+        cloud_.addElement({
+            p_ts,
+            PointDetailed{
+                wPwp.x(),
+                wPwp.y(),
+                wPwp.z(),
+                it->second.i, 
+                corrected_intensity,
+                p_dist
+            }
         });
 
         // Adjust moving average
-        assert(it->ts > ts_exp_);
+        // assert(it->ts > ts_exp_);
 
-        double alpha = exp(-exp_decay_rate_*(it->ts - ts_exp_));
-        assert(alpha >= 0 && alpha <= 1);
+        // double alpha = exp(-exp_decay_rate_*(it->ts - ts_exp_));
+        // assert(alpha >= 0 && alpha <= 1);
 
-        z_exp_mean_ = alpha*z_exp_mean_ + (1 - alpha)*r_world.z();
-        double z_dev = z_exp_mean_ - r_world.z();
-        z_exp_var_ = alpha*z_exp_var_ + (1 - alpha)*(z_dev*z_dev);
+        // z_exp_mean_ = alpha*z_exp_mean_ + (1 - alpha)*r_world.z();
+        // double z_dev = z_exp_mean_ - r_world.z();
+        // z_exp_var_ = alpha*z_exp_var_ + (1 - alpha)*(z_dev*z_dev);
 
-        ts_exp_ = it->ts;
+        // ts_exp_ = it->ts;
     }
 
     ts_prev_ = ts;
@@ -101,44 +118,12 @@ void CloudManager::newPose(double ts, Pose3 pose){
 
     if (ts_prev_ - ts_analysis_ > window_interval_)
         analyseWindow();
-
-    writeStatistics();
-}
-
-
-void CloudManager::calculateMoments(){
-    double z_sum = 0;
-    float i_sum = 0;
-
-    auto start = cloud_.iteratorLowerBound(ts_prev_ - window_size_);
-    auto end = cloud_.iteratorLowerBound(ts_prev_);
-
-    count_ = 0;
-    for (auto it = start; it != end; ++it){
-        z_sum += it->z;
-        i_sum += it->intensity;
-        ++ count_;
-    }
-
-    z_mean_ = z_sum / count_;
-    i_mean_ = i_sum / count_;
-
-    z_sum = 0;
-    i_sum = 0;
-    for (auto it = start; it != end; ++it){
-        z_sum += pow((it->z - z_mean_), 2);
-        i_sum += pow((it->intensity - i_mean_), 2);
-    }
-
-    z_var_ = z_sum / count_;
-    i_var_ = i_sum / count_;
 }
 
 void CloudManager::writeStatistics(){
     f_stats_ << ts_prev_;
     f_stats_ << "," << count_;
     f_stats_ << "," << z_mean_ << "," << z_var_;
-    f_stats_ << "," << i_mean_ << "," << i_var_;
     f_stats_ << "," << z_exp_mean_ << "," << z_exp_var_;
     f_stats_ << std::endl;
 }
@@ -146,10 +131,31 @@ void CloudManager::writeStatistics(){
 
 void CloudManager::analyseWindow(){
     // Do cloud analysis
-    calculateMoments();
+    count_ = 0;
+    double z_sum = 0;
+    double z2_sum = 0;
+
+    // Get start and end iterators
+    auto start = cloud_.iteratorLowerBound(ts_prev_ - window_size_);
+    auto end = cloud_.iteratorLowerBound(ts_prev_);
+
+
+
+    for (auto it = start; it != end; ++it){
+        double z = it->second.z;
+        z_sum += z;
+        z2_sum += z*z;
+
+        ++count_;
+    }
+
+    z_mean_ = (z_sum / count_);
+    z_var_ = (z2_sum / count_) - (z_mean_*z_mean_);
 
     if (save_cloud_)
         saveCloud();
+
+    writeStatistics();
 
     ts_analysis_ = ts_prev_;
 }
@@ -159,5 +165,5 @@ void CloudManager::saveCloud(){
     std::stringstream fname;
     fname << std::fixed << static_cast<int64_t>(ts_prev_) << ".ply";
 
-    pcl::io::savePLYFileBinary<pcl::PointXYZI>(joinPath(cloud_path_, fname.str()), *cloud_.getPclWithin(ts_prev_ - window_size_, ts_prev_));
+    //pcl::io::savePLYFileBinary<pcl::PointXYZI>(joinPath(cloud_path_, fname.str()), *cloud_.getPclWithin(ts_prev_ - window_size_, ts_prev_));
 };

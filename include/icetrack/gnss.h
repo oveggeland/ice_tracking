@@ -12,10 +12,10 @@
 #include "icetrack/common.h"
 #include "icetrack/factors/GNSSFactor.h"
 
-class GnssHandle{
+class Gnss{
 public:
-  GnssHandle();
-  GnssHandle(ros::NodeHandle nh);
+  Gnss();
+  Gnss(ros::NodeHandle nh);
 
   void init(const sensor_msgs::NavSatFix::ConstPtr& msg);
   bool isInit();

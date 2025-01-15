@@ -4,14 +4,14 @@ IceTrack::IceTrack(){}
 
 // Constructor
 IceTrack::IceTrack(ros::NodeHandle nh): nh_(nh){
-    // Lidar object (reads the incoming point clouds)
-    lidar_ = std::make_shared<LidarHandle>(nh_);
+    // Common sensors object
+    sensors_ = std::make_shared<SensorSystem>(nh_);
 
     // Navigation object
-    nav_ = IceNav(nh_, lidar_);
+    nav_ = IceNav(nh_, sensors_);
 
     // Cloud managing object
-    cloud_manager_ = CloudManager(nh_, lidar_);
+    //cloud_manager_ = CloudManager(nh_, sensors_);
     
     // Diagnostics file and object
     std::string outpath = getParamOrThrow<std::string>(nh_, "/outpath");
@@ -35,7 +35,7 @@ void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     nav_.gnssMeasurement(msg);
 
     if (nav_.isInit())
-        cloud_manager_.newPose(msg->header.stamp.toSec(), nav_.getPose());
+        //cloud_manager_.newPose(msg->header.stamp.toSec(), nav_.getPose());
 
     diag_.diagEnd();
 }
@@ -43,10 +43,10 @@ void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    lidar_->addFrame(msg);
+    // lidar_->addFrame(msg);
     
-    if (!lidar_->isInit())
-        lidar_->init(msg->header.stamp.toSec()); // TODO: Look at how lidar is initialized
+    // if (!lidar_->isInit())
+    //     lidar_->init(msg->header.stamp.toSec()); // TODO: Look at how lidar is initialized
     
     diag_.diagEnd();
 }

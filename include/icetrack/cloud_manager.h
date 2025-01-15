@@ -5,15 +5,25 @@
 #include <gtsam/geometry/Pose3.h>
 #include <pcl/io/ply_io.h>
 
-#include "icetrack/container.h"
+#include "icetrack/SensorSystem.h"
 #include "icetrack/lidar.h"
 #include "icetrack/file_system.h"
+
+#include "icetrack/StampedRingBuffer.h"
+
+
+struct PointDetailed{
+    double x, y, z;
+    float intensity;
+    float intensity_corrected;
+    float distance;
+};
 
 class CloudManager{
 public:
     // Constructurs
     CloudManager(){};
-    CloudManager(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar);
+    CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors_);
 
     // Main entry from IceTrack
     void newPose(double ts, Pose3 T);
@@ -22,9 +32,12 @@ private:
     ros::NodeHandle nh_;
     
     // Cloud buffers
-    std::shared_ptr<PointCloudBuffer> point_buffer_;    // Incoming body-frame points   (Owned by LidarHandle)
-    PointCloudBuffer cloud_;                            // World-frame points           (Owned by CloudManager)
-    
+    std::shared_ptr<StampedRingBuffer<PointXYZI>> point_buffer_; // Incoming points, in LiDAR frame
+    StampedRingBuffer<PointDetailed> cloud_;     // Templated stamped ringbuffer
+
+    // For correction 
+    double distance_ref_;
+
     // Keep track of previous pose
     double ts_prev_ = 0.0;
     Pose3 pose_prev_;
@@ -52,10 +65,11 @@ private:
 
     // Stats
     void writeStatistics();
+    void saveElevBinary();
     std::ofstream f_stats_;
-    double count_;
+
+    int count_;
     double z_mean_, z_var_;
-    double i_mean_, i_var_;
 
     double ts_exp_ = 0.0;
     double z_exp_mean_ = 0;
@@ -68,5 +82,6 @@ private:
 
     // Paths
     std::string cloud_path_;
+    std::string elev_path_; 
     std::string stats_path_;
 };

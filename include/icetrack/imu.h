@@ -12,11 +12,11 @@
 Vector3 getAcc(const sensor_msgs::Imu::ConstPtr& msg);
 Vector3 getRate(const sensor_msgs::Imu::ConstPtr& msg);
 
-class ImuHandle{
+class Imu{
     public:
         // Constructor
-        ImuHandle();
-        ImuHandle(ros::NodeHandle nh);
+        Imu();
+        Imu(ros::NodeHandle nh);
 
         // Integration
         void integrate(const sensor_msgs::Imu::ConstPtr& msg);

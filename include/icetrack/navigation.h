@@ -11,9 +11,10 @@
 #include <gtsam/navigation/GPSFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
 
+#include "icetrack/SensorSystem.h"
 #include "icetrack/gnss.h"
 #include "icetrack/imu.h"
-#include "icetrack/lidar.h"
+#include "icetrack/SurfaceEstimator.h"
 
 #include "icetrack/factors/NormConstraintFactor.h"
 #include "icetrack/factors/AngularConstraintFactor.h"
@@ -24,7 +25,7 @@
 class IceNav{
 public:
     IceNav();
-    IceNav(ros::NodeHandle nh, std::shared_ptr<LidarHandle> lidar);
+    IceNav(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors);
 
     void imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
@@ -35,6 +36,9 @@ public:
 private:
     ros::NodeHandle nh_;
     
+    // Surface plane fitting
+    SurfaceEstimator surface_estimator_;
+
     // Optimization
     NonlinearFactorGraph graph_; 
     Values values_;
@@ -55,9 +59,10 @@ private:
     Point3 lever_arm_;
 
     // Sensors
-    GnssHandle gnss_;
-    ImuHandle imu_;
-    std::shared_ptr<LidarHandle> lidar_;
+    std::shared_ptr<SensorSystem> sensors_;
+    Gnss gnss_;
+    Imu imu_;
+    std::shared_ptr<Lidar> lidar_;
 
     // Private member functions
     void initialize(double ts);

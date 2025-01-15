@@ -18,9 +18,9 @@ Vector3 getRate(const sensor_msgs::Imu::ConstPtr& msg){
     );
 }
 
-ImuHandle::ImuHandle(){}
+Imu::Imu(){}
 
-ImuHandle::ImuHandle(ros::NodeHandle nh): nh_(nh){
+Imu::Imu(ros::NodeHandle nh): nh_(nh){
     // Get config
     getParamOrThrow(nh_, "/nav/gravity_norm", gravity_norm_);
     getParamOrThrow(nh_, "/nav/accel_noise_sigma", accel_noise_sigma_);
@@ -35,7 +35,7 @@ ImuHandle::ImuHandle(ros::NodeHandle nh): nh_(nh){
     assert(preintegrated);
 }
 
-void ImuHandle::resetIntegration(double ts, imuBias::ConstantBias bias){
+void Imu::resetIntegration(double ts, imuBias::ConstantBias bias){
     ts_head_ = ts;
     preintegrated->resetIntegrationAndSetBias(bias);
 }
@@ -43,7 +43,7 @@ void ImuHandle::resetIntegration(double ts, imuBias::ConstantBias bias){
 /**
  * Used after initialization of the navigation system. Every new IMU measurement should be integrated in waiting for a new correction.
  */
-void ImuHandle::integrate(const sensor_msgs::Imu::ConstPtr& msg){
+void Imu::integrate(const sensor_msgs::Imu::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
     double dt = ts - ts_head_;
 
@@ -59,7 +59,7 @@ void ImuHandle::integrate(const sensor_msgs::Imu::ConstPtr& msg){
 /**
  * When correction occurs, we should finish integration by extrapolating the last imu measurements, and return a IMU factor
  */
-CombinedImuFactor ImuHandle::finishIntegration(double ts_correction, int correction_count){
+CombinedImuFactor Imu::finishIntegration(double ts_correction, int correction_count){
     double dt = ts_correction - ts_head_;
     assert(dt > 0 && dt < 0.02);
 
@@ -73,29 +73,29 @@ CombinedImuFactor ImuHandle::finishIntegration(double ts_correction, int correct
         preint_imu);
 }
 
-NavState ImuHandle::predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias){
+NavState Imu::predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias){
     return preintegrated->predict(NavState(pose, vel), bias);
 }
 
 
-void ImuHandle::init(const sensor_msgs::Imu::ConstPtr& msg){
+void Imu::init(const sensor_msgs::Imu::ConstPtr& msg){
     prev_acc_ = getAcc(msg);
     prev_rate_ = getRate(msg);
     is_init_ = true;
 }
 
-Unit3 ImuHandle::getNz(){
+Unit3 Imu::getNz(){
     return Unit3(-prev_acc_);
 }
 
 
-boost::shared_ptr<gtsam::NonlinearFactor> ImuHandle::getAttitudeFactor(Key key){
+boost::shared_ptr<gtsam::NonlinearFactor> Imu::getAttitudeFactor(Key key){
     return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, imu_attitude_sigma_), getNz());
 }
 
 
 // Estimate attitude from last acceleration measurement
-Rot3 ImuHandle::getPriorRot(){
+Rot3 Imu::getPriorRot(){
     Unit3 nA = Unit3(-prev_acc_);
     Unit3 nG(0, 0, 1);
 
@@ -103,7 +103,7 @@ Rot3 ImuHandle::getPriorRot(){
 }
 
 
-boost::shared_ptr<gtsam::PreintegrationCombinedParams> ImuHandle::getPreintegrationParams() {
+boost::shared_ptr<gtsam::PreintegrationCombinedParams> Imu::getPreintegrationParams() {
   // We use the sensor specs to build the noise model for the IMU factor.
   Matrix33 measured_acc_cov = I_3x3 * pow(accel_noise_sigma_, 2);
   Matrix33 measured_omega_cov = I_3x3 * pow(gyro_noise_sigma_, 2);
