@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.10)
 project(icetrack)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -18,9 +18,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Find packages ##
 find_package(GTSAM REQUIRED)
+find_package(Open3D REQUIRED)
 find_package(PROJ REQUIRED)
 find_package(yaml-cpp REQUIRED)
-find_package(PCL REQUIRED)
 
 catkin_package()
 
@@ -35,13 +35,18 @@ file(GLOB ICETRACK_SOURCES "src/icetrack/*.cpp")
 add_library(icetracklib 
   ${ICETRACK_SOURCES}
 )
-target_include_directories(icetracklib PUBLIC include/icetrack)
+target_include_directories(icetracklib
+  PUBLIC
+    ${catkin_INCLUDE_DIRS}
+    include/icetrack
+)
+
 target_link_libraries(icetracklib 
   gtsam 
   gtsam_unstable 
   proj
   yaml-cpp
-  ${PCL_LIBRARIES}
+  Open3D::Open3D
   ${catkin_LIBRARIES}
 )
 

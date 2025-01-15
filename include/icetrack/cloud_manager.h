@@ -3,14 +3,12 @@
 #include <ros/ros.h>
 
 #include <gtsam/geometry/Pose3.h>
-#include <pcl/io/ply_io.h>
 
 #include "icetrack/SensorSystem.h"
 #include "icetrack/lidar.h"
 #include "icetrack/file_system.h"
 
 #include "icetrack/StampedRingBuffer.h"
-
 
 struct PointDetailed{
     double x, y, z;
@@ -32,7 +30,7 @@ private:
     ros::NodeHandle nh_;
     
     // Cloud buffers
-    std::shared_ptr<StampedRingBuffer<PointXYZI>> point_buffer_; // Incoming points, in LiDAR frame
+    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_; // Incoming points, in LiDAR frame
     StampedRingBuffer<PointDetailed> cloud_;     // Templated stamped ringbuffer
 
     // For correction 

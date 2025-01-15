@@ -10,7 +10,7 @@ Lidar::Lidar(ros::NodeHandle nh): nh_(nh){
 
     getParamOrThrow(nh_, "/lidar/min_intensity", min_intensity_);
 
-    point_buffer_ = std::make_shared<StampedRingBuffer<PointXYZI>>(5.0 / point_interval_); // Keep track of at least 5 seconds worth of points
+    point_buffer_ = std::make_shared<StampedRingBuffer<RawLidarPoint>>(5.0 / point_interval_); // Keep track of at least 5 seconds worth of points
 }
 
 
@@ -38,7 +38,7 @@ void Lidar::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
 
         point_buffer_->addElement({
             ts_point,
-            PointXYZI{
+            RawLidarPoint{
                 it[0],
                 it[1],
                 it[2],

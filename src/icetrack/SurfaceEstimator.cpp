@@ -6,73 +6,63 @@ SurfaceEstimator::SurfaceEstimator(ros::NodeHandle nh, std::shared_ptr<SensorSys
     bTl_ = system->bTl();
     point_buffer_ = system->lidar()->getPointBuffer();
 
-    getParamOrThrow(nh, "/lidar/ransac_threshold", ransac_threshold_);
-    getParamOrThrow(nh, "/lidar/ransac_prob", ransac_prob_);
-    getParamOrThrow(nh, "/lidar/plane_min_inlier_count", min_inlier_count_);
+    getParamOrThrow(nh, "/navigation/surface_estimation/ransac_threshold", ransac_threshold_);
+    getParamOrThrow(nh, "/navigation/surface_estimation/ransac_sample_size", ransac_sample_size_);
+    getParamOrThrow(nh, "/navigation/surface_estimation/ransac_iterations", ransac_iterations_);
+    getParamOrThrow(nh, "/navigation/surface_estimation/ransac_inlier_count", ransac_inlier_count_);
 
-    getParamOrThrow(nh, "/lidar/measurement_interval", measurement_interval_);
+    getParamOrThrow(nh, "/navigation/surface_estimation/frame_interval", frame_interval_);
 
-    seg_.setModelType(pcl::SACMODEL_PLANE); // Set the model you want to fit
-    seg_.setMethodType(pcl::SAC_RANSAC);    // Use RANSAC to estimate the plane
-    seg_.setDistanceThreshold(ransac_threshold_);        // Set a distance threshold for points to be considered inliers)
-    seg_.setProbability(ransac_prob_);
+    getParamOrThrow(nh, "/navigation/surface_estimation/sigma_altitude", sigma_altitude_);
+    getParamOrThrow(nh, "/navigation/surface_estimation/sigma_attitude", sigma_attitude_);
 }
 
-bool SurfaceEstimator::segmentPlane(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud){
-    if (cloud->size() < min_inlier_count_){
-        return false;
-    }
-
-    pcl::ModelCoefficients::Ptr coeffs(new pcl::ModelCoefficients);
-    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-
-    seg_.setInputCloud(cloud);
-    seg_.segment(*inliers, *coeffs);
-
-    if (inliers->indices.size() < min_inlier_count_) {
-        return false;
-    }
-    // Set some parameters based on segmented plane
-    z_ = -abs(coeffs->values[3]);
-    bZ_ = Unit3(coeffs->values[0], coeffs->values[1], coeffs->values[2]);
-    if (bTl_.rotation().inverse().rotate(bZ_).point3().x() < 0){ // Assert normal vector has positive x in LiDAR frame (pointing down in world frame)
-        bZ_ = Unit3(-bZ_.point3());
-    }
-
-    return true;
-}
 
 boost::shared_ptr<gtsam::NonlinearFactor> SurfaceEstimator::getAltitudeFactor(Key key){
-    return boost::make_shared<AltitudeFactor>(key, z_, noiseModel::Isotropic::Sigma(1, 1));
+    return boost::make_shared<AltitudeFactor>(key, -surface_dist_, noiseModel::Isotropic::Sigma(1, sigma_altitude_));
 }
 
 boost::shared_ptr<gtsam::NonlinearFactor> SurfaceEstimator::getAttitudeFactor(Key key){
-    return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, 0.1), bZ_);
+    return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, sigma_attitude_), surface_normal_);
 }
 
-bool SurfaceEstimator::isInit(){ 
-    return init_;
+double SurfaceEstimator::getSurfaceDistance(){
+    return surface_dist_;
 }
 
-double SurfaceEstimator::getAltitude(){
-    return z_;
-}
+bool SurfaceEstimator::estimateSurface(double ts){
+    // Find bounds in point buffer
+    auto start = point_buffer_->iteratorLowerBound(ts - 0.5*frame_interval_);
+    auto end = point_buffer_->iteratorLowerBound(ts + 0.5*frame_interval_);
 
-bool SurfaceEstimator::generatePlane(double ts){
-    // Timestamp bounds for lidar points to use
-    double t0 = ts - 0.5*measurement_interval_;
-    double t1 = ts + 0.5*measurement_interval_;
+    // Check element number
+    size_t num_points = start.distance_to(end);
+    if (num_points == 0 || num_points < ransac_inlier_count_)
+        return false;
 
-    // Find tail
-    // auto cloud_ptr = getPclWithin(t0, t1);
-    // if (segmentPlane(cloud_ptr)){
-    //     return true;
-    // };
 
-    return false;
-}
+    // Extract and transform points from the buffer
+    auto cloud = std::make_shared<open3d::geometry::PointCloud>();
+    cloud->points_.reserve(num_points); // Reserve memory for the correct number of points
 
-void SurfaceEstimator::init(double ts){
-    if (generatePlane(ts))
-        init_ = true;
+    for (auto it = start; it != end; ++it) {
+        // Add the transformed point to the cloud
+        cloud->points_.emplace_back(bTl_.transformFrom(Point3(it->second.x, it->second.y, it->second.z)));
+    }
+
+    // Now fit a plane from the cloud
+    auto [plane_model, inliers] = cloud->SegmentPlane(ransac_threshold_, ransac_sample_size_, ransac_iterations_);
+
+    // Check if enough inliers were found
+    if (inliers.size() < ransac_inlier_count_)
+        return false;
+    
+    // Extract distance and surface normal
+    surface_dist_ = abs(plane_model[3]);
+
+    surface_normal_ = Unit3(plane_model.head<3>());
+    if (bTl_.rotation().inverse().rotate(surface_normal_).unitVector().x() < 0)
+        surface_normal_ = Unit3(-surface_normal_.unitVector());
+
+    return true;
 }

@@ -1,60 +1,46 @@
 #pragma once
 
-#include <gtsam/geometry/Pose3.h>
-#include <gtsam/linear/NoiseModel.h>
-
 #include <ros/ros.h>
 
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl/segmentation/sac_segmentation.h>  // For SACSegmentation
-
-#include <yaml-cpp/yaml.h>
-
-#include "icetrack/common.h"
-#include "icetrack/StampedRingBuffer.h"
-#include "icetrack/SensorSystem.h"
-
-#include "icetrack/factors/AltitudeFactor.h"
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/linear/NoiseModel.h>
 #include <gtsam/navigation/AttitudeFactor.h>
+
+#include <open3d/Open3D.h>
+#include <open3d/geometry/PointCloud.h>
+
+#include "icetrack/SensorSystem.h"
+#include "icetrack/StampedRingBuffer.h"
+#include "icetrack/factors/AltitudeFactor.h"
+
 
 class SurfaceEstimator{
 public: 
     SurfaceEstimator();
     SurfaceEstimator(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system);
 
-    void init(double ts);
-    bool isInit();
+    bool estimateSurface(double ts);
 
-    double getAltitude();
-    bool generatePlane(double ts);
+    double getSurfaceDistance();
 
-    void addFrame(sensor_msgs::PointCloud2::ConstPtr msg);
-    boost::shared_ptr<gtsam::NonlinearFactor> getAltitudeFactor(Key key);
-    boost::shared_ptr<gtsam::NonlinearFactor> getAttitudeFactor(Key key);
+    boost::shared_ptr<gtsam::NonlinearFactor> getAltitudeFactor(gtsam::Key key);
+    boost::shared_ptr<gtsam::NonlinearFactor> getAttitudeFactor(gtsam::Key key);
 
 private:
-    Pose3 bTl_;
+    Pose3 bTl_; // Extrinsic matrix (Lidar->Imu)
 
-    std::shared_ptr<StampedRingBuffer<PointXYZI>> point_buffer_;
+    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_; // Lidar point buffer (Incoming points in lidar frame)
 
-    bool init_ = false;
-    double ts_head_ = 0.0; // Track the latest point stamp to assert chronological order on insertion
+    double frame_interval_;         // Frame size used for plane fitting
 
-    // From plane measurements (given in body-frame)
-    double z_ = 0.0;    // Distance from ice sheet
-    Unit3 bZ_;          // Body frame normal vector of ice sheet
-
-    double measurement_interval_;
-    double measurement_sigma_;
-    double min_intensity_;
-    double min_dist_square_, max_dist_square_; // Square range for initial outlier rejection
-    double min_inlier_count_;
+    double surface_dist_;
+    gtsam::Unit3 surface_normal_;
 
     double ransac_threshold_;
-    double ransac_prob_;
-    pcl::SACSegmentation<pcl::PointXYZI> seg_;
+    int ransac_sample_size_;
+    int ransac_inlier_count_;
+    int ransac_iterations_;
 
-    bool segmentPlane(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud);
+    double sigma_altitude_;
+    double sigma_attitude_;
 };

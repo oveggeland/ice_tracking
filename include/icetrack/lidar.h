@@ -9,7 +9,7 @@
 #include "icetrack/common.h"
 #include "icetrack/StampedRingBuffer.h"
 
-struct PointXYZI{
+struct RawLidarPoint{
     float x, y, z, i;
 };
 
@@ -22,7 +22,7 @@ public:
     double getMinDistance() const {return max_dist_;}
     double getMaxDistance() const {return max_dist_;}
 
-    std::shared_ptr<StampedRingBuffer<PointXYZI>> getPointBuffer() const{
+    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> getPointBuffer() const{
         return point_buffer_;
     }
 
@@ -32,7 +32,7 @@ private:
     ros::NodeHandle nh_;
 
     double ts_head_;
-    std::shared_ptr<StampedRingBuffer<PointXYZI>> point_buffer_;
+    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_;
 
     double min_intensity_;
     double min_dist_;

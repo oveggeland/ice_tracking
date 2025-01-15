@@ -84,6 +84,13 @@ public:
         return !(*this == other);
     }
 
+    int distance_to(const StampedRingBufferIterator& other) const {
+        if (other.index_ >= index_) 
+            return other.index_ - index_;
+        else
+            return capacity_ - index_ + other.index_;
+    }
+
 private:
     std::vector<typename StampedRingBuffer<T>::Element>& buffer_;
     size_t capacity_;

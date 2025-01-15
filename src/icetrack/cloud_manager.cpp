@@ -164,6 +164,4 @@ void CloudManager::analyseWindow(){
 void CloudManager::saveCloud(){
     std::stringstream fname;
     fname << std::fixed << static_cast<int64_t>(ts_prev_) << ".ply";
-
-    //pcl::io::savePLYFileBinary<pcl::PointXYZI>(joinPath(cloud_path_, fname.str()), *cloud_.getPclWithin(ts_prev_ - window_size_, ts_prev_));
 };

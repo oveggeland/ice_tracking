@@ -43,10 +43,8 @@ void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    // lidar_->addFrame(msg);
-    
-    // if (!lidar_->isInit())
-    //     lidar_->init(msg->header.stamp.toSec()); // TODO: Look at how lidar is initialized
+    // Woho, new points for the lidar!
+    sensors_->lidar()->addFrame(msg);
     
     diag_.diagEnd();
 }

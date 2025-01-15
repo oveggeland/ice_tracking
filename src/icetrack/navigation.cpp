@@ -51,18 +51,20 @@ void IceNav::imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
 }
 
 void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
+    double ts = msg->header.stamp.toSec();
+
     if (init_){
         auto gnss_factor = gnss_.getCorrectionFactor(msg, X(correction_count_));
         graph_.add(gnss_factor);
 
-        update(msg->header.stamp.toSec());
+        update(ts);
     }
     else{
         gnss_.init(msg);
 
-        // The system is initialized here when sensors are ready
-        if (gnss_.isInit() && imu_.isInit())// && surface_estimator_.isInit())
-            initialize(msg->header.stamp.toSec());
+        // The system is initialized here when sensors are ready (position and velocity from gnss, orientation from IMU and altitude from surface estimator)
+        if (gnss_.isInit() && imu_.isInit() && surface_estimator_.estimateSurface(ts))
+            initialize(ts);
     } 
 }
 
@@ -78,7 +80,7 @@ void IceNav::initialize(double ts){
     // Initial state
     ts_ = ts;
 
-    double prior_z = -17;//surface_estimator_.getAltitude();
+    double prior_z = -surface_estimator_.getSurfaceDistance();
     Point3 prior_pos = (Vector3() << gnss_.getPosition(), prior_z).finished();
     pose_ = Pose3(imu_.getPriorRot(), prior_pos);
 
@@ -99,7 +101,6 @@ void IceNav::initialize(double ts){
     // Lever arm priors
     auto lever_norm_factor = NormConstraintFactor(L(0), lever_norm_threshold_, noiseModel::Isotropic::Sigma(1, lever_norm_sigma_));
     graph_.add(lever_norm_factor);
-
 
     // Add to values
     values_.insert(X(0), pose_);
@@ -128,7 +129,7 @@ void IceNav::update(double ts){
     ROS_INFO_STREAM(correction_count_);
 
     // Let us check if LiDAR measurement is available for the previous time step!
-    if (surface_estimator_.generatePlane(ts_)){
+    if (surface_estimator_.estimateSurface(ts_)){
         graph_.add(surface_estimator_.getAltitudeFactor(X(correction_count_-1)));
         graph_.add(surface_estimator_.getAttitudeFactor(X(correction_count_-1)));
     }
