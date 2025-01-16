@@ -4,7 +4,7 @@ project(icetrack)
 set(CMAKE_CXX_STANDARD 17)
 
 ## Define debug macro if assertions are used ##
-# add_compile_definitions(NDEBUG)
+#add_compile_definitions(NDEBUG)
 
 ## Find catkin macros and libraries ##
 find_package(catkin REQUIRED COMPONENTS
@@ -58,6 +58,7 @@ add_executable(rostopic_node src/rostopic_node.cpp) # Subscribe and track (real-
 target_link_libraries(rosbag_node
   ${catkin_LIBRARIES}
   icetracklib
+  -lprofiler
 )
 target_link_libraries(rostopic_node
   ${catkin_LIBRARIES}

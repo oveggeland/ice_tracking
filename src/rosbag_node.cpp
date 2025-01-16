@@ -6,8 +6,13 @@
 
 #include "icetrack/icetrack.h"
 
+#include <gperftools/profiler.h>
+
 int main(int argc, char **argv)
 {
+
+    ProfilerStart("/home/oskar/icetrack/profiling/rosbag_node.prof");
+
     // Initialize node
     ros::init(argc, argv, "rosbag_icetrack_node");
     ros::NodeHandle nh;
@@ -52,5 +57,6 @@ int main(int argc, char **argv)
         }
     }
     
+    ProfilerStop();
     return 0;
 }
