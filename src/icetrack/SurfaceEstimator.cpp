@@ -36,20 +36,25 @@ bool SurfaceEstimator::estimateSurface(double ts){
     auto end = point_buffer_->iteratorLowerBound(ts + 0.5*frame_interval_);
 
     // Check number of elements in window
-    size_t num_points = start.distance_to(end);
-    if (num_points == 0 || num_points < ransac_inlier_count_)
+    int num_points = start.distance_to(end);
+    if (num_points < ransac_inlier_count_)
         return false;
 
-    // Generate point cloud from buffer
+    // Generate point cloud
     open3d::geometry::PointCloud cloud;
     cloud.points_.reserve(num_points);
 
-    for (auto it = start; it != end; ++it) {
+    for (auto it = start; it != end; ++it){
         cloud.points_.emplace_back(it->second.x, it->second.y, it->second.z);
     }
 
-    // Now fit a plane from the cloud
-    auto [plane_model, inliers] = cloud.SegmentPlane(ransac_threshold_, ransac_sample_size_, ransac_iterations_);
+    // Downsample (in space)
+    auto cloud_downsampled = cloud.VoxelDownSample(1.0);
+    if (cloud_downsampled->points_.size() < ransac_inlier_count_)
+        return false;
+
+    // Fit plane with RANSAC
+    auto [plane_model, inliers] = cloud_downsampled->SegmentPlane(ransac_threshold_, ransac_sample_size_, ransac_iterations_);
 
     // Check if enough inliers were found
     if (inliers.size() < ransac_inlier_count_)

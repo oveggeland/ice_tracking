@@ -47,13 +47,13 @@ lidar/max_dist: 150
 # Surface estimation
 navigation/surface_estimation/ransac_threshold: 0.5
 navigation/surface_estimation/ransac_sample_size: 10
-navigation/surface_estimation/ransac_iterations: 100
-navigation/surface_estimation/ransac_inlier_count: 50
+navigation/surface_estimation/ransac_iterations: 5
+navigation/surface_estimation/ransac_inlier_count: 25
 
-navigation/surface_estimation/frame_interval: 0.2
+navigation/surface_estimation/frame_interval: 0.1
 
 /navigation/surface_estimation/sigma_altitude: 1.0
-/navigation/surface_estimation/sigma_attitude: 0.1
+/navigation/surface_estimation/sigma_attitude: 0.2
 
 # Cloud manager
 cloud/window_size: 10
