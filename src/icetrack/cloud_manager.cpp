@@ -3,6 +3,8 @@
 CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors): 
         nh_(nh), point_buffer_(sensors->lidar()->getPointBuffer())
 {
+    bTl_ = sensors->bTl();
+
     // Get config
     getParamOrThrow(nh_, "/cloud/window_size", window_size_);
     getParamOrThrow(nh_, "/cloud/window_interval", window_interval_);
@@ -27,8 +29,6 @@ CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sen
     f_stats_ = std::ofstream(stats_path_);
     f_stats_ << "ts,count,z_mean,z_var,z_exp_mean,z_exp_var";
     f_stats_ << std::endl << std::fixed;
-
-    distance_ref_ = sensors->lidar()->getMaxDistance();
 }
 
 bool CloudManager::isInit(){
@@ -50,54 +50,54 @@ void CloudManager::initialize(double t0, Pose3 pose0){
     init_ = true;
 }
 
+void CloudManager::newPose(double ts, Pose3 body_pose){
+    // Incoming pose is body, we need lidar pose (because of convention in point_buffer_)
+    Pose3 lidar_pose = body_pose.compose(bTl_);
 
-void CloudManager::newPose(double ts, Pose3 pose){
     if (!isInit()){
-        initialize(ts, pose);
+        initialize(ts, lidar_pose);
         return;
     }
 
     // Normalize XY-coordinates
-    pose = shiftPose(pose);
+    lidar_pose = shiftPose(lidar_pose);
 
-    // Assert time stamp correctness
-    double dt = ts - ts_prev_;
-    assert(dt > 0);
+    // Precompute for efficient interpolation in loop 
+    Vector3 dt_log = traits<Point3>::Logmap(traits<Point3>::Between(pose_prev_.translation(), lidar_pose.translation()));
+    Vector3 dR_log = traits<Rot3>::Logmap(traits<Rot3>::Between(pose_prev_.rotation(), lidar_pose.rotation()));
 
+    double dt_inv = 1.0 / (ts - ts_prev_);
+    assert(dt_inv > 0); 
+
+    // Find bounds for point buffer iteration
     auto start = point_buffer_->iteratorLowerBound(ts_prev_);
     auto end = point_buffer_->iteratorLowerBound(ts);
 
     for (auto it = start; it != end; ++it){
-        double p_ts = it->first;
-
-        // Check time stamp
+        double p_ts = it->ts;
         assert(p_ts >= ts_prev_);
         assert(p_ts < ts);
 
-        // Interpolate pose
-        Pose3 wTb = pose_prev_.interpolateRt(pose, (p_ts - ts_prev_) / dt);
+        // Pose interpolation
+        double alpha = (p_ts - ts_prev_)*dt_inv;
+        Pose3 wTl = Pose3(
+            pose_prev_.rotation().Retract(alpha*dR_log),
+            pose_prev_.translation() + alpha*dt_log
+        );
 
-        // Transform to world coordinates
-        Point3 lPlp = Point3(it->second.x, it->second.y, it->second.z);
-        Point3 wPlp = wTb.rotation().rotate(lPlp);
-        Point3 wPwp = wPlp + wTb.translation();
-
+        // Transform to world frame
+        Point3 wPwp = wTl.transformFrom(Point3(it->x, it->y, it->z));
         if (wPwp.z() < z_lower_bound_ || wPwp.z() > z_upper_bound_)
             continue; // Outlier
 
-        float p_dist = lPlp.norm();
-        float corrected_intensity = it->second.i*(p_dist*p_dist)/(distance_ref_*distance_ref_);
-    
-        cloud_.addElement({
+        
+        // Add to global cloud
+        cloud_.addPoint({
             p_ts,
-            PointDetailed{
-                wPwp.x(),
-                wPwp.y(),
-                wPwp.z(),
-                it->second.i, 
-                corrected_intensity,
-                p_dist
-            }
+            wPwp.x(),
+            wPwp.y(),
+            wPwp.z(),
+            it->i, 
         });
 
         // Adjust moving average
@@ -114,10 +114,10 @@ void CloudManager::newPose(double ts, Pose3 pose){
     }
 
     ts_prev_ = ts;
-    pose_prev_ = pose;
+    pose_prev_ = lidar_pose;
 
-    if (ts_prev_ - ts_analysis_ > window_interval_)
-        analyseWindow();
+    // if (ts_prev_ - ts_analysis_ > window_interval_)
+    //     analyseWindow();
 }
 
 void CloudManager::writeStatistics(){
@@ -142,7 +142,7 @@ void CloudManager::analyseWindow(){
 
 
     for (auto it = start; it != end; ++it){
-        double z = it->second.z;
+        double z = it->z;
         z_sum += z;
         z2_sum += z*z;
 

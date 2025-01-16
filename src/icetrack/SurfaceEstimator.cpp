@@ -45,7 +45,7 @@ bool SurfaceEstimator::estimateSurface(double ts){
     cloud.points_.reserve(num_points);
 
     for (auto it = start; it != end; ++it){
-        cloud.points_.emplace_back(it->second.x, it->second.y, it->second.z);
+        cloud.points_.emplace_back(it->x, it->y, it->z);
     }
 
     // Downsample (in space)

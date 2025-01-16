@@ -11,10 +11,9 @@
 #include "icetrack/StampedRingBuffer.h"
 
 struct PointDetailed{
+    double ts;
     double x, y, z;
     float intensity;
-    float intensity_corrected;
-    float distance;
 };
 
 class CloudManager{
@@ -28,6 +27,8 @@ public:
 
 private:
     ros::NodeHandle nh_;
+
+    Pose3 bTl_;
     
     // Cloud buffers
     std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_; // Incoming points, in LiDAR frame

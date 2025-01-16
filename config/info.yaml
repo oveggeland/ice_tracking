@@ -9,7 +9,7 @@ safe_delay: 0.5 # Wait this period for possible sensor lag
 
 # General
 nav/gravity_norm: 9.831
-nav/fixed_lag: 60 # Lag interval
+nav/fixed_lag: 30 # Lag interval
 
 # Prior covariance
 nav/initial_bias_sigma: 0.1

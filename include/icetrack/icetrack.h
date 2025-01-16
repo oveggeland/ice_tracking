@@ -1,3 +1,8 @@
+/*
+IceTrack is the main entry point of the library. 
+Here, callbacks from different sensors are buffered and processed in chronological order according to their header timestamp.
+*/
+
 #pragma once
 
 #include <sensor_msgs/Imu.h>
@@ -5,7 +10,7 @@
 #include <sensor_msgs/PointCloud2.h>
 
 #include "icetrack/navigation.h"
-#include "icetrack/lidar.h"
+#include "icetrack/cloud_manager.h"
 #include "icetrack/diagnostics.h"
 
 #include "icetrack/SensorSystem.h"
@@ -35,10 +40,8 @@ private:
 
     // Submodules
     std::shared_ptr<SensorSystem> sensors_;
-
     IceNav nav_;
-    // CloudManager cloud_manager_;
-    
+    CloudManager cloud_manager_;
     Diagnostics diag_;
     
     // Safe callback functions

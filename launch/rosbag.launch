@@ -2,8 +2,8 @@
     <!-- Load parameters from YAML -->
     <rosparam file="$(find icetrack)/config/info.yaml" command="load"/>
 
-    <!-- Launch navigation node -->
+    <!-- Launch node -->
     <node 
-        name="rosbag_node" pkg="icetrack" type="rosbag_node" output="screen">
+        name="rosbag_node" pkg="icetrack" type="rosbag_node" output="screen" required="true">
     </node>
 </launch>

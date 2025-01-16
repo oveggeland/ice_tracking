@@ -2,16 +2,11 @@
 
 IceTrack::IceTrack(){}
 
-// Constructor
 IceTrack::IceTrack(ros::NodeHandle nh): nh_(nh){
-    // Common sensors object
     sensors_ = std::make_shared<SensorSystem>(nh_);
 
-    // Navigation object
     nav_ = IceNav(nh_, sensors_);
-
-    // Cloud managing object
-    //cloud_manager_ = CloudManager(nh_, sensors_);
+    cloud_manager_ = CloudManager(nh_, sensors_);
     
     // Diagnostics file and object
     std::string outpath = getParamOrThrow<std::string>(nh_, "/outpath");
@@ -32,10 +27,12 @@ void IceTrack::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
 void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
+    // Update navigation
     nav_.gnssMeasurement(msg);
 
+    // Provide new pose to cloud manager
     if (nav_.isInit())
-        //cloud_manager_.newPose(msg->header.stamp.toSec(), nav_.getPose());
+        cloud_manager_.newPose(msg->header.stamp.toSec(), nav_.getPose());
 
     diag_.diagEnd();
 }
@@ -43,7 +40,7 @@ void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    // Woho, new points for the lidar!
+    // Parse incoming lidar points!
     sensors_->lidar()->addFrame(msg);
     
     diag_.diagEnd();
@@ -84,6 +81,6 @@ void IceTrack::checkCallbackBuffer(){
         it->second(); // Callback 
 
         it = callback_buffer_.erase(it);
-        t_head_ = t_msg; // Maybe this should be done in callback?
+        t_head_ = t_msg; // TODO: Maybe this should be done in callback?
     }
 }
