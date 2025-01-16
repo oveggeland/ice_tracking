@@ -5,8 +5,11 @@ Lidar::Lidar(){}
 Lidar::Lidar(ros::NodeHandle nh): nh_(nh){
     getParamOrThrow(nh_, "/lidar/point_interval", point_interval_);
 
-    getParamOrThrow<double>(nh_, "/lidar/min_dist", min_dist_);
-    getParamOrThrow<double>(nh_, "/lidar/max_dist", max_dist_);
+    double min_dist = getParamOrThrow<double>(nh_, "/lidar/min_dist");
+    min_dist_squared_ = min_dist*min_dist;
+
+    double max_dist = getParamOrThrow<double>(nh_, "/lidar/max_dist");
+    max_dist_squared_ = max_dist*max_dist;
 
     getParamOrThrow(nh_, "/lidar/min_intensity", min_intensity_);
 
@@ -32,18 +35,16 @@ void Lidar::addFrame(sensor_msgs::PointCloud2::ConstPtr msg){
             continue;
 
         // Assert distance range
-        double dist = sqrt(it[0]*it[0] + it[1]*it[1] + it[2]*it[2]);
-        if (dist < min_dist_ || dist > max_dist_)
+        double dist_squared = it[0]*it[0] + it[1]*it[1] + it[2]*it[2];
+        if (dist_squared < min_dist_squared_ || dist_squared > max_dist_squared_)
             continue;
 
-        point_buffer_->addElement({
+        point_buffer_->addPoint({
             ts_point,
-            RawLidarPoint{
-                it[0],
-                it[1],
-                it[2],
-                it[3]
-            }
+            it[0],
+            it[1],
+            it[2],
+            it[3]
         });        
     }
     

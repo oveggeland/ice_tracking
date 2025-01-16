@@ -9,7 +9,8 @@
 #include "icetrack/common.h"
 #include "icetrack/StampedRingBuffer.h"
 
-struct RawLidarPoint{
+struct RawLidarPoint {
+    double ts;
     float x, y, z, i;
 };
 
@@ -19,8 +20,8 @@ public:
     Lidar(ros::NodeHandle nh);
 
     double getPointInterval() const {return point_interval_;}
-    double getMinDistance() const {return max_dist_;}
-    double getMaxDistance() const {return max_dist_;}
+    double getMinDistance() const {return sqrt(min_dist_squared_);}
+    double getMaxDistance() const {return sqrt(max_dist_squared_);}
 
     std::shared_ptr<StampedRingBuffer<RawLidarPoint>> getPointBuffer() const{
         return point_buffer_;
@@ -35,8 +36,8 @@ private:
     std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_;
 
     double min_intensity_;
-    double min_dist_;
-    double max_dist_;
+    double min_dist_squared_;
+    double max_dist_squared_;
 
     double point_interval_;    // Temporal distance between measurements (We use half the interval because of dual return mode)
 };

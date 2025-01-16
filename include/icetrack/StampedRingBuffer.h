@@ -17,41 +17,31 @@ class StampedRingBufferIterator;
 template <typename T>
 class StampedRingBuffer {
 public:
-    using Element = std::pair<double, T>;
-
     // Constructors
     StampedRingBuffer() = default;
     StampedRingBuffer(size_t capacity);
 
+    // Iterators TODO: Make const?
     StampedRingBufferIterator<T> begin();
     StampedRingBufferIterator<T> end();
     StampedRingBufferIterator<T> iteratorLowerBound(double ts);
 
-    void addElement(const Element& new_element);
-
-    const Element* first() const;
-    const Element* last() const;
-
-    void removeElementsBefore(double threshold);
-
-    size_t size() const;
-    size_t capacity() const;
-    bool isFull() const;
-    bool isEmpty() const;
+    void addPoint(const T& point);
 
 private:
     size_t capacity_ = 0;  
     size_t size_ = 0;  
-    int head_ = 0;  
-    std::vector<Element> buffer_;
+    int head_ = 0;
+    std::vector<T> buffer_;
 
     void increment(int& idx) const;
-    void decrement(int& idx) const;
 
+    int idxFirst() const;
+    int idxLast() const;
     int idxAdd(int idx, int offset) const;
     int idxDiff(int idx0, int idx1) const;
+
     int idxLowerBound(double ts) const;
-    int getTail() const;
 };
 
 // Define a custom iterator
@@ -59,12 +49,11 @@ template <typename T>
 class StampedRingBufferIterator {
 public:
     using iterator_category = std::forward_iterator_tag;
-    using value_type = typename StampedRingBuffer<T>::Element;
     using difference_type = ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
+    using pointer = T*;
+    using reference = T&;
 
-    StampedRingBufferIterator(std::vector<typename StampedRingBuffer<T>::Element>& buffer, size_t capacity, int index)
+    StampedRingBufferIterator(std::vector<T>& buffer, size_t capacity, int index)
         : buffer_(buffer), capacity_(capacity), index_(index) {}
 
     reference operator*() { return buffer_[index_]; }
@@ -92,7 +81,7 @@ public:
     }
 
 private:
-    std::vector<typename StampedRingBuffer<T>::Element>& buffer_;
+    std::vector<T>& buffer_;
     size_t capacity_;
     int index_;
 };
