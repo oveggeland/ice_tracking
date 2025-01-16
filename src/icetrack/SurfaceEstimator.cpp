@@ -35,34 +35,33 @@ bool SurfaceEstimator::estimateSurface(double ts){
     auto start = point_buffer_->iteratorLowerBound(ts - 0.5*frame_interval_);
     auto end = point_buffer_->iteratorLowerBound(ts + 0.5*frame_interval_);
 
-    // Check element number
+    // Check number of elements in window
     size_t num_points = start.distance_to(end);
     if (num_points == 0 || num_points < ransac_inlier_count_)
         return false;
 
-
-    // Extract and transform points from the buffer
-    auto cloud = std::make_shared<open3d::geometry::PointCloud>();
-    cloud->points_.reserve(num_points); // Reserve memory for the correct number of points
+    // Generate point cloud from buffer
+    open3d::geometry::PointCloud cloud;
+    cloud.points_.reserve(num_points);
 
     for (auto it = start; it != end; ++it) {
-        // Add the transformed point to the cloud
-        cloud->points_.emplace_back(bTl_.transformFrom(Point3(it->second.x, it->second.y, it->second.z)));
+        cloud.points_.emplace_back(it->second.x, it->second.y, it->second.z);
     }
 
     // Now fit a plane from the cloud
-    auto [plane_model, inliers] = cloud->SegmentPlane(ransac_threshold_, ransac_sample_size_, ransac_iterations_);
+    auto [plane_model, inliers] = cloud.SegmentPlane(ransac_threshold_, ransac_sample_size_, ransac_iterations_);
 
     // Check if enough inliers were found
     if (inliers.size() < ransac_inlier_count_)
         return false;
     
-    // Extract distance and surface normal
-    surface_dist_ = abs(plane_model[3]);
+    // NB: Assuming Lidar is pointing towards the sea, make sure normal vector is pointing downwards.
+    if (plane_model[0] < 0)
+        plane_model = -plane_model;
 
-    surface_normal_ = Unit3(plane_model.head<3>());
-    if (bTl_.rotation().inverse().rotate(surface_normal_).unitVector().x() < 0)
-        surface_normal_ = Unit3(-surface_normal_.unitVector());
+    // Transform plane model from Lidar to IMU frame
+    surface_normal_ = Unit3(bTl_.rotation().rotate(plane_model.head<3>()));
+    surface_dist_ = abs(plane_model[3] - bTl_.translation().dot(surface_normal_.unitVector()));
 
     return true;
 }
