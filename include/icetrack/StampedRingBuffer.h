@@ -22,11 +22,15 @@ public:
     StampedRingBuffer(size_t capacity);
 
     // Iterators TODO: Make const?
-    StampedRingBufferIterator<T> begin();
-    StampedRingBufferIterator<T> end();
-    StampedRingBufferIterator<T> iteratorLowerBound(double ts);
+    const StampedRingBufferIterator<T> begin() const;
+    const StampedRingBufferIterator<T> end() const;
+    const StampedRingBufferIterator<T> iteratorLowerBound(double ts) const;
 
     void addPoint(const T& point);
+
+    int size(){
+        return size_;
+    }
 
 private:
     size_t capacity_ = 0;  
@@ -48,16 +52,11 @@ private:
 template <typename T>
 class StampedRingBufferIterator {
 public:
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type = ptrdiff_t;
-    using pointer = T*;
-    using reference = T&;
-
-    StampedRingBufferIterator(std::vector<T>& buffer, size_t capacity, int index)
+    StampedRingBufferIterator(const std::vector<T>& buffer, const size_t capacity, int index)
         : buffer_(buffer), capacity_(capacity), index_(index) {}
 
-    reference operator*() { return buffer_[index_]; }
-    pointer operator->() { return &buffer_[index_]; }
+    const T& operator*() { return buffer_[index_]; }
+    const T* operator->() { return &buffer_[index_]; }
 
     StampedRingBufferIterator& operator++() {
         if (++index_ >= capacity_)
@@ -81,8 +80,8 @@ public:
     }
 
 private:
-    std::vector<T>& buffer_;
-    size_t capacity_;
+    const std::vector<T>& buffer_;
+    const size_t capacity_;
     int index_;
 };
 

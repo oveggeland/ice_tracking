@@ -6,17 +6,17 @@ StampedRingBuffer<T>::StampedRingBuffer(size_t capacity)
 
 
 template <typename T>
-StampedRingBufferIterator<T> StampedRingBuffer<T>::begin(){
+const StampedRingBufferIterator<T> StampedRingBuffer<T>::begin() const{
     return StampedRingBufferIterator<T>(buffer_, capacity_, idxFirst());
 }
 
 template <typename T>
-StampedRingBufferIterator<T> StampedRingBuffer<T>::end(){
+const StampedRingBufferIterator<T> StampedRingBuffer<T>::end() const{
     return StampedRingBufferIterator<T>(buffer_, capacity_, head_);
 }
 
 template <typename T>
-StampedRingBufferIterator<T> StampedRingBuffer<T>::iteratorLowerBound(double ts){
+const StampedRingBufferIterator<T> StampedRingBuffer<T>::iteratorLowerBound(double ts) const{
     int idx = idxLowerBound(ts);
     return (idx < 0) ? end() : StampedRingBufferIterator<T>(buffer_, capacity_, idx);
 }

@@ -1,4 +1,4 @@
-#include "icetrack/diagnostics.h"
+#include "icetrack/Diagnostics.h"
 
 Diagnostics::Diagnostics(){};
 

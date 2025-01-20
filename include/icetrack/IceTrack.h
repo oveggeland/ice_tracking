@@ -5,17 +5,11 @@ Here, callbacks from different sensors are buffered and processed in chronologic
 
 #pragma once
 
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/NavSatFix.h>
-#include <sensor_msgs/PointCloud2.h>
+#include "icetrack/navigation/PoseEstimator.h"
+#include "icetrack/CloudManager.h"
+#include "icetrack/Diagnostics.h"
 
-#include "icetrack/ShipNavigation.h"
-
-#include "icetrack/navigation.h"
-#include "icetrack/cloud_manager.h"
-#include "icetrack/diagnostics.h"
-
-#include "icetrack/SensorSystem.h"
+#include "icetrack/system/SensorSystem.h"
 #include "icetrack/file_system.h"
 
 class IceTrack{
@@ -29,8 +23,6 @@ public:
 
     void shipCallback(const icetrack::ShipNavigation::ConstPtr& msg);
 private:
-    ros::NodeHandle nh_;
-
     // Time control
     double t_head_ = 0.0;       // Last processed message
     double t_safe_ = 0.0;       // Earliest time allowed for processing a message
@@ -42,8 +34,8 @@ private:
     void checkCallbackBuffer();
 
     // Submodules
-    std::shared_ptr<SensorSystem> sensors_;
-    IceNav nav_;
+    std::shared_ptr<SensorSystem> system_;
+    PoseEstimator pose_estimator_;
     CloudManager cloud_manager_;
     Diagnostics diag_;
     

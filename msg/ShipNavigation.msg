@@ -1,0 +1,9 @@
+Header header
+float32 lat
+float32 lng
+float32 cog
+float32 sog
+float32 roll
+float32 pitch
+float32 heading   
+float32 heave     

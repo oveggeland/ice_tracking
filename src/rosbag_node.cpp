@@ -4,18 +4,27 @@
 
 #include <filesystem>
 
-#include "icetrack/icetrack.h"
+#include "icetrack/IceTrack.h"
 
 #include <gperftools/profiler.h>
 
 int main(int argc, char **argv)
 {
-
     ProfilerStart("/home/oskar/icetrack/profiling/rosbag_node.prof");
 
     // Initialize node
     ros::init(argc, argv, "rosbag_icetrack_node");
     ros::NodeHandle nh;
+
+
+    std::string log_level = getParamOrThrow<std::string>(nh, "/log_level");
+    if (log_level == "DEBUG")
+        ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug);
+    else if (log_level == "INFO")
+        ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
+    
+    ros::console::notifyLoggerLevelsChanged();
+    
 
     // Extract info parameters
     std::string bagpath = getParamOrThrow<std::string>(nh, "/bagpath");
@@ -28,11 +37,10 @@ int main(int argc, char **argv)
     std::sort(files.begin(), files.end());
 
     // Iterate over bagfiles in chronological order
-    std::vector<std::string> topic_types = {"sensor_msgs/Imu", "sensor_msgs/NavSatFix", "sensor_msgs/PointCloud2"};
     for (const std::string& filename : files) {
         ROS_INFO_STREAM("Reading bag: " << filename);
         rosbag::Bag bag(filename);
-        rosbag::View view(bag);//, rosbag::TopicQuery(topic_types));
+        rosbag::View view(bag);
 
         for (rosbag::MessageInstance const m : view) {
             if (m.getDataType() == "sensor_msgs/Imu") {

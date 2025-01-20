@@ -48,7 +48,13 @@ include_directories(
 )
 
 ## Define icetrack library ##
-file(GLOB ICETRACK_SOURCES "src/icetrack/*.cpp")
+file(GLOB ICETRACK_SOURCES 
+  "src/icetrack/*.cpp"
+  "src/icetrack/system/*.cpp"
+  "src/icetrack/navigation/*.cpp"
+  "src/icetrack/*.cpp"
+)
+
 add_library(icetracklib 
   ${ICETRACK_SOURCES}
 )

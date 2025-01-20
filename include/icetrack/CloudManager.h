@@ -2,10 +2,13 @@
 
 #include <ros/ros.h>
 
+#include <open3d/Open3D.h>
+#include <open3d/core/Tensor.h>
+#include <open3d/t/geometry/PointCloud.h>
+
 #include <gtsam/geometry/Pose3.h>
 
-#include "icetrack/SensorSystem.h"
-#include "icetrack/lidar.h"
+#include "icetrack/system/SensorSystem.h"
 #include "icetrack/file_system.h"
 
 #include "icetrack/StampedRingBuffer.h"
@@ -23,15 +26,15 @@ public:
     CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors_);
 
     // Main entry from IceTrack
-    void newPose(double ts, Pose3 T);
+    void newPose(double ts, gtsam::Pose3 T);
 
 private:
     ros::NodeHandle nh_;
 
-    Pose3 bTl_;
+    gtsam::Pose3 bTl_;
     
     // Cloud buffers
-    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_; // Incoming points, in LiDAR frame
+    std::shared_ptr<const StampedRingBuffer<RawLidarPoint>> point_buffer_; // Incoming points, in LiDAR frame
     StampedRingBuffer<PointDetailed> cloud_;     // Templated stamped ringbuffer
 
     // For correction 
@@ -39,17 +42,17 @@ private:
 
     // Keep track of previous pose
     double ts_prev_ = 0.0;
-    Pose3 pose_prev_;
+    gtsam::Pose3 pose_prev_;
 
     // Keep track of offset
     double x0_ = 0.0;
     double y0_ = 0.0;
-    Pose3 shiftPose(Pose3 pose);
+    gtsam::Pose3 shiftPose(gtsam::Pose3 pose);
 
     // Initializing
     bool init_ = false;
     bool isInit();
-    void initialize(double t0, Pose3 pose0);
+    void initialize(double t0, gtsam::Pose3 pose0);
 
     // Bounds
     double z_lower_bound_, z_upper_bound_;

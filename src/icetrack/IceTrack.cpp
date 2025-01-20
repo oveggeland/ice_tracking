@@ -1,25 +1,28 @@
-#include "icetrack/icetrack.h"
+#include "icetrack/IceTrack.h"
 
 IceTrack::IceTrack(){}
 
-IceTrack::IceTrack(ros::NodeHandle nh): nh_(nh){
-    sensors_ = std::make_shared<SensorSystem>(nh_);
+IceTrack::IceTrack(ros::NodeHandle nh){
+    system_ = std::make_shared<SensorSystem>(nh);
 
-    nav_ = IceNav(nh_, sensors_);
-    cloud_manager_ = CloudManager(nh_, sensors_);
+    pose_estimator_ = PoseEstimator(nh, system_);
+    cloud_manager_ = CloudManager(nh, system_);
     
     // Diagnostics file and object
-    std::string outpath = getParamOrThrow<std::string>(nh_, "/outpath");
+    std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
     std::string diag_file = joinPath(outpath, "diag/diag.csv");
     makePath(diag_file);
 
-    diag_ = Diagnostics(joinPath(outpath, "diag/diag.csv"));
+    diag_ = Diagnostics(diag_file);
 }
+
 
 void IceTrack::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    nav_.imuMeasurement(msg);
+    bool valid = system_->imu()->newMessage(msg);
+    if (valid)  
+        pose_estimator_.imuUpdate();
 
     diag_.diagEnd();
 }
@@ -27,12 +30,9 @@ void IceTrack::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
 void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    // Update navigation
-    nav_.gnssMeasurement(msg);
-
-    // Provide new pose to cloud manager
-    if (nav_.isInit())
-        cloud_manager_.newPose(msg->header.stamp.toSec(), nav_.getPose());
+    bool valid = system_->gnss()->newMessage(msg);
+    if (valid)  
+        pose_estimator_.gnssUpdate();
 
     diag_.diagEnd();
 }
@@ -40,9 +40,10 @@ void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    // Parse incoming lidar points!
-    sensors_->lidar()->addFrame(msg);
-    
+    bool valid = system_->lidar()->newMessage(msg);
+    if (valid)  
+        pose_estimator_.lidarUpdate();
+
     diag_.diagEnd();
 }
 
@@ -50,7 +51,7 @@ void IceTrack::shipSafeCallback(const icetrack::ShipNavigation::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
     // Parse incoming lidar points!
-    nav_.shipNavigationMeasurement(msg);
+    // pose_estimator_.shipNavigationMeasurement(msg);
 
     diag_.diagEnd();
 }

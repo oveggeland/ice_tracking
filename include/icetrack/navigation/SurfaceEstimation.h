@@ -9,15 +9,16 @@
 #include <open3d/Open3D.h>
 #include <open3d/geometry/PointCloud.h>
 
-#include "icetrack/SensorSystem.h"
+#include "icetrack/system/SensorSystem.h"
 #include "icetrack/StampedRingBuffer.h"
-#include "icetrack/factors/AltitudeFactor.h"
+#include "icetrack/navigation/factors/AltitudeFactor.h"
 
+using namespace gtsam;
 
-class SurfaceEstimator{
+class SurfaceEstimation{
 public: 
-    SurfaceEstimator();
-    SurfaceEstimator(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system);
+    SurfaceEstimation();
+    SurfaceEstimation(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system);
 
     bool estimateSurface(double ts);
 

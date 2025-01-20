@@ -1,10 +1,10 @@
-#include "icetrack/SurfaceEstimator.h"
+#include "icetrack/navigation/SurfaceEstimation.h"
 
-SurfaceEstimator::SurfaceEstimator(){}
+SurfaceEstimation::SurfaceEstimation(){}
 
-SurfaceEstimator::SurfaceEstimator(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system){
+SurfaceEstimation::SurfaceEstimation(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system){
     bTl_ = system->bTl();
-    point_buffer_ = system->lidar()->getPointBuffer();
+    point_buffer_ = system->lidar()->getConstBufferPointer();
 
     getParamOrThrow(nh, "/navigation/surface_estimation/ransac_threshold", ransac_threshold_);
     getParamOrThrow(nh, "/navigation/surface_estimation/ransac_sample_size", ransac_sample_size_);
@@ -18,27 +18,28 @@ SurfaceEstimator::SurfaceEstimator(ros::NodeHandle nh, std::shared_ptr<SensorSys
 }
 
 
-boost::shared_ptr<gtsam::NonlinearFactor> SurfaceEstimator::getAltitudeFactor(Key key){
+boost::shared_ptr<gtsam::NonlinearFactor> SurfaceEstimation::getAltitudeFactor(Key key){
     return boost::make_shared<AltitudeFactor>(key, -surface_dist_, noiseModel::Isotropic::Sigma(1, sigma_altitude_));
 }
 
-boost::shared_ptr<gtsam::NonlinearFactor> SurfaceEstimator::getAttitudeFactor(Key key){
+boost::shared_ptr<gtsam::NonlinearFactor> SurfaceEstimation::getAttitudeFactor(Key key){
     return boost::make_shared<Pose3AttitudeFactor>(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, sigma_attitude_), surface_normal_);
 }
 
-double SurfaceEstimator::getSurfaceDistance(){
+double SurfaceEstimation::getSurfaceDistance(){
     return surface_dist_;
 }
 
-bool SurfaceEstimator::estimateSurface(double ts){
+bool SurfaceEstimation::estimateSurface(double ts){
     // Find bounds in point buffer
     auto start = point_buffer_->iteratorLowerBound(ts - 0.5*frame_interval_);
     auto end = point_buffer_->iteratorLowerBound(ts + 0.5*frame_interval_);
 
     // Check number of elements in window
     int num_points = start.distance_to(end);
-    if (num_points < ransac_inlier_count_)
+    if (num_points < ransac_inlier_count_){
         return false;
+    }
 
     // Generate point cloud
     open3d::geometry::PointCloud cloud;
@@ -50,15 +51,17 @@ bool SurfaceEstimator::estimateSurface(double ts){
 
     // Downsample (in space)
     auto cloud_downsampled = cloud.VoxelDownSample(1.0);
-    if (cloud_downsampled->points_.size() < ransac_inlier_count_)
+    if (cloud_downsampled->points_.size() < ransac_inlier_count_){
         return false;
+    }
 
     // Fit plane with RANSAC
     auto [plane_model, inliers] = cloud_downsampled->SegmentPlane(ransac_threshold_, ransac_sample_size_, ransac_iterations_);
 
     // Check if enough inliers were found
-    if (inliers.size() < ransac_inlier_count_)
+    if (inliers.size() < ransac_inlier_count_){
         return false;
+    }
     
     // NB: Assuming Lidar is pointing towards the sea, make sure normal vector is pointing downwards.
     if (plane_model[0] < 0)
