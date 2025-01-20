@@ -13,8 +13,8 @@ Gnss::Gnss(ros::NodeHandle nh): nh_(nh){
     projection_ = proj_create_crs_to_crs(proj_context_create(), crs_source_.c_str(), crs_target_.c_str(), NULL);
 }
 
-boost::shared_ptr<gtsam::NonlinearFactor> Gnss::getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key){
-    return boost::make_shared<GNSSFactor>(key, getMeasurement(msg), correction_noise_);
+boost::shared_ptr<gtsam::NonlinearFactor> Gnss::getCorrectionFactor(Point2 xy, Key key){
+    return boost::make_shared<GNSSFactor>(key, xy, correction_noise_);
 }
 
 

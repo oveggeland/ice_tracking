@@ -23,6 +23,8 @@ class Imu{
         CombinedImuFactor finishIntegration(double ts_correction, int correction_count);
         void resetIntegration(double ts, imuBias::ConstantBias bias);
 
+        bool timeOut(); // Check if integration has timed out (no updates for a while)
+
         // Tools
         NavState predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias);
         Rot3 getPriorRot();
@@ -44,6 +46,9 @@ class Imu{
         bool is_init_ = false;
 
         double ts_head_;
+        double ts_tail_; 
+        double timeout_interval_;
+
         Vector3 prev_acc_;
         Vector3 prev_rate_;
 

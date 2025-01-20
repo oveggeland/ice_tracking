@@ -1,7 +1,7 @@
 # System
-bagpath: "/home/oskar/icetrack/data/long3_decompressed/"
+bagpath: "/home/oskar/icetrack/data/optical/"
 ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
-outpath: "/home/oskar/icetrack/output/long3_decompressed/"
+outpath: "/home/oskar/icetrack/output/optical/"
 
 safe_delay: 0.5 # Wait this period for possible sensor lag
 
@@ -9,7 +9,7 @@ safe_delay: 0.5 # Wait this period for possible sensor lag
 
 # General
 nav/gravity_norm: 9.831
-nav/fixed_lag: 30 # Lag interval
+nav/fixed_lag: 60 # Lag interval
 
 # Prior covariance
 nav/initial_bias_sigma: 0.1
@@ -23,13 +23,17 @@ nav/lever_norm_sigma: 1.0e-1
 nav/lever_angle_sigma: 1.0e-2
 nav/lever_altitude_sigma: 1
 
+# Ship
+/nav/ship/use_ship_navigation: false
+
 # GNSS
 nav/gnss_sigma_: 1.0
 nav/gnss_crs_source: "EPSG:4326"
 nav/gnss_crs_target: "EPSG:6052"
+nav/gnss/innovation_norm_limit: 30
 
 # IMU
-nav/imu_max_integration_time: 1.1 # TODO
+nav/imu_timeout_interval: 1.1
 nav/imu_attitude_sigma: 0.1
 
 nav/accel_noise_sigma: 1.0e-3
@@ -56,9 +60,9 @@ navigation/surface_estimation/frame_interval: 0.1
 /navigation/surface_estimation/sigma_attitude: 0.2
 
 # Cloud manager
-cloud/window_size: 10
-cloud/window_interval: 5
-cloud/save_cloud: false
+cloud/window_size: 60
+cloud/window_interval: 60
+cloud/save_cloud: true
 
 cloud/z_lower_bound: -3
 cloud/z_upper_bound: 1

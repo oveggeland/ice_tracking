@@ -25,6 +25,8 @@ IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors): nh_(n
     getParamOrThrow(nh_, "/nav/lever_angle_sigma", lever_angle_sigma_);
     getParamOrThrow(nh_, "/nav/lever_altitude_sigma", lever_altitude_sigma_);
 
+    getParamOrThrow(nh_, "/nav/gnss/innovation_norm_limit", gnss_innovation_norm_limit_);
+
     // Initialize instances 
     graph_ = NonlinearFactorGraph();
     values_ = Values();
@@ -44,6 +46,10 @@ IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors): nh_(n
 void IceNav::imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
     if (init_){
         imu_.integrate(msg);
+        if (imu_.timeOut()){
+            ROS_WARN_STREAM(std::fixed << msg->header.stamp.toSec() << ": IMU timeout");
+            update(msg->header.stamp.toSec());
+        }
     }
     else{
         imu_.init(msg);
@@ -54,10 +60,15 @@ void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
 
     if (init_){
-        auto gnss_factor = gnss_.getCorrectionFactor(msg, X(correction_count_));
-        graph_.add(gnss_factor);
+        Point2 xy = gnss_.getMeasurement(msg);
+        Point2 innovation = xy - pose_.translation().head<2>();
 
-        update(ts);
+        if (innovation.norm() < gnss_innovation_norm_limit_){
+            auto gnss_factor = gnss_.getCorrectionFactor(xy, X(correction_count_));
+            graph_.add(gnss_factor);
+
+            update(ts);
+        }
     }
     else{
         gnss_.init(msg);

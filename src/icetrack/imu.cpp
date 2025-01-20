@@ -29,6 +29,8 @@ Imu::Imu(ros::NodeHandle nh): nh_(nh){
     getParamOrThrow(nh_, "/nav/gyro_bias_rw_sigma", gyro_bias_rw_sigma_);
     getParamOrThrow(nh_, "/nav/imu_attitude_sigma", imu_attitude_sigma_);
 
+    getParamOrThrow(nh_, "/nav/imu_timeout_interval", timeout_interval_);
+
     auto p = getPreintegrationParams();
 
     preintegrated = std::make_shared<PreintegratedCombinedMeasurements>(p);
@@ -37,6 +39,7 @@ Imu::Imu(ros::NodeHandle nh): nh_(nh){
 
 void Imu::resetIntegration(double ts, imuBias::ConstantBias bias){
     ts_head_ = ts;
+    ts_tail_ = ts;
     preintegrated->resetIntegrationAndSetBias(bias);
 }
 
@@ -47,13 +50,24 @@ void Imu::integrate(const sensor_msgs::Imu::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
     double dt = ts - ts_head_;
 
-    assert(dt > 0 && dt < 0.02);
+    assert(dt >= 0 && dt < 0.02);
 
-    prev_acc_ = getAcc(msg);
-    prev_rate_ = getRate(msg);
-    ts_head_ = ts;
+    if (dt > 0){
+        preintegrated->integrateMeasurement(prev_acc_, prev_rate_, dt);
+        prev_acc_ = getAcc(msg);
+        prev_rate_ = getRate(msg);
+        ts_head_ = ts;
+    }
+}
 
-    preintegrated->integrateMeasurement(prev_acc_, prev_rate_, dt);
+
+/**
+ * Check if IMU integration interval is exceeding the predefined timeout interval.
+ * This typically happens when GNSS measurements are not available, at which point 
+ * we should still add new state variables at a reasonable interval.
+ */
+bool Imu::timeOut(){
+    return (ts_head_ - ts_tail_) > timeout_interval_;
 }
 
 /**
@@ -61,9 +75,10 @@ void Imu::integrate(const sensor_msgs::Imu::ConstPtr& msg){
  */
 CombinedImuFactor Imu::finishIntegration(double ts_correction, int correction_count){
     double dt = ts_correction - ts_head_;
-    assert(dt > 0 && dt < 0.02);
+    assert(dt >= 0 && dt < 0.02);
 
-    preintegrated->integrateMeasurement(prev_acc_, prev_rate_, dt);
+    if (dt > 0)
+        preintegrated->integrateMeasurement(prev_acc_, prev_rate_, dt);
     
     auto preint_imu = dynamic_cast<const PreintegratedCombinedMeasurements&>(*preintegrated);
     return CombinedImuFactor(

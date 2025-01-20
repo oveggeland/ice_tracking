@@ -23,7 +23,8 @@ public:
   Point2 getPosition();
   Point2 getVelocity();
 
-  boost::shared_ptr<gtsam::NonlinearFactor> getCorrectionFactor(const sensor_msgs::NavSatFix::ConstPtr& msg, Key key);
+  Point2 getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
+  boost::shared_ptr<gtsam::NonlinearFactor> getCorrectionFactor(Point2 xy, Key key);
 
 private:
   ros::NodeHandle nh_;
@@ -43,7 +44,4 @@ private:
   std::string crs_source_;
   std::string crs_target_;
   PJ* projection_;
-
-  // Private functions
-  Point2 getMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
 };

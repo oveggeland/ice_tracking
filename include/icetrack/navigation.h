@@ -78,6 +78,7 @@ private:
     double lever_angle_sigma_;
     double lever_altitude_sigma_;
 
+    double gnss_innovation_norm_limit_;
 
     // Output
     std::ofstream f_nav_;
