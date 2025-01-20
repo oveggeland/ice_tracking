@@ -9,6 +9,8 @@ Here, callbacks from different sensors are buffered and processed in chronologic
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
 
+#include "icetrack/ShipNavigation.h"
+
 #include "icetrack/navigation.h"
 #include "icetrack/cloud_manager.h"
 #include "icetrack/diagnostics.h"
@@ -25,6 +27,7 @@ public:
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
+    void shipCallback(const icetrack::ShipNavigation::ConstPtr& msg);
 private:
     ros::NodeHandle nh_;
 
@@ -48,4 +51,6 @@ private:
     void imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+
+    void shipSafeCallback(const icetrack::ShipNavigation::ConstPtr& msg);
 };

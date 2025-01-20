@@ -4,6 +4,7 @@
 
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
+#include "icetrack/ShipNavigation.h"
 
 #include "gtsam/nonlinear/LevenbergMarquardtOptimizer.h"
 #include "gtsam/nonlinear/NonlinearFactorGraph.h"
@@ -29,6 +30,8 @@ public:
 
     void imuMeasurement(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg);
+
+    void shipNavigationMeasurement(const icetrack::ShipNavigation::ConstPtr& msg);
 
     bool isInit();
     Pose3 getPose();
@@ -68,6 +71,7 @@ private:
     void initialize(double ts);
     void update(double ts);
     
+    
     double initial_bias_sigma_;
     double initial_velocity_sigma_;
     double initial_position_sigma_;
@@ -79,6 +83,9 @@ private:
     double lever_altitude_sigma_;
 
     double gnss_innovation_norm_limit_;
+
+    // Ship
+    bool use_ship_nav_;
 
     // Output
     std::ofstream f_nav_;

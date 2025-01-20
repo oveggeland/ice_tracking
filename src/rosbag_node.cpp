@@ -50,6 +50,11 @@ int main(int argc, char **argv)
 
                 tracker.pclCallback(msg);
             }
+            else if (m.getTopic() == "/ship/nav") {
+                icetrack::ShipNavigation::ConstPtr msg = m.instantiate<icetrack::ShipNavigation>();
+
+                tracker.shipCallback(msg);
+            }
 
             if (!ros::ok()){
                 break;

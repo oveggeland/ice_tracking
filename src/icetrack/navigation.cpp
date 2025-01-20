@@ -27,6 +27,10 @@ IceNav::IceNav(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors): nh_(n
 
     getParamOrThrow(nh_, "/nav/gnss/innovation_norm_limit", gnss_innovation_norm_limit_);
 
+    
+    getParamOrThrow(nh_, "/nav/ship/use_ship_navigation", use_ship_nav_);
+
+
     // Initialize instances 
     graph_ = NonlinearFactorGraph();
     values_ = Values();
@@ -78,6 +82,17 @@ void IceNav::gnssMeasurement(const sensor_msgs::NavSatFix::ConstPtr& msg){
             initialize(ts);
     } 
 }
+
+/**
+ * This function can be used to provide extra information to the navigation system from the ship. 
+ * Consider this cheating for the stand-alone concept, but for data generation this is gold. 
+ */
+void IceNav::shipNavigationMeasurement(const icetrack::ShipNavigation::ConstPtr& msg){
+    ROS_INFO("SHIP NAC");
+    if (!use_ship_nav_)
+        return;
+}
+
 
 bool IceNav::isInit(){
     return init_;
@@ -131,7 +146,6 @@ void IceNav::initialize(double ts){
     correction_count_ = 1;
     init_ = true;
 }
-
 
 /*
 This is a generic uppdate function, called when a new state variable is added. 

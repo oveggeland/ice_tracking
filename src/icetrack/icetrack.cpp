@@ -46,6 +46,15 @@ void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     diag_.diagEnd();
 }
 
+void IceTrack::shipSafeCallback(const icetrack::ShipNavigation::ConstPtr& msg){
+    diag_.diagStart(msg->header.stamp.toSec());
+
+    // Parse incoming lidar points!
+    nav_.shipNavigationMeasurement(msg);
+
+    diag_.diagEnd();
+}
+
 void IceTrack::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     addCallback(msg->header.stamp.toSec(), std::bind(&IceTrack::imuSafeCallback, this, msg));
 }
@@ -56,6 +65,10 @@ void IceTrack::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 
 void IceTrack::pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     addCallback(msg->header.stamp.toSec(), std::bind(&IceTrack::pclSafeCallback, this, msg));
+}
+
+void IceTrack::shipCallback(const icetrack::ShipNavigation::ConstPtr& msg){
+    addCallback(msg->header.stamp.toSec(), std::bind(&IceTrack::shipSafeCallback, this, msg));
 }
 
 void IceTrack::addCallback(double ts, std::function<void()> cb){

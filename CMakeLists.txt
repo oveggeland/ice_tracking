@@ -7,7 +7,7 @@ set(CMAKE_BUILD_TYPE Release)
 
 
 ## Define debug macro if assertions are used ##
-add_compile_definitions(NDEBUG)
+#add_compile_definitions(NDEBUG)
 
 ## Find catkin macros and libraries ##
 find_package(catkin REQUIRED COMPONENTS
@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   topic_tools
+  message_generation
 )
 
 ## Find packages ##
@@ -25,7 +26,20 @@ find_package(Open3D REQUIRED)
 find_package(PROJ REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
-catkin_package()
+## Message generation ##
+add_message_files(
+  FILES
+  ShipNavigation.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
+catkin_package(
+  CATKIN_DEPENDS message_runtime
+)
 
 ## Include directories ##
 include_directories(
