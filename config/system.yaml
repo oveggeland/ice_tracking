@@ -1,10 +1,12 @@
+# General system
+safe_delay: 0.5 # Wait this period for possible sensor lag
+
 # Imu
 imu/acc_norm_threshold: 20 # Upper acceptance threshold for acceleration (m/s^2) 
 imu/rate_norm_threshold: 0.3 # Upper acceptance threshold for angular velocity (rad/s)
 
 # Gnss
-gnss/vel_norm_threshold: 8 # Upper acceptance threshold for planar velocity between two measurements (m/s) 
-gnss/altitude_rate_threshold: 1 # Threshold for altitude change rate between consequtive measurements (m/s)
+gnss/write_to_file: true
 
 # Lidar
 lidar/buffer_period: 2.0
@@ -16,4 +18,3 @@ lidar/max_dist: 150
 # Ship
 ship/alignment_rotation: [0.3, -29.56, 88.85]           # Angular part of ship->system allignment matrix (Euler angles in degrees)
 ship/alignment_translation: [1.42, 13.36, -16.75]      # Translational part of ship->system allignment matrix (Meters)
-

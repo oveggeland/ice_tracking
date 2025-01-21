@@ -20,9 +20,6 @@ CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sen
     cloud_path_ = joinPath(out_path, "clouds/");
     makePath(cloud_path_, true);
 
-    elev_path_ = joinPath(out_path, "elev/");
-    makePath(elev_path_, true);
-
     stats_path_ = joinPath(out_path, "stats/stats.csv");
     makePath(stats_path_);
 

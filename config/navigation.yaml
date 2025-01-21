@@ -1,7 +1,7 @@
 
 # General
 gravity_norm: 9.831
-fixed_lag: 60
+fixed_lag: 120
 
 use_ship_estimate: false
 crs_source: "EPSG:4326"
@@ -12,14 +12,15 @@ initial_bias_sigma: 0.1
 initial_velocity_sigma: 1
 initial_position_sigma: 2
 
-# Lever arm stuff  
+# Lever arm stuff   
 lever_norm_threshold: 25
-lever_norm_sigma: 1.0e-1
+lever_norm_sigma: 0.1
 lever_altitude_sigma: 1
 
 # GNSS
-gnss/sigma: 1.0
-gnss/gate_threshold: 50.0
+gnss/timeout_interval: 5.0
+gnss/suspension_interval: 10.0
+gnss/sigma_xy: 2.0
 
 # IMU
 imu_timeout_interval: 1.1

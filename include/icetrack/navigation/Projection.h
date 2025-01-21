@@ -5,7 +5,7 @@
 #include <proj.h>
 #include <gtsam/geometry/Point2.h>
 
-#include "icetrack/common.h"
+#include "icetrack/utils/utils.h"
 
 class Projection{
 public:

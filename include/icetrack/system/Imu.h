@@ -5,7 +5,7 @@
 
 #include <gtsam/base/Vector.h>
 
-#include "icetrack/common.h"
+#include "icetrack/utils/utils.h"
 
 gtsam::Vector3 getAcc(const sensor_msgs::Imu::ConstPtr& msg);
 gtsam::Vector3 getRate(const sensor_msgs::Imu::ConstPtr& msg);

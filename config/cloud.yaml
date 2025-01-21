@@ -1,0 +1,7 @@
+# Cloud manager
+window_size: 60
+window_interval: 60
+save_cloud: true
+
+z_lower_bound: -3
+z_upper_bound: 1

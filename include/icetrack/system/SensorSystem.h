@@ -8,7 +8,7 @@
 #include "icetrack/system/Lidar.h"
 #include "icetrack/system/Ship.h"
 
-#include "icetrack/common.h"
+#include "icetrack/utils/utils.h"
 
 // Master class
 class SensorSystem {

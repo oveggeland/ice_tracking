@@ -18,7 +18,7 @@
 #include "icetrack/navigation/factors/NormConstraintFactor.h"
 #include "icetrack/navigation/factors/LeveredAltitudeFactor.h"
 
-#include "icetrack/file_system.h"
+#include "icetrack/utils/utils.h"
 
 using namespace gtsam;
 

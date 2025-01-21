@@ -6,10 +6,11 @@ GnssCorrection::GnssCorrection(ros::NodeHandle nh, std::shared_ptr<SensorSystem>
     gnss_ = system->gnss();
 
     // Get config
-    double sigma = getParamOrThrow<double>(nh, "/navigation/gnss/sigma");
-    correction_noise_ = noiseModel::Isotropic::Sigma(2, sigma);
+    getParamOrThrow(nh, "/navigation/gnss/timeout_interval", timeout_interval_);
+    getParamOrThrow(nh, "/navigation/gnss/suspension_interval", suspension_interval_);
 
-    getParamOrThrow<double>(nh, "/navigation/gnss/gate_threshold", gate_threshold_);
+    double sigma = getParamOrThrow<double>(nh, "/navigation/gnss/sigma_xy");
+    correction_noise_ = noiseModel::Isotropic::Sigma(2, sigma);
 }
 
 bool GnssCorrection::initialize(){
@@ -27,20 +28,24 @@ bool GnssCorrection::initialize(){
     return ret;
 }
 
-void GnssCorrection::update(){
+bool GnssCorrection::update(){
     const GnssMeasurement& meas = gnss_->getMeasurement();
 
+    bool ret = false;
+    if (meas.ts - ts_head_ > timeout_interval_){  // Timeout, start suspension period
+        ROS_WARN("GnssCorrection: Timeout detected");
+        t0_suspend_ = meas.ts;
+    }
+    else if (meas.ts - t0_suspend_ > suspension_interval_){ // Suspension finished
+        ret = true;
+    }
+    else{
+        ROS_WARN("GnssCorrection: Waiting for suspension to finish");
+    }
+    
     ts_head_ = meas.ts;
     xy_ = meas.xy;
-}
-
-bool GnssCorrection::gate(Point2 xy_est){
-    return true;
-    // if ((xy_ - xy_est).norm() > gate_threshold_){
-    //     ROS_WARN("GnssCorrection: Measurement gate failed...");
-    //     return false;
-    // }
-    // return true;
+    return ret;
 }
 
 GNSSFactor GnssCorrection::getCorrectionFactor(Key key) const{

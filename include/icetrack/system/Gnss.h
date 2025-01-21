@@ -5,7 +5,7 @@
 
 #include <gtsam/base/Vector.h>
 
-#include "icetrack/common.h"
+#include "icetrack/utils/utils.h"
 #include "icetrack/navigation/Projection.h"
 
 struct GnssMeasurement{
@@ -27,6 +27,6 @@ private:
 
   Projection proj_;
 
-  double vel_norm_threshold_;
-  double altitude_rate_threshold_;
+  bool write_to_file_;
+  std::ofstream f_out_;
 };

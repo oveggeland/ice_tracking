@@ -4,7 +4,7 @@
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/AttitudeFactor.h>
 
-#include "icetrack/common.h"
+#include "icetrack/utils/utils.h"
 #include "icetrack/navigation/navigation.h"
 #include "icetrack/system/SensorSystem.h"
 

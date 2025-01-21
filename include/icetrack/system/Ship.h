@@ -3,7 +3,7 @@
 #include "ros/ros.h"
 #include "gtsam/geometry/Pose3.h"
 
-#include "icetrack/common.h"
+#include "icetrack/utils/utils.h"
 #include "icetrack/ShipNavigation.h"
 
 class Ship{

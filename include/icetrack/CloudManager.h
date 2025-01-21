@@ -9,9 +9,9 @@
 #include <gtsam/geometry/Pose3.h>
 
 #include "icetrack/system/SensorSystem.h"
-#include "icetrack/file_system.h"
+#include "icetrack/utils/utils.h"
 
-#include "icetrack/StampedRingBuffer.h"
+#include "icetrack/utils/StampedRingBuffer.h"
 
 struct PointDetailed{
     double ts;

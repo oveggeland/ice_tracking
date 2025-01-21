@@ -70,13 +70,36 @@ def plot_navigation(nav_data, save_path=""):
         plt.savefig(save_path)
 
 
+def gnss_vs_estimate(nav, gnss):
+    plt.figure("GNSS evaluation")
+
+    # Define the timestamp interval
+    t0, t1 = 1.72607e9-200, 1.72607e9+200
+    
+    # Filter the DataFrames based on the timestamp interval
+    gnss_filtered = gnss[(gnss["ts"] >= t0) & (gnss["ts"] <= t1)]
+    nav_filtered = nav[(nav["ts"] >= t0) & (nav["ts"] <= t1)]
+    
+    cmap = plt.scatter(gnss_filtered["y"], gnss_filtered["x"], c=gnss_filtered["ts"], cmap='viridis')
+    plt.scatter(nav_filtered["y"], nav_filtered["x"], c=nav_filtered["ts"], cmap='viridis', marker='x')
+    
+    plt.xlabel('East [m]')
+    plt.ylabel('North [m]')
+    plt.colorbar(cmap, label='Time [s]')
+
     
 if __name__ == "__main__":
     rospy.init_node("nav_analysis_node")
     outpath = rospy.get_param('outpath')
     
     nav_path = os.path.join(outpath, "nav")
-    nav_data = nav_data = pd.read_csv(os.path.join(nav_path, "nav.csv"))
+    nav_data = pd.read_csv(os.path.join(nav_path, "ins.csv"))
+    
+    gnss_path = os.path.join(outpath, "navigation", "sensors", "gnss.csv")
+    gnss_data = pd.read_csv(gnss_path)
+    
+    gnss_vs_estimate(nav_data, gnss_data)
+
     
     plot_navigation(nav_data, os.path.join(nav_path, "nav.pdf"))
     

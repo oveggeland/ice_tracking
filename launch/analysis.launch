@@ -1,6 +1,6 @@
 <launch>
     <!-- Load parameters from YAML -->
-    <rosparam file="$(find icetrack)/config/info.yaml" command="load"/>
+    <rosparam file="$(find icetrack)/config/general.yaml" command="load"/>
 
     <!-- Launch analysis scripts -->
     <node 

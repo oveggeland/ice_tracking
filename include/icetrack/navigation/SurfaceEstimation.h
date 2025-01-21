@@ -10,7 +10,7 @@
 #include <open3d/geometry/PointCloud.h>
 
 #include "icetrack/system/SensorSystem.h"
-#include "icetrack/StampedRingBuffer.h"
+#include "icetrack/utils/StampedRingBuffer.h"
 #include "icetrack/navigation/factors/AltitudeFactor.h"
 
 using namespace gtsam;

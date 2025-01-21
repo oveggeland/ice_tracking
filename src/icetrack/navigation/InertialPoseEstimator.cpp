@@ -26,8 +26,8 @@ InertialPoseEstimator::InertialPoseEstimator(ros::NodeHandle nh, std::shared_ptr
     getParamOrThrow(nh, "/navigation/lever_altitude_sigma", lever_altitude_sigma_);
 
     // Outstream
-    std::string out_path = getParamOrThrow<std::string>(nh, "/outpath");
-    std::string nav_path = joinPath(out_path, "nav/nav.csv");
+    fs::path outpath = getParamOrThrow<std::string>(nh, "/outpath");
+    std::string nav_path = outpath / "navigation" / "ins.csv";
     makePath(nav_path);
 
     f_nav_ = std::ofstream(nav_path);
@@ -53,9 +53,9 @@ bool InertialPoseEstimator::imuUpdate(){
 
 bool InertialPoseEstimator::gnssUpdate(){
     if (init_){
-        gnss_correction_.update();
+        bool fix = gnss_correction_.update();
 
-        if (gnss_correction_.gate(pose_.translation().head<2>())){
+        if (fix){
             auto gnss_factor = gnss_correction_.getCorrectionFactor(X(correction_count_));
             graph_.add(gnss_factor);
 

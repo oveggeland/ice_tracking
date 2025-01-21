@@ -1,0 +1,7 @@
+# System
+bagpath: "/home/oskar/icetrack/data/optical/"
+outpath: "/home/oskar/icetrack/output/optical/"
+
+ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
+
+log_level: "INFO"

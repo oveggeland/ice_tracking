@@ -8,7 +8,7 @@
 #include "icetrack/ShipNavigation.h"
 #include "icetrack/navigation/Projection.h"
 #include "icetrack/system/SensorSystem.h"
-#include "icetrack/common.h"
+#include "icetrack/utils/utils.h"
 
 using namespace gtsam;
 
