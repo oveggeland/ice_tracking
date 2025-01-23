@@ -22,6 +22,7 @@ struct PointDetailed{
 class CloudManager{
 public:
     CloudManager(ros::NodeHandle nh, const SensorSystem& sensors_);
+    ~CloudManager();
 
     // Main entry from IceTrack
     void newPose(double t1, gtsam::Pose3 imu_pose);
@@ -32,7 +33,10 @@ private:
     
     // Cloud buffers
     const StampedRingBuffer<RawLidarPoint>& point_buffer_; // Incoming points, in LiDAR frame
-    StampedRingBuffer<PointDetailed> cloud_;     // Templated stamped ringbuffer
+    
+    // New way of tracking points
+    std::vector<double> positions_;
+    std::vector<float> intensities_;
 
     // Keep track of previous pose
     double t0_ = 0.0;
@@ -54,10 +58,8 @@ private:
     // Cloud management and processing
     double t0_window_;
     double window_size_;
-    double window_interval_;
 
     void analyseWindow();
-    std::shared_ptr<open3d::t::geometry::PointCloud> generateWindowCloud();
 
     // Stats
     int count_;
@@ -74,7 +76,7 @@ private:
    
     // Saving
     bool save_cloud_;
-    void saveCloud(std::shared_ptr<open3d::t::geometry::PointCloud> pcd);
+    void saveCloud(const open3d::t::geometry::PointCloud& pcd);
 
     // Paths
     std::string cloud_path_;
