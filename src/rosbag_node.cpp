@@ -16,16 +16,6 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "rosbag_icetrack_node");
     ros::NodeHandle nh;
 
-
-    std::string log_level = getParamOrThrow<std::string>(nh, "/log_level");
-    if (log_level == "DEBUG")
-        ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug);
-    else if (log_level == "INFO")
-        ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
-    
-    ros::console::notifyLoggerLevelsChanged();
-    
-
     // Extract info parameters
     std::string bagpath = getParamOrThrow<std::string>(nh, "/bagpath");
 
@@ -58,12 +48,7 @@ int main(int argc, char **argv)
 
                 tracker.pclCallback(msg);
             }
-            else if (m.getTopic() == "/ship/nav") {
-                icetrack::ShipNavigation::ConstPtr msg = m.instantiate<icetrack::ShipNavigation>();
-
-                tracker.shipCallback(msg);
-            }
-
+            
             if (!ros::ok()){
                 break;
             }

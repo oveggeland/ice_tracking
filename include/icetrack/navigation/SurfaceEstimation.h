@@ -17,8 +17,7 @@ using namespace gtsam;
 
 class SurfaceEstimation{
 public: 
-    SurfaceEstimation();
-    SurfaceEstimation(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system);
+    SurfaceEstimation(ros::NodeHandle nh, const SensorSystem& sensors);
 
     bool estimateSurface(double ts);
 
@@ -29,8 +28,7 @@ public:
 
 private:
     Pose3 bTl_; // Extrinsic matrix (Lidar->Imu)
-
-    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_; // Lidar point buffer (Incoming points in lidar frame)
+    const StampedRingBuffer<RawLidarPoint>& point_buffer_;
 
     double frame_interval_;         // Frame size used for plane fitting
 

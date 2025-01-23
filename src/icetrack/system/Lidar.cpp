@@ -1,9 +1,8 @@
 #include "icetrack/system/Lidar.h"
 
-Lidar::Lidar(){}
-
 Lidar::Lidar(ros::NodeHandle nh){
     getParamOrThrow(nh, "/system/lidar/point_interval", point_interval_);
+    point_buffer_ = StampedRingBuffer<RawLidarPoint>(5.0 / point_interval_); // Keep track of at least 5 seconds worth of points
 
     double min_dist = getParamOrThrow<double>(nh, "/system/lidar/min_dist");
     min_dist_squared_ = min_dist*min_dist;
@@ -12,25 +11,6 @@ Lidar::Lidar(ros::NodeHandle nh){
     max_dist_squared_ = max_dist*max_dist;
 
     getParamOrThrow(nh, "/system/lidar/min_intensity", min_intensity_);
-
-    point_buffer_ = std::make_shared<StampedRingBuffer<RawLidarPoint>>(5.0 / point_interval_); // Keep track of at least 5 seconds worth of points
-}
-
-
-double Lidar::getPointInterval() const {
-    return point_interval_;
-}
-
-double Lidar::getMinDistance() const {
-    return sqrt(min_dist_squared_);
-}
-
-double Lidar::getMaxDistance() const {
-    return sqrt(max_dist_squared_);
-}
-
-std::shared_ptr<StampedRingBuffer<RawLidarPoint>> Lidar::getConstBufferPointer() const{
-    return point_buffer_;
 }
 
 
@@ -53,7 +33,7 @@ bool Lidar::newMessage(sensor_msgs::PointCloud2::ConstPtr msg){
             continue;
 
         // Point accepted
-        point_buffer_->addPoint({
+        point_buffer_.addPoint({
             ts_point,
             it[0],
             it[1],

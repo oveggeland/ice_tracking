@@ -6,40 +6,41 @@
 #include "icetrack/system/Imu.h"
 #include "icetrack/system/Gnss.h"
 #include "icetrack/system/Lidar.h"
-#include "icetrack/system/Ship.h"
 
 #include "icetrack/utils/utils.h"
 
-// Master class
+// Master class for sensor rig
 class SensorSystem {
 public:
-    SensorSystem();
     SensorSystem(ros::NodeHandle nh);
 
-    std::shared_ptr<Imu> imu() const; 
-    std::shared_ptr<Gnss> gnss() const; 
-    std::shared_ptr<Lidar> lidar() const; 
-    std::shared_ptr<Ship> ship() const;
+    // Non-const accessors
+    Imu& imu() { return imu_; }
+    Gnss& gnss() { return gnss_; }
+    Lidar& lidar() { return lidar_; }
 
-    // Functions to get extrinsics
-    gtsam::Pose3 bTc() const;
-    gtsam::Pose3 bTl() const;
-    gtsam::Pose3 cTb() const;
-    gtsam::Pose3 cTl() const;
-    gtsam::Pose3 lTb() const;
-    gtsam::Pose3 lTc() const;
+    // Const accessors
+    const Imu& imu() const { return imu_; }
+    const Gnss& gnss() const { return gnss_; }
+    const Lidar& lidar() const { return lidar_; }
+
+    // Extrinsic accessors
+    gtsam::Pose3 bTc() const { return cTb_.inverse(); }
+    gtsam::Pose3 bTl() const { return cTb_.inverse().compose(lTc_.inverse()); }
+    gtsam::Pose3 cTb() const { return cTb_; }
+    gtsam::Pose3 cTl() const { return lTc_.inverse(); }
+    gtsam::Pose3 lTb() const { return lTc_.compose(cTb_); }
+    gtsam::Pose3 lTc() const { return lTc_; }
 
 private:
     // Private members for sensors
-    std::shared_ptr<Imu> imu_;
-    std::shared_ptr<Gnss> gnss_;
-    std::shared_ptr<Lidar> lidar_;
-    std::shared_ptr<Ship> ship_;
-    
+    Imu imu_;
+    Gnss gnss_;
+    Lidar lidar_;
+
     // Calibration
     gtsam::Pose3 cTb_;
     gtsam::Pose3 lTc_;
 
-    // Read calibration
     void readExtrinsics(const std::string& filename);
 };

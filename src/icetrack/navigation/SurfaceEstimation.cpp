@@ -1,10 +1,7 @@
 #include "icetrack/navigation/SurfaceEstimation.h"
 
-SurfaceEstimation::SurfaceEstimation(){}
-
-SurfaceEstimation::SurfaceEstimation(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system){
-    bTl_ = system->bTl();
-    point_buffer_ = system->lidar()->getConstBufferPointer();
+SurfaceEstimation::SurfaceEstimation(ros::NodeHandle nh, const SensorSystem& sensors)
+    : bTl_(sensors.bTl()), point_buffer_(sensors.lidar().pointBuffer()) {
 
     getParamOrThrow(nh, "/navigation/surface_estimation/ransac_threshold", ransac_threshold_);
     getParamOrThrow(nh, "/navigation/surface_estimation/ransac_sample_size", ransac_sample_size_);
@@ -32,8 +29,8 @@ double SurfaceEstimation::getSurfaceDistance(){
 
 bool SurfaceEstimation::estimateSurface(double ts){
     // Find bounds in point buffer
-    auto start = point_buffer_->iteratorLowerBound(ts - 0.5*frame_interval_);
-    auto end = point_buffer_->iteratorLowerBound(ts + 0.5*frame_interval_);
+    auto start = point_buffer_.iteratorLowerBound(ts - 0.5*frame_interval_);
+    auto end = point_buffer_.iteratorLowerBound(ts + 0.5*frame_interval_);
 
     // Check number of elements in window
     int num_points = start.distance_to(end);

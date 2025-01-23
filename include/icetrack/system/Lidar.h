@@ -14,20 +14,18 @@ struct RawLidarPoint {
 
 class Lidar{
 public: 
-    Lidar();
     Lidar(ros::NodeHandle nh);
-
-    double getPointInterval() const;
-    double getMinDistance() const;
-    double getMaxDistance() const;
-
-    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> getConstBufferPointer() const;
 
     bool newMessage(sensor_msgs::PointCloud2::ConstPtr msg);
 
+    double getPointInterval() const { return point_interval_; }
+    double getMinDistance() const { return sqrt(min_dist_squared_); }
+    double getMaxDistance() const { return sqrt(max_dist_squared_); }
+    const StampedRingBuffer<RawLidarPoint>& pointBuffer() const { return point_buffer_; }
+
 private:
     double ts_head_ = 0.0;
-    std::shared_ptr<StampedRingBuffer<RawLidarPoint>> point_buffer_;
+    StampedRingBuffer<RawLidarPoint> point_buffer_;
 
     double min_intensity_;
     double min_dist_squared_;

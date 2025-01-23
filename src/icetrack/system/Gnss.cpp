@@ -13,7 +13,7 @@ Gnss::Gnss(ros::NodeHandle nh){
         // Generate file path and make directories
         fs::path outpath = getParamOrThrow<std::string>(nh, "/outpath");
         fs::path fname = outpath / "navigation" / "sensors" / "gnss.csv";
-        makePath(fname, true);
+        makePath(fname);
 
         f_out_ = std::ofstream(fname);
         f_out_ << "ts,latitude,longitude,altitude,x,y" << std::endl;
@@ -21,25 +21,27 @@ Gnss::Gnss(ros::NodeHandle nh){
     }
 }
 
-
-bool Gnss::newMessage(const sensor_msgs::NavSatFix::ConstPtr& msg){
-    double ts = msg->header.stamp.toSec();
-    gtsam::Vector2 xy = proj_.project(msg->latitude, msg->longitude);
+/**
+ * Parse incoming NavSatFix message and save the data.
+ */
+void Gnss::newMessage(const sensor_msgs::NavSatFix::ConstPtr& msg){
+    ts_ = msg->header.stamp.toSec();
+    xy_ = proj_.project(msg->latitude, msg->longitude);
 
     if (write_to_file_){
-        f_out_ << ts;
+        f_out_ << ts_;
         f_out_ << "," << msg->latitude << "," << msg->longitude << "," << msg->altitude;
-        f_out_ << "," << xy.x() << "," << xy.y();
+        f_out_ << "," << xy_.x() << "," << xy_.y();
         f_out_ << std::endl;
     }
-
-    meas_ = GnssMeasurement{
-        ts,
-        xy,
-    };
-    return true;
 }
 
-const GnssMeasurement& Gnss::getMeasurement() const{
-    return meas_;
-}
+
+const double& Gnss::getTimeStamp() const{
+    return ts_;
+};
+
+
+const gtsam::Point2& Gnss::getPosition() const{
+    return xy_;
+};

@@ -3,27 +3,24 @@
 #include "ros/ros.h"
 #include <sensor_msgs/NavSatFix.h>
 
-#include <gtsam/base/Vector.h>
+#include <gtsam/geometry/Point2.h>
 
-#include "icetrack/utils/utils.h"
+#include "icetrack/utils/file.h"
 #include "icetrack/navigation/Projection.h"
-
-struct GnssMeasurement{
-  double ts=0.0;
-  gtsam::Vector2 xy;
-  double altitude;
-};
 
 class Gnss{
 public:
   Gnss();
   Gnss(ros::NodeHandle nh);
 
-  bool newMessage(const sensor_msgs::NavSatFix::ConstPtr& msg);
-  const GnssMeasurement& getMeasurement() const;
+  void newMessage(const sensor_msgs::NavSatFix::ConstPtr& msg);
+
+  const double& getTimeStamp() const;
+  const gtsam::Point2& getPosition() const;
 
 private:
-  GnssMeasurement meas_;
+  double ts_;
+  gtsam::Point2 xy_;
 
   Projection proj_;
 

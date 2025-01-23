@@ -12,19 +12,17 @@
 class ImuIntegration{
     public:
         // Constructors
-        ImuIntegration();
-        ImuIntegration(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system);
+        ImuIntegration(ros::NodeHandle nh, const Imu& imu_);
 
         // Interface
         void initialize();
-        bool isInit() const;
-
         void integrate();
         void resetIntegration(double ts, imuBias::ConstantBias bias);
         NavState predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias) const;
 
-        bool timeOut() const;
-        double getHead() const;
+        bool isInit() const { return init_; }
+        bool timeOut() const { return (ts_head_ - ts_tail_) > timeout_interval_; };
+        double getHead() const { return ts_head_; }
         Rot3 estimateAttitude() const;
         
         CombinedImuFactor getIntegrationFactor(double ts_correction, int correction_count);
@@ -32,14 +30,14 @@ class ImuIntegration{
 
     private:
         // Imu class
-        std::shared_ptr<const Imu> imu_;
+        const Imu& imu_;
 
         // Preintegration class
         std::shared_ptr<PreintegrationType> preintegration_;
         boost::shared_ptr<PreintegrationCombinedParams> getPreintegrationParams() const;
 
         // Control
-        bool is_init_ = false;
+        bool init_ = false;
 
         double ts_head_;
         double ts_tail_; 

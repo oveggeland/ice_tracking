@@ -14,14 +14,12 @@ Here, callbacks from different sensors are buffered and processed in chronologic
 
 class IceTrack{
 public:
-    IceTrack();
     IceTrack(ros::NodeHandle nh);
 
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    void shipCallback(const icetrack::ShipNavigation::ConstPtr& msg);
 private:
     // Time control
     double t_head_ = 0.0;       // Last processed message
@@ -34,15 +32,16 @@ private:
     void checkCallbackBuffer();
 
     // Submodules
-    std::shared_ptr<SensorSystem> system_;
+    SensorSystem sensors_;
     PoseEstimator pose_estimator_;
     CloudManager cloud_manager_;
     Diagnostics diag_;
     
+    // Called regularly to update cloud manager
+    void updateCloud();
+
     // Safe callback functions
     void imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-
-    void shipSafeCallback(const icetrack::ShipNavigation::ConstPtr& msg);
 };

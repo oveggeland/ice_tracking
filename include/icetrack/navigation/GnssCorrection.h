@@ -13,8 +13,7 @@
 
 class GnssCorrection{
 public:
-    GnssCorrection();
-    GnssCorrection(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system);
+    GnssCorrection(ros::NodeHandle nh, const Gnss& gnss);
 
     bool initialize();    
 
@@ -27,10 +26,10 @@ public:
     GNSSFactor getCorrectionFactor(Key key) const;
 
 private:
-    std::shared_ptr<const Gnss> gnss_; // Gnss object
+    const Gnss& gnss_;
 
     // State
-    double ts_head_ = 0.0;
+    double ts_ = 0.0;
     Point2 xy_ = Point2::Zero();
     Point2 v_xy_ = Point2::Zero();
 

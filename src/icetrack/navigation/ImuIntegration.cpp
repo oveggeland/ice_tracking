@@ -1,12 +1,6 @@
 #include "icetrack/navigation/ImuIntegration.h"
 
-
-ImuIntegration::ImuIntegration(){}
-
-ImuIntegration::ImuIntegration(ros::NodeHandle nh, std::shared_ptr<SensorSystem> system){
-    // Imu interface
-    imu_ = system->imu();
-
+ImuIntegration::ImuIntegration(ros::NodeHandle nh, const Imu& imu) : imu_(imu) {
     // Get config
     getParamOrThrow(nh, "/navigation/gravity_norm", gravity_norm_);
     getParamOrThrow(nh, "/navigation/imu_timeout_interval", timeout_interval_);
@@ -27,28 +21,21 @@ ImuIntegration::ImuIntegration(ros::NodeHandle nh, std::shared_ptr<SensorSystem>
 
 
 void ImuIntegration::initialize(){
-    const ImuMeasurement& meas = imu_->getMeasurement();
-
-    prev_acc_ = meas.acc;
-    prev_rate_ = meas.rate;
-    is_init_ = true;
+    prev_acc_ = imu_.getAcc();
+    prev_rate_ = imu_.getRate();
+    init_ = true;
 }
-
-bool ImuIntegration::isInit() const{
-    return is_init_;
-}
-
 
 void ImuIntegration::integrate(){
-    const ImuMeasurement& meas = imu_->getMeasurement();
+    double ts = imu_.getTimeStamp();
 
-    double dt = meas.ts - ts_head_;
+    double dt = ts - ts_head_;
     assert(dt >= 0 && dt < 0.02);
 
     if (dt > 0){
-        ts_head_ = meas.ts;
-        prev_acc_ = meas.acc;
-        prev_rate_ = meas.rate;
+        ts_head_ = ts;
+        prev_acc_ = imu_.getAcc();
+        prev_rate_ = imu_.getRate();
     
         preintegration_->integrateMeasurement(prev_acc_, prev_rate_, dt);
     }
@@ -58,15 +45,6 @@ void ImuIntegration::resetIntegration(double ts, imuBias::ConstantBias bias){
     ts_head_ = ts;
     ts_tail_ = ts;
     preintegration_->resetIntegrationAndSetBias(bias);
-}
-
-
-bool ImuIntegration::timeOut() const{
-    return (ts_head_ - ts_tail_) > timeout_interval_;
-}
-
-double ImuIntegration::getHead() const{
-    return ts_head_;
 }
 
 /**
@@ -90,7 +68,6 @@ CombinedImuFactor ImuIntegration::getIntegrationFactor(double ts_correction, int
 NavState ImuIntegration::predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias) const{
     return preintegration_->predict(NavState(pose, vel), bias);
 }
-
 
 // Estimate attitude from last acceleration measurement
 Rot3 ImuIntegration::estimateAttitude() const{

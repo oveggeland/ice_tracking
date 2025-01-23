@@ -1,9 +1,9 @@
 
 # General
 gravity_norm: 9.831
-fixed_lag: 120
+fixed_lag: 30
 
-use_ship_estimate: false
+use_ship_estimate: true
 crs_source: "EPSG:4326"
 crs_target: "EPSG:6052"
 

@@ -3,11 +3,10 @@ project(icetrack)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Release)
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -flto")
 
 
 ## Define debug macro if assertions are used ##
-#add_compile_definitions(NDEBUG)
+add_compile_definitions(NDEBUG)
 
 ## Find catkin macros and libraries ##
 find_package(catkin REQUIRED COMPONENTS

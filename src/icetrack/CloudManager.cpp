@@ -1,10 +1,6 @@
 #include "icetrack/CloudManager.h"
 
-CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors): 
-        point_buffer_(sensors->lidar()->getConstBufferPointer())
-{
-    bTl_ = sensors->bTl();
-
+CloudManager::CloudManager(ros::NodeHandle nh, const SensorSystem& sensors) : bTl_(sensors.bTl()), point_buffer_(sensors.lidar().pointBuffer()) {
     // Get config
     getParamOrThrow(nh, "/cloud/window_size", window_size_);
     getParamOrThrow(nh, "/cloud/window_interval", window_interval_);
@@ -12,7 +8,7 @@ CloudManager::CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sen
     getParamOrThrow(nh, "/cloud/z_lower_bound", z_lower_bound_);
     getParamOrThrow(nh, "/cloud/z_upper_bound", z_upper_bound_);
 
-    cloud_ = StampedRingBuffer<PointDetailed>(window_size_ / sensors->lidar()->getPointInterval());
+    cloud_ = StampedRingBuffer<PointDetailed>(window_size_ / sensors.lidar().getPointInterval());
 
     // Set output paths
     std::string out_path = getParamOrThrow<std::string>(nh, "/outpath");
@@ -38,55 +34,53 @@ gtsam::Pose3 CloudManager::shiftPose(gtsam::Pose3 pose){
 }
 
 
-void CloudManager::initialize(double t0, gtsam::Pose3 pose0){
-    ts_prev_ = t0;
-    ts_analysis_ = t0;
-    x0_ = pose0.translation().x();
-    y0_ = pose0.translation().y();
-    pose_prev_ = shiftPose(pose0);
+void CloudManager::initialize(double ts, gtsam::Pose3 pose){
+    t0_ = ts;
+    t0_window_ = ts;
+    x0_ = pose.translation().x();
+    y0_ = pose.translation().y();
+    pose0_ = shiftPose(pose);
     init_ = true;
 }
 
-void CloudManager::newPose(double ts, gtsam::Pose3 body_pose){
-    return;
+void CloudManager::newPose(double t1, gtsam::Pose3 imu_pose){
     // Incoming pose is body, we need lidar pose (because of convention in point_buffer_)
-    gtsam::Pose3 lidar_pose = body_pose.compose(bTl_);
+    gtsam::Pose3 pose1 = imu_pose.compose(bTl_);
 
     if (!isInit()){
-        initialize(ts, lidar_pose);
+        initialize(t1, pose1);
         return;
     }
 
     // Normalize XY-coordinates
-    lidar_pose = shiftPose(lidar_pose);
+    pose1 = shiftPose(pose1);
 
     // Precompute for efficient interpolation in loop 
-    gtsam::Vector3 dt_log = lidar_pose.translation() - pose_prev_.translation();
-    gtsam::Vector3 dR_log = gtsam::Rot3::Logmap(pose_prev_.rotation().between(lidar_pose.rotation()));
+    gtsam::Vector3 dt_log = pose1.translation() - pose0_.translation();
+    gtsam::Vector3 dR_log = gtsam::Rot3::Logmap(pose0_.rotation().between(pose1.rotation()));
 
-    double dt_inv = 1.0 / (ts - ts_prev_);
+    double dt_inv = 1.0 / (t1 - t0_);
     assert(dt_inv > 0); 
 
     // Find bounds for point buffer iteration
-    auto start = point_buffer_->iteratorLowerBound(ts_prev_);
-    auto end = point_buffer_->iteratorLowerBound(ts);
+    auto start = point_buffer_.iteratorLowerBound(t0_);
+    auto end = point_buffer_.iteratorLowerBound(t1);
 
     for (auto it = start; it != end; ++it){
-        double p_ts = it->ts;
-        assert(p_ts >= ts_prev_);
-        assert(p_ts < ts);
+        double ts = it->ts;
+        assert(ts >= t0_);
+        assert(ts < t1);
 
         // Pose interpolation
-        double alpha = (p_ts - ts_prev_)*dt_inv;
+        double alpha = (ts - t0_)*dt_inv;
         gtsam::Pose3 wTl(
-            pose_prev_.rotation().retract(alpha*dR_log),
-            pose_prev_.translation() + alpha*dt_log
+            pose0_.rotation().retract(alpha*dR_log),
+            pose0_.translation() + alpha*dt_log
         );
 
-        // Pose3 wTl_test = pose_prev_.interpolateRt(lidar_pose, alpha);
-
-        // if (!wTl_test.equals(wTl))
-        //     ROS_ERROR("FAILED!");
+        gtsam::Pose3 wTl_test = pose0_.interpolateRt(pose1, alpha);
+        if (!wTl_test.equals(wTl))
+            ROS_ERROR("FAILED!");
 
 
         // Transform to world frame
@@ -97,87 +91,54 @@ void CloudManager::newPose(double ts, gtsam::Pose3 body_pose){
         
         // Add to global cloud
         cloud_.addPoint({
-            p_ts,
+            ts,
             wPwp.x(),
             wPwp.y(),
             wPwp.z(),
             it->i, 
         });
 
-        // Adjust moving average
-        assert(it->ts > ts_exp_);
+        // Adjust moving average and variance
+        assert(ts > ts_exp_);
 
-        double beta = exp(-exp_decay_rate_*(it->ts - ts_exp_));
+        double beta = exp(-exp_decay_rate_*(ts - ts_exp_));
         assert(beta >= 0 && beta <= 1);
 
         z_exp_mean_ = beta*z_exp_mean_ + (1 - beta)*wPwp.z();
         double z_dev = z_exp_mean_ - wPwp.z();
         z_exp_var_ = beta*z_exp_var_ + (1 - beta)*(z_dev*z_dev);
 
-        ts_exp_ = it->ts;
+        ts_exp_ = ts;
     }
 
-    ts_prev_ = ts;
-    pose_prev_ = lidar_pose;
+    t0_ = t1;
+    pose0_ = pose1;
 
-    if (ts_prev_ - ts_analysis_ > window_interval_)
-        analyseWindow();
+    //if (t0_ - t0_window_ > window_interval_)
+        //analyseWindow();
 }
 
 void CloudManager::writeStatistics(){
-    f_stats_ << ts_prev_;
+    f_stats_ << t0_;
     f_stats_ << "," << count_;
     f_stats_ << "," << z_mean_ << "," << z_var_;
     f_stats_ << "," << z_exp_mean_ << "," << z_exp_var_;
     f_stats_ << std::endl;
 }
 
-
-void CloudManager::analyseWindow(){
-    // // Do cloud analysis
-    // count_ = 0;
-    // double z_sum = 0;
-    // double z2_sum = 0;
-
-    // // Get start and end iterators
-    // auto start = cloud_.iteratorLowerBound(ts_prev_ - window_size_);
-    // auto end = cloud_.iteratorLowerBound(ts_prev_);
-
-
-
-    // for (auto it = start; it != end; ++it){
-    //     double z = it->z;
-    //     z_sum += z;
-    //     z2_sum += z*z;
-
-    //     ++count_;
-    // }
-
-    // z_mean_ = (z_sum / count_);
-    // z_var_ = (z2_sum / count_) - (z_mean_*z_mean_);
-
-    if (save_cloud_)
-        saveCloud();
-
-    writeStatistics();
-
-    ts_analysis_ = ts_prev_;
-}
-
-void CloudManager::saveCloud() {
-    auto start = cloud_.iteratorLowerBound(ts_prev_ - window_size_);
-    auto end = cloud_.iteratorLowerBound(ts_prev_);
+std::shared_ptr<open3d::t::geometry::PointCloud> CloudManager::generateWindowCloud(){
+    auto start = cloud_.iteratorLowerBound(t0_ - window_size_);
+    auto end = cloud_.iteratorLowerBound(t0_);
 
     // Create vectors for points and intensity
     std::vector<double> points;   // Flat array for points
     std::vector<float> intensities;
 
     size_t num_points = start.distance_to(end);
-    points.reserve(num_points * 3);  // Reserve space for 3 coordinates per point
+    points.reserve(3*num_points);  // Reserve space for 3 coordinates per point
     intensities.reserve(num_points);
 
     for (auto it = start; it != end; ++it) {
-        // Add points in a flat format (x, y, z)
         points.push_back(it->x);
         points.push_back(it->y);
         points.push_back(it->z);
@@ -187,14 +148,29 @@ void CloudManager::saveCloud() {
     std::unordered_map<std::string, open3d::core::Tensor> tensor_map;
     tensor_map["positions"] = open3d::core::Tensor(points, {(int)points.size()/3, 3}, open3d::core::Dtype::Float64);
     tensor_map["intensities"] = open3d::core::Tensor(intensities, {(int)intensities.size(), 1}, open3d::core::Dtype::Float32);
-    open3d::t::geometry::PointCloud cloud(tensor_map);
+    
+    return std::make_shared<open3d::t::geometry::PointCloud>(tensor_map);
+}
 
-    // Generate filename
+
+void CloudManager::analyseWindow(){
+    auto pcd = generateWindowCloud();
+
+    if (save_cloud_)
+        saveCloud(pcd);
+
+    writeStatistics();
+
+    t0_window_ = t0_;
+}
+
+void CloudManager::saveCloud(std::shared_ptr<open3d::t::geometry::PointCloud> pcd) {
     std::stringstream fname;
-    fname << std::fixed << static_cast<int64_t>(ts_prev_) << ".ply";
+    fname << std::fixed << static_cast<int64_t>(t0_) << ".ply";
     std::string fpath = joinPath(cloud_path_, fname.str());
+
     // Save the point cloud as a .ply file
-    if (!open3d::t::io::WritePointCloud(fpath, cloud))
+    if (!open3d::t::io::WritePointCloud(fpath, *pcd))
         ROS_INFO_STREAM("Saved cloud at " << fpath);
     else
         ROS_WARN_STREAM("Failed to save cloud at " << fpath);

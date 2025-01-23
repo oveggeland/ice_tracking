@@ -1,56 +1,43 @@
 #include "icetrack/system/Imu.h"
 
-// Extract accelerometer vector from Imu message
-gtsam::Vector3 getAcc(const sensor_msgs::Imu::ConstPtr& msg){
-    return gtsam::Vector3(
+Imu::Imu(){
+    // Default constructor
+}
+
+Imu::Imu(ros::NodeHandle nh){
+    // Potential for including configuration here
+}
+
+void Imu::newMessage(const sensor_msgs::Imu::ConstPtr& msg){
+    ts_ = msg->header.stamp.toSec();
+    setAcc(msg);
+    setRate(msg);
+}
+
+void Imu::setAcc(const sensor_msgs::Imu::ConstPtr& msg){
+    acc_ = gtsam::Vector3(
         msg->linear_acceleration.x, 
         msg->linear_acceleration.y,
         msg->linear_acceleration.z
     );
 }
 
-// Extract angular velocity vector from Imu message
-gtsam::Vector3 getRate(const sensor_msgs::Imu::ConstPtr& msg){
-    return gtsam::Vector3(
+void Imu::setRate(const sensor_msgs::Imu::ConstPtr& msg){
+    rate_ = gtsam::Vector3(
         msg->angular_velocity.x, 
         msg->angular_velocity.y,
         msg->angular_velocity.z
     );
 }
 
-Imu::Imu(){
-    // Default constructor
+const double& Imu::getTimeStamp() const{
+    return ts_;
 }
 
-Imu::Imu(ros::NodeHandle nh){
-    getParamOrThrow(nh, "/system/imu/acc_norm_threshold", acc_norm_threshold_);
-    getParamOrThrow(nh, "/system/imu/rate_norm_threshold", rate_norm_threshold_);
+const gtsam::Vector3& Imu::getAcc() const{
+    return acc_;
 }
 
-bool Imu::newMessage(const sensor_msgs::Imu::ConstPtr& msg){
-    double ts = msg->header.stamp.toSec();
-    if (ts <= meas_.ts){
-        ROS_WARN("Imu: Timestamp is prior or equal to previous IMU message...");
-        return false;
-    }
-
-    gtsam::Vector3 acc = getAcc(msg);
-    gtsam::Vector3 rate = getRate(msg);
-
-    if (acc.norm() > acc_norm_threshold_ || rate.norm() > rate_norm_threshold_){
-        ROS_WARN("Imu: Measurement norms are higher than the accepted threshold...");
-        return false;
-    }
-
-    meas_ = ImuMeasurement{
-        ts,
-        acc,
-        rate
-    };
-
-    return true;
-}
-
-const ImuMeasurement& Imu::getMeasurement() const{
-    return meas_;
+const gtsam::Vector3& Imu::getRate() const{
+    return rate_;
 }

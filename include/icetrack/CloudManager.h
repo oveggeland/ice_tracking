@@ -21,28 +21,22 @@ struct PointDetailed{
 
 class CloudManager{
 public:
-    // Constructurs
-    CloudManager(){};
-    CloudManager(ros::NodeHandle nh, std::shared_ptr<SensorSystem> sensors_);
+    CloudManager(ros::NodeHandle nh, const SensorSystem& sensors_);
 
     // Main entry from IceTrack
-    void newPose(double ts, gtsam::Pose3 T);
+    void newPose(double t1, gtsam::Pose3 imu_pose);
 
 private:
-    ros::NodeHandle nh_;
-
+    // Extrinsics (lidar->imu)
     gtsam::Pose3 bTl_;
     
     // Cloud buffers
-    std::shared_ptr<const StampedRingBuffer<RawLidarPoint>> point_buffer_; // Incoming points, in LiDAR frame
+    const StampedRingBuffer<RawLidarPoint>& point_buffer_; // Incoming points, in LiDAR frame
     StampedRingBuffer<PointDetailed> cloud_;     // Templated stamped ringbuffer
 
-    // For correction 
-    double distance_ref_;
-
     // Keep track of previous pose
-    double ts_prev_ = 0.0;
-    gtsam::Pose3 pose_prev_;
+    double t0_ = 0.0;
+    gtsam::Pose3 pose0_;
 
     // Keep track of offset
     double x0_ = 0.0;
@@ -54,22 +48,18 @@ private:
     bool isInit();
     void initialize(double t0, gtsam::Pose3 pose0);
 
-    // Bounds
+    // Filtering
     double z_lower_bound_, z_upper_bound_;
 
     // Cloud management and processing
-    double window_size_; // Size of sliding window to use for analysis
-    void analyseWindow();
-    void calculateMoments();
-
+    double t0_window_;
+    double window_size_;
     double window_interval_;
-    double ts_analysis_ = 0.0;
+
+    void analyseWindow();
+    std::shared_ptr<open3d::t::geometry::PointCloud> generateWindowCloud();
 
     // Stats
-    void writeStatistics();
-    void saveElevBinary();
-    std::ofstream f_stats_;
-
     int count_;
     double z_mean_, z_var_;
 
@@ -78,12 +68,15 @@ private:
     double z_exp_var_ = 0;
     double exp_decay_rate_ = 0.1; // Time constant of 10 seconds
 
+    std::ofstream f_stats_;
+
+    void writeStatistics();
+   
     // Saving
     bool save_cloud_;
-    void saveCloud();
+    void saveCloud(std::shared_ptr<open3d::t::geometry::PointCloud> pcd);
 
     // Paths
     std::string cloud_path_;
-    std::string elev_path_; 
     std::string stats_path_;
 };
