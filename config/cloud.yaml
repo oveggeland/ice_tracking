@@ -1,6 +1,12 @@
 # Cloud manager
-window_size: 30.0
+window_size: 60.0
 save_cloud: true
 
-z_lower_bound: -3
-z_upper_bound: 1
+# Processing parameters
+min_elevation: -1
+max_elevation: 4
+min_intensity: 1
+
+grid_size: 1.0            # Down sample point cloud to grid_size*grid_size tiles (in xy-plane)
+smoothing_radius: 2.0     # Elevation is smoothed withing smoothing radius
+deformation_radius: 5.0   # Deformation is calculated for each point by searchin in deformation_radius
