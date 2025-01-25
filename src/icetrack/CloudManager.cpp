@@ -2,6 +2,7 @@
 
 CloudManager::CloudManager(ros::NodeHandle nh, const SensorSystem& sensors) : bTl_(sensors.bTl()), point_buffer_(sensors.lidar().pointBuffer()) {
     // Get config
+    getParamOrThrow(nh, "/cloud/enabled", enabled_);
     getParamOrThrow(nh, "/cloud/window_size", window_size_);
     getParamOrThrow(nh, "/cloud/save_cloud", save_cloud_);
 
@@ -52,7 +53,11 @@ void CloudManager::initialize(double ts, gtsam::Pose3 pose){
     init_ = true;
 }
 
+// This is the main entry point to CloudManager from IceTrack
 void CloudManager::newPose(double t1, gtsam::Pose3 imu_pose){
+    if (!enabled_)
+        return;
+        
     // Incoming pose is body, we need lidar pose (because of convention in point_buffer_)
     gtsam::Pose3 pose1 = imu_pose.compose(bTl_);
 

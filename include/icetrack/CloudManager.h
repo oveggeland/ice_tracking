@@ -29,6 +29,8 @@ public:
     void newPose(double t1, gtsam::Pose3 imu_pose);
 
 private:
+    bool enabled_;
+    
     // Extrinsics (lidar->imu)
     gtsam::Pose3 bTl_;
     
