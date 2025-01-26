@@ -3,11 +3,9 @@
 #include "gtsam/geometry/Pose3.h"
 #include "yaml-cpp/yaml.h"
 
-#include "icetrack/system/Imu.h"
-#include "icetrack/system/Gnss.h"
 #include "icetrack/system/Lidar.h"
 
-#include "icetrack/utils/utils.h"
+#include "icetrack/utils/ros_params.h"
 
 // Master class for sensor rig
 class SensorSystem {
@@ -15,13 +13,9 @@ public:
     SensorSystem(ros::NodeHandle nh);
 
     // Non-const accessors
-    Imu& imu() { return imu_; }
-    Gnss& gnss() { return gnss_; }
     Lidar& lidar() { return lidar_; }
 
     // Const accessors
-    const Imu& imu() const { return imu_; }
-    const Gnss& gnss() const { return gnss_; }
     const Lidar& lidar() const { return lidar_; }
 
     // Extrinsic accessors
@@ -34,8 +28,6 @@ public:
 
 private:
     // Private members for sensors
-    Imu imu_;
-    Gnss gnss_;
     Lidar lidar_;
 
     // Calibration

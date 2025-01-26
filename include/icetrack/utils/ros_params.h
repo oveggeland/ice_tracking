@@ -2,16 +2,6 @@
 
 #include <ros/ros.h>
 #include <stdexcept>
-#include <string>
-#include <iostream>
-
-#ifndef DEG2RAD
-#define DEG2RAD(degrees) ((degrees) * M_PI / 180.0)
-#endif
-
-#ifndef RAD2DEG
-#define RAD2DEG(radians) ((radians) * 180.0 / M_PI)
-#endif
 
 template <typename T>
 void getParamOrThrow(const ros::NodeHandle& nh, const std::string& param_name, T& param) {
@@ -26,4 +16,3 @@ T getParamOrThrow(const ros::NodeHandle& nh, const std::string& param_name) {
     getParamOrThrow<T>(nh, param_name, param);
     return param;
 }
-

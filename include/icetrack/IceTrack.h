@@ -10,7 +10,7 @@ Here, callbacks from different sensors are buffered and processed in chronologic
 #include "icetrack/system/SensorSystem.h"
 
 #include "icetrack/Diagnostics.h"
-#include "icetrack/utils/utils.h"
+#include "icetrack/utils/ros_params.h"
 
 class IceTrack{
 public:
@@ -36,9 +36,6 @@ private:
     PoseEstimator pose_estimator_;
     CloudManager cloud_manager_;
     Diagnostics diag_;
-    
-    // Called regularly to update cloud manager
-    void updateCloud();
 
     // Safe callback functions
     void imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg);

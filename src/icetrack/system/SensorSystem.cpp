@@ -1,7 +1,7 @@
 #include "icetrack/system/SensorSystem.h"
 
 SensorSystem::SensorSystem(ros::NodeHandle nh)
-    : imu_(nh), gnss_(nh), lidar_(nh) {
+    :lidar_(nh) {
     std::string ext_file = getParamOrThrow<std::string>(nh, "/ext_file");
     readExtrinsics(ext_file);
 }

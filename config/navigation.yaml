@@ -8,9 +8,8 @@ crs_source: "EPSG:4326"
 crs_target: "EPSG:6052"
 
 # Prior covariance
-initial_bias_sigma: 0.1
-initial_velocity_sigma: 1
-initial_position_sigma: 2
+initial_acc_bias_sigma: 0.1
+initial_gyro_bias_sigma: 0.1
 
 # Lever arm stuff   
 lever_norm_threshold: 25

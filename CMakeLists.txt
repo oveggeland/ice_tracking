@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   topic_tools
-  message_generation
 )
 
 ## Find packages ##
@@ -24,17 +23,6 @@ find_package(GTSAM REQUIRED)
 find_package(Open3D REQUIRED)
 find_package(PROJ REQUIRED)
 find_package(yaml-cpp REQUIRED)
-
-## Message generation ##
-add_message_files(
-  FILES
-  ShipNavigation.msg
-)
-
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
 
 catkin_package(
   CATKIN_DEPENDS message_runtime

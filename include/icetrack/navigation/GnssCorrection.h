@@ -1,37 +1,37 @@
 #pragma once
 
-#include "ros/ros.h"
+#include <sensor_msgs/NavSatFix.h>
 
 #include <gtsam/geometry/Point2.h>
-#include <gtsam/geometry/Pose3.h>
-#include <gtsam/nonlinear/NonlinearFactor.h>
 
-#include "icetrack/utils/utils.h"
+#include <proj.h>
+
+#include "icetrack/utils/ros_params.h"
 #include "icetrack/navigation/navigation.h"
 #include "icetrack/navigation/factors/GNSSFactor.h"
-#include "icetrack/system/SensorSystem.h"
 
 class GnssCorrection{
 public:
-    GnssCorrection(ros::NodeHandle nh, const Gnss& gnss);
+    GnssCorrection(ros::NodeHandle nh);
 
-    bool initialize();    
+    // Interface
+    void newMeasurement(const sensor_msgs::NavSatFix::ConstPtr msg);
 
-    bool update();
+    bool isFix() { return fix_; }
+    bool isInit() { return !v_xy_.isZero() && isFix(); }
+    Point2 getPosition() const { return xy_; }
+    Point2 getVelocity() const { return v_xy_; }
 
-    double getHead() const;
-    Point2 getPosition() const;
-    Point2 getVelocity() const;
-
-    GNSSFactor getCorrectionFactor(Key key) const;
+    GNSSFactor getCorrectionFactor(Key key) const { return GNSSFactor(key, xy_, correction_noise_); }
 
 private:
-    const Gnss& gnss_;
-
     // State
     double ts_ = 0.0;
     Point2 xy_ = Point2::Zero();
     Point2 v_xy_ = Point2::Zero();
+    bool fix_ = false; 
+
+    bool checkFix(double ts, Point2 xy);
 
     // Timeout/Suspension logic (GNSS is very innaccurate after timeout)
     double timeout_interval_;
@@ -40,4 +40,8 @@ private:
 
     // Noise
     noiseModel::Isotropic::shared_ptr correction_noise_;
+
+    // Projection
+    PJ* projection_;
+    Point2 project(const sensor_msgs::NavSatFix::ConstPtr msg) const;
 };

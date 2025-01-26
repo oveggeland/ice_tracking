@@ -18,7 +18,8 @@
 #include "icetrack/navigation/factors/NormConstraintFactor.h"
 #include "icetrack/navigation/factors/LeveredAltitudeFactor.h"
 
-#include "icetrack/utils/utils.h"
+#include "icetrack/utils/file_system.h"
+#include "icetrack/utils/ros_params.h"
 
 using namespace gtsam;
 
@@ -27,12 +28,12 @@ public:
     PoseEstimator(ros::NodeHandle nh, const SensorSystem& sensors);
 
     // Interface
-    bool imuUpdate();
-    bool gnssUpdate();
-    bool lidarUpdate();
+    void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
+    void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+    void lidarUpdate();
 
-    bool isInit();
-    void getCurrentPose(double& ts, Pose3& pose) const;
+    bool isInit() { return init_; }
+
 private:
     // Factor generating submodules
     SurfaceEstimation surface_estimation_;
@@ -46,38 +47,32 @@ private:
     BatchFixedLagSmoother smoother_;
     FixedLagSmoother::KeyTimestampMap stamps_;
 
-    // Filter control 
+    // Filter control
     bool init_ = false;
-    int correction_count_ = 0;
+    int state_count_ = 0;
 
-    // Current state
+    // State
     double ts_;
     Pose3 pose_;
     Point3 vel_;
     imuBias::ConstantBias bias_;
     Point3 lever_arm_;
 
+    void initializeState();
+    void addPriors();
+
     // Private member functions
     void initialize(double ts);
-    void newCorrection(double ts);
+    void addState(double ts);
     
     
-    double initial_bias_sigma_;
-    double initial_velocity_sigma_;
-    double initial_position_sigma_;
-    
+    double initial_acc_bias_sigma_;
+    double initial_gyro_bias_sigma_;
     double lever_norm_threshold_; 
-    double lever_angle_threshold_; // In deg
     double lever_norm_sigma_;
-    double lever_angle_sigma_;
     double lever_altitude_sigma_;
 
-    double gnss_innovation_norm_limit_;
-
-    // Ship
-    bool use_ship_nav_;
-
     // Output
-    std::ofstream f_nav_;
+    std::ofstream f_out_;
     void writeToFile();
 };

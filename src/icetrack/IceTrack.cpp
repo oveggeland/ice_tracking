@@ -11,19 +11,10 @@ IceTrack::IceTrack(ros::NodeHandle nh)
     diag_ = Diagnostics(diag_file);
 }
 
-void IceTrack::updateCloud(){
-    double ts;
-    gtsam::Pose3 pose;
-
-    pose_estimator_.getCurrentPose(ts, pose);
-    cloud_manager_.newPose(ts, pose);
-}
-
 void IceTrack::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    sensors_.imu().newMessage(msg);
-    pose_estimator_.imuUpdate();
+    pose_estimator_.imuCallback(msg);
 
     diag_.diagEnd();
 }
@@ -31,8 +22,7 @@ void IceTrack::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
 void IceTrack::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     diag_.diagStart(msg->header.stamp.toSec());
 
-    sensors_.gnss().newMessage(msg);
-    pose_estimator_.gnssUpdate();
+    pose_estimator_.gnssCallback(msg);
 
     diag_.diagEnd();
 }
@@ -44,7 +34,7 @@ void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
 
     sensors_.lidar().newMessage(msg);
     if (pose_estimator_.isInit())
-        updateCloud(); // TODO: Maybe there is a better way?
+        // updateCloud(); // TODO: Maybe there is a better way?
 
     diag_.diagEnd();
 }

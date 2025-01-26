@@ -1,6 +1,6 @@
 #include "icetrack/navigation/ImuIntegration.h"
 
-ImuIntegration::ImuIntegration(ros::NodeHandle nh, const Imu& imu) : imu_(imu) {
+ImuIntegration::ImuIntegration(ros::NodeHandle nh) {
     // Get config
     getParamOrThrow(nh, "/navigation/gravity_norm", gravity_norm_);
     getParamOrThrow(nh, "/navigation/imu_timeout_interval", timeout_interval_);
@@ -20,25 +20,44 @@ ImuIntegration::ImuIntegration(ros::NodeHandle nh, const Imu& imu) : imu_(imu) {
 }
 
 
-void ImuIntegration::initialize(){
-    prev_acc_ = imu_.getAcc();
-    prev_rate_ = imu_.getRate();
-    init_ = true;
+void ImuIntegration::newMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
+    // Timestamp
+    double ts = msg->header.stamp.toSec();
+    double dt = ts - ts_head_;
+    assert(dt >= 0);
+
+    // Check message sequence
+    int seq = msg->header.seq;
+    if ((seq != seq_ + 1) && seq_ != 0){
+        ROS_WARN_STREAM("ImuIntegration: Wrong sequence number (" << seq_ << " to " << seq << ")");
+    }
+    
+    // All good, set new measurement
+    setAcc(msg);
+    setRate(msg);
+
+    // Integrate and reset headers
+    if (dt > 0)
+        preintegration_->integrateMeasurement(acc_, rate_, dt);
+
+    ts_head_ = ts;
+    seq_ = seq;
 }
 
-void ImuIntegration::integrate(){
-    double ts = imu_.getTimeStamp();
+void ImuIntegration::setAcc(const sensor_msgs::Imu::ConstPtr& msg){
+    acc_ = Vector3(
+        msg->linear_acceleration.x, 
+        msg->linear_acceleration.y,
+        msg->linear_acceleration.z
+    );
+}
 
-    double dt = ts - ts_head_;
-    assert(dt >= 0 && dt < 0.02);
-
-    if (dt > 0){
-        ts_head_ = ts;
-        prev_acc_ = imu_.getAcc();
-        prev_rate_ = imu_.getRate();
-    
-        preintegration_->integrateMeasurement(prev_acc_, prev_rate_, dt);
-    }
+void ImuIntegration::setRate(const sensor_msgs::Imu::ConstPtr& msg){
+    rate_ = Vector3(
+        msg->angular_velocity.x, 
+        msg->angular_velocity.y,
+        msg->angular_velocity.z
+    );
 }
 
 void ImuIntegration::resetIntegration(double ts, imuBias::ConstantBias bias){
@@ -47,21 +66,23 @@ void ImuIntegration::resetIntegration(double ts, imuBias::ConstantBias bias){
     preintegration_->resetIntegrationAndSetBias(bias);
 }
 
+void ImuIntegration::finishIntegration(double ts){
+    double dt = ts - ts_head_;
+    assert(dt >= 0);
+
+    if (dt > 0) // Potentially finish integration if there is still a time delta :) 
+        preintegration_->integrateMeasurement(acc_, rate_, dt);
+}
+
 /**
  * When correction occurs, we should finish integration by extrapolating the last imu measurements, and return a IMU factor
  */
-CombinedImuFactor ImuIntegration::getIntegrationFactor(double ts_correction, int correction_count){
-    double dt = ts_correction - ts_head_;
-    assert(dt >= 0 && dt < 0.02);
-
-    if (dt > 0)
-        preintegration_->integrateMeasurement(prev_acc_, prev_rate_, dt);
-    
+CombinedImuFactor ImuIntegration::getIntegrationFactor(int state_idx){    
     auto preint_imu = dynamic_cast<const PreintegratedCombinedMeasurements&>(*preintegration_);
     return CombinedImuFactor(
-        X(correction_count-1), V(correction_count-1), 
-        X(correction_count), V(correction_count), 
-        B(correction_count-1), B(correction_count), 
+        X(state_idx-1), V(state_idx-1), 
+        X(state_idx), V(state_idx), 
+        B(state_idx-1), B(state_idx), 
         preint_imu);
 }
 
@@ -71,16 +92,11 @@ NavState ImuIntegration::predict(Pose3 pose, Point3 vel, imuBias::ConstantBias b
 
 // Estimate attitude from last acceleration measurement
 Rot3 ImuIntegration::estimateAttitude() const{
-    Unit3 nA = Unit3(-prev_acc_);
+    Unit3 nA = Unit3(-acc_);
     Unit3 nG(0, 0, 1);
 
     return Rot3::AlignPair(nA.cross(nG), nG, nA);
 }
-
-Pose3AttitudeFactor ImuIntegration::getAttitudeFactor(Key key) const{
-    return Pose3AttitudeFactor(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, imu_attitude_sigma_), Unit3(-prev_acc_));
-}
-
 
 boost::shared_ptr<gtsam::PreintegrationCombinedParams> ImuIntegration::getPreintegrationParams() const{
   // We use the sensor specs to build the noise model for the IMU factor.

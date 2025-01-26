@@ -4,7 +4,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 
-#include "icetrack/utils/utils.h"
+#include "icetrack/utils/ros_params.h"
 #include "icetrack/utils/StampedRingBuffer.h"
 
 struct RawLidarPoint {
