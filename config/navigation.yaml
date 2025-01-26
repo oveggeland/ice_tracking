@@ -3,7 +3,6 @@
 gravity_norm: 9.831
 fixed_lag: 30
 
-use_ship_estimate: true
 crs_source: "EPSG:4326"
 crs_target: "EPSG:6052"
 
@@ -31,12 +30,17 @@ accel_bias_rw_sigma: 1.0e-4
 gyro_bias_rw_sigma: 1.0e-5
 
 # Surface estimation
+surface_estimation/buffer_size: 2.0 # Allocate memory for at least buffer_size seconds worth of points
+surface_estimation/lidar_point_interval: 5.0e-6   # Interval between each scan from lidar (put half if in dual-return mode)
+surface_estimation/lidar_min_intensity: 1.0
+surface_estimation/lidar_min_dist: 15.0
+surface_estimation/lidar_max_dist: 150.0
+
 surface_estimation/ransac_threshold: 0.5
 surface_estimation/ransac_sample_size: 10
 surface_estimation/ransac_iterations: 5
 surface_estimation/ransac_inlier_count: 25
-
-surface_estimation/frame_interval: 0.1
+surface_estimation/ransac_frame_size: 0.1
 
 surface_estimation/sigma_altitude: 1.0
 surface_estimation/sigma_attitude: 0.2

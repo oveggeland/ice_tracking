@@ -25,12 +25,12 @@ using namespace gtsam;
 
 class PoseEstimator{
 public:
-    PoseEstimator(ros::NodeHandle nh, const SensorSystem& sensors);
+    PoseEstimator(ros::NodeHandle nh);
 
     // Interface
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
-    void lidarUpdate();
+    void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
     bool isInit() { return init_; }
 

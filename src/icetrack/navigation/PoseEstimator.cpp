@@ -1,7 +1,7 @@
 #include "icetrack/navigation/PoseEstimator.h"
 
-PoseEstimator::PoseEstimator(ros::NodeHandle nh, const SensorSystem& sensors)
-    : imu_integration_(nh), gnss_correction_(nh), surface_estimation_(nh, sensors){
+PoseEstimator::PoseEstimator(ros::NodeHandle nh)
+    : imu_integration_(nh), gnss_correction_(nh), surface_estimation_(nh){
 
     // Fixed lag smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
@@ -49,16 +49,12 @@ void PoseEstimator::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
         addState(ts);
     }
     else if (gnss_correction_.isInit() && surface_estimation_.estimateSurface(ts)){
-        auto gnss_factor = gnss_correction_.getCorrectionFactor(X(0));
-        graph_.add(gnss_factor); // Planar position prior
-
         initialize(ts);
     }
 }
 
-void PoseEstimator::lidarUpdate(){
-    // Add frame
-    // surface_estimation_.addLidarFrame(msg);
+void PoseEstimator::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    surface_estimation_.addLidarFrame(msg);
 };
 
 
@@ -86,6 +82,10 @@ void PoseEstimator::initializeState(){
 }
 
 void PoseEstimator::addPriors(){
+    // From GNSS
+    auto gnss_factor = gnss_correction_.getCorrectionFactor(X(0));
+    graph_.add(gnss_factor); // Planar position prior
+
     // Bias prior
     auto initial_bias_noise = noiseModel::Diagonal::Sigmas(
         (Vector6() << Vector::Constant(3, initial_acc_bias_sigma_), Vector::Constant(3, initial_gyro_bias_sigma_)).finished()

@@ -1,7 +1,7 @@
 #include "icetrack/IceTrack.h"
 
 IceTrack::IceTrack(ros::NodeHandle nh) 
-    : sensors_(nh), pose_estimator_(nh, sensors_), cloud_manager_(nh, sensors_) {
+    : sensors_(nh), pose_estimator_(nh), cloud_manager_(nh, sensors_) {
     
     // Diagnostics file and object
     std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
@@ -32,9 +32,7 @@ void IceTrack::pclSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
 
     diag_.diagStart(ts);
 
-    sensors_.lidar().newMessage(msg);
-    if (pose_estimator_.isInit())
-        // updateCloud(); // TODO: Maybe there is a better way?
+    pose_estimator_.lidarCallback(msg);
 
     diag_.diagEnd();
 }
