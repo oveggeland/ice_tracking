@@ -14,20 +14,15 @@
 
 #include "icetrack/utils/StampedRingBuffer.h"
 #include "icetrack/utils/file_system.h"
-
-
-struct PointDetailed{
-    double ts;
-    double x, y, z;
-    float intensity;
-};
+#include "icetrack/utils/calibration.h"
 
 class CloudManager{
 public:
-    CloudManager(ros::NodeHandle nh, const SensorSystem& sensors_);
+    CloudManager(ros::NodeHandle nh);
     ~CloudManager();
 
-    // Main entry from IceTrack
+    // Interface
+    void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
     void newPose(double t1, gtsam::Pose3 imu_pose);
 
 private:
@@ -37,7 +32,11 @@ private:
     gtsam::Pose3 bTl_;
     
     // Cloud buffers
-    const StampedRingBuffer<RawLidarPoint>& point_buffer_; // Incoming points, in LiDAR frame
+    StampedRingBuffer<PointXYZIT> point_buffer_; // Incoming points, in LiDAR frame
+    double point_interval_ = 5.0e-6;
+    double ts_head_ = 0.0;
+    double min_dist_squared_ = 15*15;
+    double max_dist_squared_ = 100*100;
     
     // New way of tracking points
     std::vector<float> positions_;

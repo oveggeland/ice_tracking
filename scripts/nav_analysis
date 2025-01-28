@@ -95,10 +95,10 @@ if __name__ == "__main__":
     nav_path = os.path.join(outpath, "navigation")
     nav_data = pd.read_csv(os.path.join(nav_path, "ins.csv"))
     
-    gnss_path = os.path.join(outpath, "navigation", "sensors", "gnss.csv")
-    gnss_data = pd.read_csv(gnss_path)
+    # gnss_path = os.path.join(outpath, "navigation", "sensors", "gnss.csv")
+    # gnss_data = pd.read_csv(gnss_path)
     
-    gnss_vs_estimate(nav_data, gnss_data)
+    # gnss_vs_estimate(nav_data, gnss_data)
 
     
     plot_navigation(nav_data, os.path.join(nav_path, "ins.pdf"))

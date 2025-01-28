@@ -1,6 +1,6 @@
 #include "icetrack/CloudManager.h"
 
-CloudManager::CloudManager(ros::NodeHandle nh, const SensorSystem& sensors) : bTl_(sensors.bTl()), point_buffer_(sensors.lidar().pointBuffer()) {
+CloudManager::CloudManager(ros::NodeHandle nh) {
     // Get config
     getParamOrThrow(nh, "/cloud/enabled", enabled_);
     getParamOrThrow(nh, "/cloud/window_size", window_size_);
@@ -14,8 +14,14 @@ CloudManager::CloudManager(ros::NodeHandle nh, const SensorSystem& sensors) : bT
     getParamOrThrow(nh, "/cloud/smoothing_radius", smoothing_radius_);
     getParamOrThrow(nh, "/cloud/deformation_radius", deformation_radius_);
 
+    // Read extrinsics
+    std::string ext_file = getParamOrThrow<std::string>(nh, "/ext_file");
+    bTl_ = bTl(ext_file);
+
     // Allocate cloud storage
-    int max_points = window_size_ / sensors.lidar().getPointInterval();
+    point_buffer_ = StampedRingBuffer<PointXYZIT>(2.0/point_interval_);
+
+    int max_points = window_size_ / point_interval_;
     positions_ = std::vector<float>(3*max_points);
     intensities_ = std::vector<uint8_t>(max_points);
 
@@ -39,6 +45,44 @@ CloudManager::~CloudManager(){
 bool CloudManager::isInit(){
     return init_;
 }
+
+void CloudManager::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    double ts_point = msg->header.stamp.toSec() - point_interval_; // Track stamp of points as we iterate
+    for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
+        ts_point += point_interval_;
+
+        // Initial rejections
+        if (
+            it[0] == 0.0 ||             // Empty point
+            it[3] < min_intensity_ ||   // Outlier
+            ts_point <= ts_head_        // Time error
+        )
+            continue;
+
+        // Range filtering
+        double dist_squared = it[0]*it[0] + it[1]*it[1] + it[2]*it[2];
+        if (dist_squared < min_dist_squared_ || dist_squared > max_dist_squared_)
+            continue;
+
+        // Point accepted
+        point_buffer_.addPoint({
+            it[0],
+            it[1],
+            it[2],
+            it[3],
+            ts_point
+        });
+    }
+    
+    if (ts_point > ts_head_){
+        ts_head_ = ts_point;
+    }
+}
+
+
+
+
+
 
 gtsam::Pose3 CloudManager::shiftPose(gtsam::Pose3 pose){
     return gtsam::Pose3(pose.rotation(), pose.translation() - gtsam::Point3(x0_, y0_, 0));

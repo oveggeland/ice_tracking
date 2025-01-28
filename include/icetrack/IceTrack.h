@@ -7,10 +7,10 @@ Here, callbacks from different sensors are buffered and processed in chronologic
 
 #include "icetrack/navigation/PoseEstimator.h"
 #include "icetrack/CloudManager.h"
-#include "icetrack/system/SensorSystem.h"
 
 #include "icetrack/Diagnostics.h"
 #include "icetrack/utils/ros_params.h"
+#include "icetrack/utils/CallbackSequencer.h"
 
 class IceTrack{
 public:
@@ -27,12 +27,9 @@ private:
     double safe_delay_ = 0.5;   // Delay between latest incoming message timestamp and t_safe_
 
     // Saving incoming measurements in buffer and process in chronological time after safe_delay has expired
-    std::map<double, std::function<void()>> callback_buffer_;
-    void addCallback(double ts, std::function<void()> cb);
-    void checkCallbackBuffer();
+    CallbackSequencer sequencer_;
 
     // Submodules
-    SensorSystem sensors_;
     PoseEstimator pose_estimator_;
     CloudManager cloud_manager_;
     Diagnostics diag_;

@@ -29,7 +29,7 @@ int main(int argc, char **argv)
     // Iterate over bagfiles in chronological order
     for (const std::string& filename : files) {
         ROS_INFO_STREAM("Reading bag: " << filename);
-        rosbag::Bag bag(filename);
+        rosbag::Bag bag(filename, rosbag::bagmode::Read);
         rosbag::View view(bag);
 
         for (rosbag::MessageInstance const m : view) {

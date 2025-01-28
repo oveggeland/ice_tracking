@@ -26,7 +26,7 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
 }
 
 
-void PoseEstimator::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
+bool PoseEstimator::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     // Integrate new measurement
     imu_integration_.newMeasurement(msg);
 
@@ -34,11 +34,13 @@ void PoseEstimator::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     if (isInit() && imu_integration_.timeOut()){
         ROS_WARN("PoseEstimator: IMU integration timeout, add new state variable");
         addState(msg->header.stamp.toSec());
+        return true;
     }
+    return false;
 }
 
 
-void PoseEstimator::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+bool PoseEstimator::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
     gnss_correction_.newMeasurement(msg);
 
@@ -47,10 +49,12 @@ void PoseEstimator::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
         graph_.add(gnss_factor);
 
         addState(ts);
+        return true;
     }
     else if (gnss_correction_.isInit() && surface_estimation_.estimateSurface(ts)){
         initialize(ts);
     }
+    return false;
 }
 
 void PoseEstimator::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){

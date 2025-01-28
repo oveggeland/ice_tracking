@@ -1,5 +1,5 @@
 # Cloud manager
-enabled: false              # Use this do disbale/enable the cloud manager (useful to debug navigation)
+enabled: true              # Use this do disbale/enable the cloud manager (useful to debug navigation)
 window_size: 60.0
 save_cloud: true
 

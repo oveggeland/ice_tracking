@@ -28,9 +28,12 @@ public:
     PoseEstimator(ros::NodeHandle nh);
 
     // Interface
-    void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
-    void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+    bool imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
+    bool gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+
+    double getTimeStamp()   { return ts_; }
+    Pose3 getPose()        { return pose_; }
 
     bool isInit() { return init_; }
 

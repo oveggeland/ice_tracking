@@ -1,5 +1,7 @@
 # System
-bagpath: "/home/oskar/icetrack/data/long3/"
+safe_delay: 0.5 # Wait this period for possible sensor lag
+
+bagpath: "/home/oskar/icetrack/data/long3"
 outpath: "/home/oskar/icetrack/output/long3/"
 
 ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
