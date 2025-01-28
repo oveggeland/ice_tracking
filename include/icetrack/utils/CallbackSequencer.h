@@ -10,26 +10,32 @@ This is handy when e.g. sensor messages are delayed because of hardware interfac
 
 class CallbackSequencer{
 public:
-    CallbackSequencer(){ }
+    CallbackSequencer(){}
     CallbackSequencer(double safe_delay): safe_delay_(safe_delay) {}
 
+    /*
+    Add a callback to be sequenced according to its timestamp.
+    */
     void addCallback(double ts, std::function<void()> cb){
-        if (ts < t_head_) // Is message even valid?
+        if (ts < t_head_) // Discard if message is too late
             return;
         callback_buffer_[ts] = cb;
 
-        // Update safe time and check for valid callbacks
-        if (ts - safe_delay_ > t_safe_){
-            t_safe_ = ts - safe_delay_;
-            checkCallbackBuffer();
-        }
+        // Check for new valid callbacks
+        checkCallbackBuffer(ts);
     }
 
-    void checkCallbackBuffer(){
+    /*
+    Check for callbacks that are safe to call (i.e. safe_time has passed).
+    */
+    void checkCallbackBuffer(double t_wall){
+        double t_safe = t_wall - safe_delay_;
+
+        // Process all messages stamped before safe time
         for (auto it = callback_buffer_.begin(); it != callback_buffer_.end();){
             double t_msg = it->first;
 
-            if (t_msg > t_safe_)
+            if (t_msg > t_safe)
                 break;
             
             it->second(); // Callback 
@@ -43,6 +49,5 @@ private:
     
     // Timestamp management
     double t_head_ = 0.0;       // Timestamp of last call
-    double t_safe_ = 0.0;       // Only call functions with stamp before the safetime
     double safe_delay_ = 0.0;   // Delay between latest received timestamp and safetime
 };

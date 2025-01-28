@@ -37,9 +37,6 @@ int main(int argc, char** argv) {
     ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
     ros::Publisher clock_pub = nh.advertise<rosgraph_msgs::Clock>("/clock", 10);
 
-    // Enable simulated time
-    ros::param::set("/use_sim_time", true);
-
     // Initialize nodes
     PoseEstimator pose_estimator(nh);
     // CloudManager cloud_manager(nh);

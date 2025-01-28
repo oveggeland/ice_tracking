@@ -5,10 +5,7 @@
 
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
-#include <gtsam/navigation/GPSFactor.h>
-#include <gtsam/slam/BetweenFactor.h>
 
-#include "icetrack/system/SensorSystem.h"
 #include "icetrack/navigation/navigation.h"
 
 #include "icetrack/navigation/ImuIntegration.h"
@@ -46,10 +43,17 @@ private:
     void gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
+    // Private functionality
+    void initialize(double ts);
+    void initializeState();
+    void addPriors();
+
+    void addState(double ts);
+
     // Factor generating submodules
-    SurfaceEstimation surface_estimation_;
     ImuIntegration imu_integration_;
     GnssCorrection gnss_correction_;
+    SurfaceEstimation surface_estimation_;
 
     // Optimization
     NonlinearFactorGraph graph_; 
@@ -68,15 +72,8 @@ private:
     Point3 vel_;
     imuBias::ConstantBias bias_;
     Point3 lever_arm_;
-
-    void initializeState();
-    void addPriors();
-
-    // Private member functions
-    void initialize(double ts);
-    void addState(double ts);
     
-    
+    // General configuration parameters
     double initial_acc_bias_sigma_;
     double initial_gyro_bias_sigma_;
     double lever_norm_threshold_; 
@@ -84,6 +81,9 @@ private:
     double lever_altitude_sigma_;
 
     // Output
+    ros::Publisher pose_pub_;
+    void publishPose();
+
     std::ofstream f_out_;
     void writeToFile();
 };

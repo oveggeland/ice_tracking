@@ -26,6 +26,10 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     getParamOrThrow(nh, "/navigation/lever_norm_sigma", lever_norm_sigma_);
     getParamOrThrow(nh, "/navigation/lever_altitude_sigma", lever_altitude_sigma_);
 
+    // Output
+    std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
+    pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, 10);
+
     // Outstream TODO: Switch to publisher logic?
     fs::path outpath = getParamOrThrow<std::string>(nh, "/outpath");
     std::string nav_path = outpath / "navigation" / "ins.csv";
@@ -190,7 +194,18 @@ void PoseEstimator::addState(double ts){
     // Control parameters
     ts_ = ts;
     state_count_ ++;
+
     writeToFile();
+    publishPose();
+}
+
+
+void PoseEstimator::publishPose(){
+    geometry_msgs::PoseStamped msg;
+    msg.header.stamp = ros::Time(ts_);
+    msg.pose = poseGtsamToRos(pose_);
+
+    pose_pub_.publish(msg);
 }
 
 void PoseEstimator::writeToFile(){

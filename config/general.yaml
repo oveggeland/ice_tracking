@@ -8,6 +8,9 @@ ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yam
 
 # Topics
 use_sim_time: true
+
 imu_topic: "/arduino_node/imu"
 gnss_topic: "/arduino_node/gnss"
 pcl_topic: "/livox_lidar_node/pointcloud2"
+
+pose_topic: "/pose"
