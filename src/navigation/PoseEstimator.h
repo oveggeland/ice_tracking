@@ -6,19 +6,19 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
 
-#include "icetrack/navigation/navigation.h"
+#include "navigation/navigation.h"
 
-#include "icetrack/navigation/ImuIntegration.h"
-#include "icetrack/navigation/GnssCorrection.h"
-#include "icetrack/navigation/SurfaceEstimation.h"
+#include "ImuIntegration.h"
+#include "GnssCorrection.h"
+#include "SurfaceEstimation.h"
 
-#include "icetrack/navigation/factors/NormConstraintFactor.h"
-#include "icetrack/navigation/factors/LeveredAltitudeFactor.h"
+#include "factors/NormConstraintFactor.h"
+#include "factors/LeveredAltitudeFactor.h"
 
-#include "icetrack/utils/file_system.h"
-#include "icetrack/utils/ros_params.h"
-#include "icetrack/utils/conversions.h"
-#include "icetrack/utils/CallbackSequencer.h"
+#include "utils/file_system.h"
+#include "utils/ros_params.h"
+#include "utils/conversions.h"
+#include "utils/CallbackSequencer.h"
 
 using namespace gtsam;
 

@@ -9,10 +9,10 @@
 
 #include <open3d/geometry/PointCloud.h>
 
-#include "icetrack/utils/ros_params.h"
-#include "icetrack/utils/calibration.h"
-#include "icetrack/utils/StampedRingBuffer.h"
-#include "icetrack/navigation/factors/AltitudeFactor.h"
+#include "utils/ros_params.h"
+#include "utils/calibration.h"
+#include "utils/StampedRingBuffer.h"
+#include "navigation/factors/AltitudeFactor.h"
 
 using namespace gtsam;
 

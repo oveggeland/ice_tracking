@@ -1,21 +1,21 @@
-#include "icetrack/CloudManager.h"
+#include "mapping/CloudManager.h"
 
 CloudManager::CloudManager(ros::NodeHandle nh) {
     // Get config
-    getParamOrThrow(nh, "/cloud/enabled", enabled_);
-    getParamOrThrow(nh, "/cloud/window_size", window_size_);
-    getParamOrThrow(nh, "/cloud/save_cloud", save_cloud_);
+    getParamOrThrow(nh, "/mapping/enabled", enabled_);
+    getParamOrThrow(nh, "/mapping/window_size", window_size_);
+    getParamOrThrow(nh, "/mapping/save_cloud", save_cloud_);
 
-    getParamOrThrow(nh, "/cloud/min_elevation", min_elevation_);
-    getParamOrThrow(nh, "/cloud/max_elevation", max_elevation_);
-    getParamOrThrow(nh, "/cloud/min_intensity", min_intensity_);
+    getParamOrThrow(nh, "/mapping/min_elevation", min_elevation_);
+    getParamOrThrow(nh, "/mapping/max_elevation", max_elevation_);
+    getParamOrThrow(nh, "/mapping/min_intensity", min_intensity_);
 
-    getParamOrThrow(nh, "/cloud/grid_size", grid_size_);
-    getParamOrThrow(nh, "/cloud/smoothing_radius", smoothing_radius_);
-    getParamOrThrow(nh, "/cloud/deformation_radius", deformation_radius_);
+    getParamOrThrow(nh, "/mapping/grid_size", grid_size_);
+    getParamOrThrow(nh, "/mapping/smoothing_radius", smoothing_radius_);
+    getParamOrThrow(nh, "/mapping/deformation_radius", deformation_radius_);
 
     // Setup sequencer and subscribers
-    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/safe_delay"));
+    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/mapping/safe_delay"));
 
     std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");

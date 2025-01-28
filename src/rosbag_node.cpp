@@ -11,9 +11,9 @@
 #include <filesystem>
 #include <gperftools/profiler.h>
 
-#include "icetrack/utils/ros_params.h"
-#include "icetrack/navigation/PoseEstimator.h"
-#include "icetrack/CloudManager.h"
+#include "utils/ros_params.h"
+#include "navigation/PoseEstimator.h"
+#include "mapping/CloudManager.h"
 
 int main(int argc, char** argv) {
     // Initialize node

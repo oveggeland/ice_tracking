@@ -2,6 +2,8 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
 
 #include <open3d/Open3D.h>
 #include <open3d/core/Tensor.h>
@@ -9,15 +11,14 @@
 
 #include <gtsam/geometry/Pose3.h>
 
-#include "icetrack/system/SensorSystem.h"
-#include "icetrack/utils/ros_params.h"
-#include "icetrack/utils/pointcloud.h"
+#include "utils/ros_params.h"
+#include "utils/pointcloud.h"
 
-#include "icetrack/utils/StampedRingBuffer.h"
-#include "icetrack/utils/file_system.h"
-#include "icetrack/utils/calibration.h"
-#include "icetrack/utils/conversions.h"
-#include "icetrack/utils/CallbackSequencer.h"
+#include "utils/StampedRingBuffer.h"
+#include "utils/file_system.h"
+#include "utils/calibration.h"
+#include "utils/conversions.h"
+#include "utils/CallbackSequencer.h"
 
 class CloudManager{
 public:

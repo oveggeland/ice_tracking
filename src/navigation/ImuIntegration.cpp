@@ -1,4 +1,4 @@
-#include "icetrack/navigation/ImuIntegration.h"
+#include "ImuIntegration.h"
 
 ImuIntegration::ImuIntegration(ros::NodeHandle nh) {
     // Get config

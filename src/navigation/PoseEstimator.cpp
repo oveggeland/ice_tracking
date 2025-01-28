@@ -1,4 +1,4 @@
-#include "icetrack/navigation/PoseEstimator.h"
+#include "PoseEstimator.h"
 
 PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     : imu_integration_(nh), gnss_correction_(nh), surface_estimation_(nh){
@@ -8,7 +8,7 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     smoother_ = BatchFixedLagSmoother(lag);
 
     // Setup sequencer and subscribers
-    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/safe_delay"));
+    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
 
     std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");

@@ -1,4 +1,4 @@
-#include "icetrack/navigation/GnssCorrection.h"
+#include "GnssCorrection.h"
 
 GnssCorrection::GnssCorrection(ros::NodeHandle nh){
     getParamOrThrow(nh, "/navigation/gnss/timeout_interval", timeout_interval_);

@@ -1,5 +1,6 @@
 
 # General
+safe_delay: 0.5
 gravity_norm: 9.831
 fixed_lag: 30
 

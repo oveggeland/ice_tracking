@@ -1,4 +1,4 @@
-#include "icetrack/navigation/SurfaceEstimation.h"
+#include "SurfaceEstimation.h"
 
 SurfaceEstimation::SurfaceEstimation(ros::NodeHandle nh) {
     // Initialize buffer

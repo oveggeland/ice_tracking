@@ -6,8 +6,8 @@
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/AttitudeFactor.h>
 
-#include "icetrack/utils/ros_params.h"
-#include "icetrack/navigation/navigation.h"
+#include "utils/ros_params.h"
+#include "navigation/navigation.h"
 
 class ImuIntegration{
     public:

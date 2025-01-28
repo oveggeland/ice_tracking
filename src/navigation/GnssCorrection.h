@@ -6,9 +6,9 @@
 
 #include <proj.h>
 
-#include "icetrack/utils/ros_params.h"
-#include "icetrack/navigation/navigation.h"
-#include "icetrack/navigation/factors/GNSSFactor.h"
+#include "utils/ros_params.h"
+#include "navigation/navigation.h"
+#include "navigation/factors/GNSSFactor.h"
 
 class GnssCorrection{
 public:
