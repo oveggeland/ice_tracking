@@ -7,7 +7,18 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
     smoother_ = BatchFixedLagSmoother(lag);
 
-    // Config
+    // Setup sequencer and subscribers
+    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/safe_delay"));
+
+    std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
+    std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
+    std::string lidar_topic = getParamOrThrow<std::string>(nh, "/pcl_topic");
+
+    imu_sub_ = nh.subscribe(imu_topic, 10, &PoseEstimator::imuCallback, this);
+    gnss_sub_ = nh.subscribe(gnss_topic, 10, &PoseEstimator::gnssCallback, this);
+    lidar_sub_ = nh.subscribe(lidar_topic, 10, &PoseEstimator::lidarCallback, this);
+
+    // General config
     getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);
     getParamOrThrow(nh, "/navigation/initial_gyro_bias_sigma", initial_gyro_bias_sigma_);
     
@@ -15,7 +26,7 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     getParamOrThrow(nh, "/navigation/lever_norm_sigma", lever_norm_sigma_);
     getParamOrThrow(nh, "/navigation/lever_altitude_sigma", lever_altitude_sigma_);
 
-    // Outstream
+    // Outstream TODO: Switch to publisher logic?
     fs::path outpath = getParamOrThrow<std::string>(nh, "/outpath");
     std::string nav_path = outpath / "navigation" / "ins.csv";
     makePath(nav_path);
@@ -26,38 +37,47 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
 }
 
 
-bool PoseEstimator::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
+// Subscriber callbacks. All we do is add the callbacks to the sequencer to assert chronological order of messages
+void PoseEstimator::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
+    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&PoseEstimator::imuSafeCallback, this, msg));
+};
+void PoseEstimator::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&PoseEstimator::gnssSafeCallback, this, msg));
+};
+void PoseEstimator::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&PoseEstimator::lidarSafeCallback, this, msg));
+};
+
+
+void PoseEstimator::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
     // Integrate new measurement
     imu_integration_.newMeasurement(msg);
 
     // Check for potential timeout (if we are initialized)
-    if (isInit() && imu_integration_.timeOut()){
+    if (init_ && imu_integration_.timeOut()){
         ROS_WARN("PoseEstimator: IMU integration timeout, add new state variable");
         addState(msg->header.stamp.toSec());
-        return true;
     }
-    return false;
 }
 
 
-bool PoseEstimator::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+void PoseEstimator::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
     gnss_correction_.newMeasurement(msg);
 
-    if (isInit() && gnss_correction_.isFix()){
+    if (init_ && gnss_correction_.isFix()){
         auto gnss_factor = gnss_correction_.getCorrectionFactor(X(state_count_));
         graph_.add(gnss_factor);
 
         addState(ts);
-        return true;
     }
     else if (gnss_correction_.isInit() && surface_estimation_.estimateSurface(ts)){
         initialize(ts);
     }
-    return false;
 }
 
-void PoseEstimator::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+
+void PoseEstimator::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     surface_estimation_.addLidarFrame(msg);
 };
 

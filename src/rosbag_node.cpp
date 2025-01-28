@@ -2,59 +2,110 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/NavSatFix.h>
+#include <sensor_msgs/PointCloud2.h>
+
+#include <rosgraph_msgs/Clock.h>
+
 #include <filesystem>
-
-#include "icetrack/IceTrack.h"
-
 #include <gperftools/profiler.h>
 
-int main(int argc, char **argv)
-{
-    ProfilerStart("/home/oskar/icetrack/profiling/rosbag_node.prof");
+#include "icetrack/utils/ros_params.h"
+#include "icetrack/navigation/PoseEstimator.h"
+#include "icetrack/CloudManager.h"
 
+int main(int argc, char** argv) {
     // Initialize node
     ros::init(argc, argv, "rosbag_icetrack_node");
     ros::NodeHandle nh;
 
-    // Extract info parameters
+    // Start profiler
+    std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
+    std::string profile_path = std::filesystem::path(outpath) / "rosbag_node.profile";
+    ProfilerStart(profile_path.c_str());
+
+    // Get parameters for the bag path and topic names
     std::string bagpath = getParamOrThrow<std::string>(nh, "/bagpath");
+    std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
+    std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
+    std::string pcl_topic = getParamOrThrow<std::string>(nh, "/pcl_topic");
 
-    // Initialize some navigation node
-    IceTrack tracker = IceTrack(nh);
+    // Publishers for IMU, GNSS, PointCloud2, and simulated clock
+    ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>(imu_topic, 10);
+    ros::Publisher gnss_pub = nh.advertise<sensor_msgs::NavSatFix>(gnss_topic, 10);
+    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
+    ros::Publisher clock_pub = nh.advertise<rosgraph_msgs::Clock>("/clock", 10);
 
+    // Enable simulated time
+    ros::param::set("/use_sim_time", true);
+
+    // Initialize nodes
+    PoseEstimator pose_estimator(nh);
+    // CloudManager cloud_manager(nh);
+
+    // Collect bag files
     std::vector<std::filesystem::path> files;
     std::copy(std::filesystem::directory_iterator(bagpath), std::filesystem::directory_iterator(), std::back_inserter(files));
     std::sort(files.begin(), files.end());
 
-    // Iterate over bagfiles in chronological order
-    for (const std::string& filename : files) {
+    // Process each bag file
+    for (const auto& filepath : files) {
+        std::string filename = filepath.string();
         ROS_INFO_STREAM("Reading bag: " << filename);
-        rosbag::Bag bag(filename, rosbag::bagmode::Read);
+
+        rosbag::Bag bag;
+        try {
+            bag.open(filename, rosbag::bagmode::Read);
+        } catch (const rosbag::BagException& e) {
+            ROS_ERROR_STREAM("Failed to open bag file: " << filename << ". Error: " << e.what());
+            continue;
+        }
+
         rosbag::View view(bag);
 
+        // Process each message in the bag
         for (rosbag::MessageInstance const m : view) {
+            ros::Time msg_time = m.getTime();
+
+            // Publish clock time
+            rosgraph_msgs::Clock clock_msg;
+            clock_msg.clock = msg_time;
+            clock_pub.publish(clock_msg);
+
+            // Publish the message to the appropriate topic
             if (m.getDataType() == "sensor_msgs/Imu") {
-                sensor_msgs::Imu::ConstPtr msg = m.instantiate<sensor_msgs::Imu>();
+                auto msg = m.instantiate<sensor_msgs::Imu>();
+                if (msg) {
+                    imu_pub.publish(msg);
+                }
+            } else if (m.getDataType() == "sensor_msgs/NavSatFix") {
+                auto msg = m.instantiate<sensor_msgs::NavSatFix>();
+                if (msg) {
+                    gnss_pub.publish(msg);
+                }
+            } else if (m.getDataType() == "sensor_msgs/PointCloud2") {
+                auto msg = m.instantiate<sensor_msgs::PointCloud2>();
+                if (msg) {
+                    pcl_pub.publish(msg);
+                }
+            }
 
-                tracker.imuCallback(msg);
-            }
-            else if (m.getDataType() == "sensor_msgs/NavSatFix") {
-                sensor_msgs::NavSatFix::ConstPtr msg = m.instantiate<sensor_msgs::NavSatFix>();
-                
-                tracker.gnssCallback(msg);
-            }
-            else if (m.getDataType() == "sensor_msgs/PointCloud2") {
-                sensor_msgs::PointCloud2::ConstPtr msg = m.instantiate<sensor_msgs::PointCloud2>();
+            // Allow nodes to process messages
+            ros::spinOnce();
 
-                tracker.pclCallback(msg);
-            }
-            
-            if (!ros::ok()){
+            // Everything ok?
+            if (!ros::ok())
                 break;
-            }
         }
+
+        bag.close();
+
+        // Everything ok?
+        if (!ros::ok())
+            break;
     }
-    
+
     ProfilerStop();
     return 0;
 }

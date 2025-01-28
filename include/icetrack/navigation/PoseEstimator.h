@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ros/ros.h"
+#include <geometry_msgs/PoseStamped.h>
 
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
@@ -8,7 +9,6 @@
 #include <gtsam/slam/BetweenFactor.h>
 
 #include "icetrack/system/SensorSystem.h"
-
 #include "icetrack/navigation/navigation.h"
 
 #include "icetrack/navigation/ImuIntegration.h"
@@ -20,6 +20,8 @@
 
 #include "icetrack/utils/file_system.h"
 #include "icetrack/utils/ros_params.h"
+#include "icetrack/utils/conversions.h"
+#include "icetrack/utils/CallbackSequencer.h"
 
 using namespace gtsam;
 
@@ -27,17 +29,23 @@ class PoseEstimator{
 public:
     PoseEstimator(ros::NodeHandle nh);
 
-    // Interface
-    bool imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
-    bool gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+private:
+    // Subscribers and subscriber callbacks
+    ros::Subscriber imu_sub_;
+    ros::Subscriber gnss_sub_;
+    ros::Subscriber lidar_sub_;
+
+    void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
+    void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    double getTimeStamp()   { return ts_; }
-    Pose3 getPose()        { return pose_; }
+    // Safe callback sequencing
+    CallbackSequencer sequencer_;
+    
+    void imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg);
+    void gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+    void lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    bool isInit() { return init_; }
-
-private:
     // Factor generating submodules
     SurfaceEstimation surface_estimation_;
     ImuIntegration imu_integration_;

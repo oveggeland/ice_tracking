@@ -1,6 +1,9 @@
 /*
 This class is used to sequence callbacks in chronological order. 
-This is handy when e.g. sensor messages are delayed because of hardware interfaces, or when working with asynchronous data input from ros topics.*/
+This is handy when e.g. sensor messages are delayed because of hardware interfaces, or when working with asynchronous data input from ros topics.
+*/
+
+#pragma once
 
 #include <functional>
 #include <map>
