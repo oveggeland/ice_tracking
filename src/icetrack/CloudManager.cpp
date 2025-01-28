@@ -14,6 +14,15 @@ CloudManager::CloudManager(ros::NodeHandle nh) {
     getParamOrThrow(nh, "/cloud/smoothing_radius", smoothing_radius_);
     getParamOrThrow(nh, "/cloud/deformation_radius", deformation_radius_);
 
+    // Setup sequencer and subscribers
+    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/safe_delay"));
+
+    std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
+    std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
+
+    lidar_sub_ = nh.subscribe(lidar_topic, 10, &CloudManager::lidarCallback, this);
+    pose_sub_ = nh.subscribe(pose_topic, 10, &CloudManager::poseCallback, this);
+
     // Read extrinsics
     std::string ext_file = getParamOrThrow<std::string>(nh, "/ext_file");
     bTl_ = bTl(ext_file);
@@ -39,14 +48,20 @@ CloudManager::CloudManager(ros::NodeHandle nh) {
     f_stats_ << std::endl << std::fixed;
 }
 
-CloudManager::~CloudManager(){
-}
-
-bool CloudManager::isInit(){
-    return init_;
-}
-
+// Subscriber callbacks. Add safe callback version to sequencer for synchronization. 
 void CloudManager::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&CloudManager::lidarSafeCallback, this, msg));
+}
+void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
+    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&CloudManager::poseSafeCallback, this, msg));
+}
+
+
+// Add LiDAR points to buffer
+void CloudManager::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    if (!enabled_)
+        return;
+
     double ts_point = msg->header.stamp.toSec() - point_interval_; // Track stamp of points as we iterate
     for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
         ts_point += point_interval_;
@@ -80,32 +95,18 @@ void CloudManager::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
 }
 
 
-
-
-
-
-gtsam::Pose3 CloudManager::shiftPose(gtsam::Pose3 pose){
-    return gtsam::Pose3(pose.rotation(), pose.translation() - gtsam::Point3(x0_, y0_, 0));
-}
-
-void CloudManager::initialize(double ts, gtsam::Pose3 pose){
-    t0_ = ts;
-    t0_window_ = ts;
-    x0_ = pose.translation().x();
-    y0_ = pose.translation().y();
-    pose0_ = shiftPose(pose);
-    init_ = true;
-}
-
-// This is the main entry point to CloudManager from IceTrack
-void CloudManager::newPose(double t1, gtsam::Pose3 imu_pose){
+// When a new pose is available, use this to add lidar points from buffer to global cloud
+void CloudManager::poseSafeCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
     if (!enabled_)
         return;
-        
+
+    double t1 = msg->header.stamp.toSec();
+    gtsam::Pose3 imu_pose = poseRosToGtsam(msg->pose);
+
     // Incoming pose is body, we need lidar pose (because of convention in point_buffer_)
     gtsam::Pose3 pose1 = imu_pose.compose(bTl_);
 
-    if (!isInit()){
+    if (!init_){
         initialize(t1, pose1);
         return;
     }
@@ -159,6 +160,24 @@ void CloudManager::newPose(double t1, gtsam::Pose3 imu_pose){
     if (t0_ - t0_window_ > window_size_)
         analyseWindow();
 }
+
+
+
+
+
+gtsam::Pose3 CloudManager::shiftPose(gtsam::Pose3 pose){
+    return gtsam::Pose3(pose.rotation(), pose.translation() - gtsam::Point3(x0_, y0_, 0));
+}
+
+void CloudManager::initialize(double ts, gtsam::Pose3 pose){
+    t0_ = ts;
+    t0_window_ = ts;
+    x0_ = pose.translation().x();
+    y0_ = pose.translation().y();
+    pose0_ = shiftPose(pose);
+    init_ = true;
+}
+
 
 void CloudManager::analyseWindow(){
     // Generate pointcloud

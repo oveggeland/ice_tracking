@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <geometry_msgs/PoseStamped.h>
 
 #include <open3d/Open3D.h>
 #include <open3d/core/Tensor.h>
@@ -15,19 +16,27 @@
 #include "icetrack/utils/StampedRingBuffer.h"
 #include "icetrack/utils/file_system.h"
 #include "icetrack/utils/calibration.h"
+#include "icetrack/utils/conversions.h"
+#include "icetrack/utils/CallbackSequencer.h"
 
 class CloudManager{
 public:
     CloudManager(ros::NodeHandle nh);
-    ~CloudManager();
-
-    // Interface
-    void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-    void newPose(double t1, gtsam::Pose3 imu_pose);
 
 private:
     bool enabled_;
     
+    // Message sequencing and subscriber callbacks
+    CallbackSequencer sequencer_;
+
+    ros::Subscriber lidar_sub_;
+    void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    void lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+
+    ros::Subscriber pose_sub_;
+    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+    void poseSafeCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+
     // Extrinsics (lidar->imu)
     gtsam::Pose3 bTl_;
     
@@ -53,7 +62,6 @@ private:
 
     // Initializing
     bool init_ = false;
-    bool isInit();
     void initialize(double t0, gtsam::Pose3 pose0);
 
     // Filtering

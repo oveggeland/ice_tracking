@@ -1,12 +1,12 @@
 # Cloud manager
-enabled: false              # Use this do disbale/enable the cloud manager (useful to debug navigation)
+enabled: true              # Use this do disbale/enable the cloud manager (useful to debug navigation)
 window_size: 60.0
 save_cloud: true
 
 # Processing parameters
 min_elevation: -1
 max_elevation: 4
-min_intensity: 1
+min_intensity: 0
 
 grid_size: 1.0            # Down sample point cloud to grid_size*grid_size tiles (in xy-plane)
 smoothing_radius: 2.0     # Elevation is smoothed withing smoothing radius

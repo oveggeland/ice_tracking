@@ -2,7 +2,7 @@
 safe_delay: 0.5 # Wait this period for possible sensor lag
 
 bagpath: "/home/oskar/icetrack/data/long3"
-outpath: "/home/oskar/icetrack/output/test/"
+outpath: "/home/oskar/icetrack/output/long3/"
 
 ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
 
@@ -11,6 +11,6 @@ use_sim_time: true
 
 imu_topic: "/arduino_node/imu"
 gnss_topic: "/arduino_node/gnss"
-pcl_topic: "/livox_lidar_node/pointcloud2"
+lidar_topic: "/livox_lidar_node/pointcloud2"
 
 pose_topic: "/pose"

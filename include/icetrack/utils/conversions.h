@@ -1,6 +1,8 @@
 /*
 Header library for conversions between GTSAM and ROS geometries.
 */
+#pragma once
+
 #include <gtsam/geometry/Quaternion.h>
 #include <gtsam/geometry/Pose3.h>
 #include <geometry_msgs/Pose.h>

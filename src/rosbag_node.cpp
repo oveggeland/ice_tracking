@@ -29,17 +29,17 @@ int main(int argc, char** argv) {
     std::string bagpath = getParamOrThrow<std::string>(nh, "/bagpath");
     std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
-    std::string pcl_topic = getParamOrThrow<std::string>(nh, "/pcl_topic");
+    std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
 
     // Publishers for IMU, GNSS, PointCloud2, and simulated clock
     ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>(imu_topic, 10);
     ros::Publisher gnss_pub = nh.advertise<sensor_msgs::NavSatFix>(gnss_topic, 10);
-    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2>(pcl_topic, 10);
+    ros::Publisher lidar_pub = nh.advertise<sensor_msgs::PointCloud2>(lidar_topic, 10);
     ros::Publisher clock_pub = nh.advertise<rosgraph_msgs::Clock>("/clock", 10);
 
     // Initialize nodes
     PoseEstimator pose_estimator(nh);
-    // CloudManager cloud_manager(nh);
+    CloudManager cloud_manager(nh);
 
     // Collect bag files
     std::vector<std::filesystem::path> files;
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
             } else if (m.getDataType() == "sensor_msgs/PointCloud2") {
                 auto msg = m.instantiate<sensor_msgs::PointCloud2>();
                 if (msg) {
-                    pcl_pub.publish(msg);
+                    lidar_pub.publish(msg);
                 }
             }
 

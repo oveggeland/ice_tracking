@@ -12,7 +12,7 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
 
     std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
-    std::string lidar_topic = getParamOrThrow<std::string>(nh, "/pcl_topic");
+    std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
 
     imu_sub_ = nh.subscribe(imu_topic, 10, &PoseEstimator::imuCallback, this);
     gnss_sub_ = nh.subscribe(gnss_topic, 10, &PoseEstimator::gnssCallback, this);
