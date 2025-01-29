@@ -96,18 +96,3 @@ T findHistogramPeak(const std::vector<T>& data, int num_bins, T min, T max) {
     T bin_width = (max - min) / num_bins;
     return min + peak_bin * bin_width + bin_width / 2;
 }
-
-
-inline void gridDownSample(open3d::t::geometry::PointCloud& pcd, double grid_size){
-    // Copy z-value to scalar attribute and set to 0 in position tensor
-    auto z_tensor = pcd.GetPointPositions().Slice(1, 2, 3);
-    pcd.SetPointAttr("z_value", z_tensor.Clone());
-    z_tensor.SetItem(open3d::core::Tensor::Zeros({1, 1}, open3d::core::Float32));
-
-    // Downsample (now with z=0)
-    pcd = pcd.VoxelDownSample(grid_size);
-
-    // Move z-value back to positions and remove attribute copy
-    pcd.GetPointPositions().Slice(1, 2, 3).SetItem(pcd.GetPointAttr("z_value"));
-    pcd.RemovePointAttr("z_value");
-}
