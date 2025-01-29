@@ -14,9 +14,9 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
     std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
 
-    imu_sub_ = nh.subscribe(imu_topic, 10, &PoseEstimator::imuCallback, this);
+    imu_sub_ = nh.subscribe(imu_topic, 2000, &PoseEstimator::imuCallback, this);
     gnss_sub_ = nh.subscribe(gnss_topic, 10, &PoseEstimator::gnssCallback, this);
-    lidar_sub_ = nh.subscribe(lidar_topic, 10, &PoseEstimator::lidarCallback, this);
+    lidar_sub_ = nh.subscribe(lidar_topic, 100, &PoseEstimator::lidarCallback, this);
 
     // General config
     getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);

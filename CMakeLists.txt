@@ -66,6 +66,8 @@ target_link_libraries(maplib
 add_executable(navigation_node src/navigation_node.cpp)
 add_executable(mapping_node src/mapping_node.cpp)
 add_executable(rosbag_node src/rosbag_node.cpp)
+add_executable(rosbag_fixed_rate_node src/rosbag_fixed_rate_node.cpp)
+
 
 ## Link executables ##
 target_link_libraries(navigation_node
@@ -83,6 +85,12 @@ target_link_libraries(rosbag_node
   navlib
   maplib
   -lprofiler
+)
+
+target_link_libraries(rosbag_fixed_rate_node
+  ${catkin_LIBRARIES}
+  navlib
+  maplib
 )
 
 # Python stuff

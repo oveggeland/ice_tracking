@@ -9,3 +9,4 @@ gnss_topic: "/arduino_node/gnss"
 lidar_topic: "/livox_lidar_node/pointcloud2"
 pose_topic: "/icetrack/pose"
 
+max_publish_rate: 20 # For fixed rate node

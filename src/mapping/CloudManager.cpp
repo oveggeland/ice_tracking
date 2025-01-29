@@ -20,7 +20,7 @@ CloudManager::CloudManager(ros::NodeHandle nh) {
     std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
 
-    lidar_sub_ = nh.subscribe(lidar_topic, 10, &CloudManager::lidarCallback, this);
+    lidar_sub_ = nh.subscribe(lidar_topic, 100, &CloudManager::lidarCallback, this);
     pose_sub_ = nh.subscribe(pose_topic, 10, &CloudManager::poseCallback, this);
 
     // Read extrinsics
@@ -28,7 +28,7 @@ CloudManager::CloudManager(ros::NodeHandle nh) {
     bTl_ = bTl(ext_file);
 
     // Allocate cloud storage
-    point_buffer_ = StampedRingBuffer<PointXYZIT>(2.0/point_interval_);
+    point_buffer_ = StampedRingBuffer<PointXYZIT>(5.0/point_interval_);
 
     int max_points = window_size_ / point_interval_;
     positions_ = std::vector<float>(3*max_points);
