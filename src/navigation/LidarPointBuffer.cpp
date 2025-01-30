@@ -1,7 +1,7 @@
-#include "LidarBuffer.h"
+#include "LidarPointBuffer.h"
 
 
-LidarBuffer::LidarBuffer(const ros::NodeHandle& nh) {
+LidarPointBuffer::LidarPointBuffer(const ros::NodeHandle& nh) {
     // Initialize buffer
     double buffer_size = getParamOrThrow<double>(nh, "/navigation/surface_estimation/buffer_size");
     getParamOrThrow(nh, "/navigation/surface_estimation/lidar_point_interval", point_interval_);
@@ -14,7 +14,7 @@ LidarBuffer::LidarBuffer(const ros::NodeHandle& nh) {
 }
 
 
-void LidarBuffer::addLidarFrame(const sensor_msgs::PointCloud2::ConstPtr& msg){
+void LidarPointBuffer::addLidarPoints(const sensor_msgs::PointCloud2::ConstPtr& msg){
     double ts_point = msg->header.stamp.toSec() - point_interval_; // Track stamp of points as we iterate
     for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
         ts_point += point_interval_;

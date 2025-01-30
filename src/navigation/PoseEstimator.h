@@ -10,7 +10,10 @@
 
 #include "ImuIntegration.h"
 #include "GnssCorrection.h"
-#include "LidarBuffer.h"
+
+#include "LidarPointBuffer.h"
+#include "LidarFrameBuffer.h"
+
 #include "SurfaceEstimation.h"
 #include "LidarOdometry.h"
 
@@ -52,11 +55,13 @@ private:
 
     void addState(double ts);
 
-    // Factor generating submodules
+    // PointCloud buffers
+    LidarPointBuffer point_buffer_;
+    LidarFrameBuffer frame_buffer_;
+
+    // Factor generator modules
     ImuIntegration imu_integration_;
     GnssCorrection gnss_correction_;
-    
-    LidarBuffer lidar_buffer_;
     SurfaceEstimation surface_estimation_;
     LidarOdometry lidar_odometry_;
 

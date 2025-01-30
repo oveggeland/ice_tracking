@@ -6,14 +6,14 @@
 #include "utils/ros_params.h"
 #include "utils/StampedRingBuffer.h"
 
-class LidarBuffer{
+class LidarPointBuffer{
 public: 
-    LidarBuffer(const ros::NodeHandle& nh);
+    LidarPointBuffer(const ros::NodeHandle& nh);
 
     // Interface
-    void addLidarFrame(const sensor_msgs::PointCloud2::ConstPtr& msg);
-    const StampedRingBuffer<PointXYZT>& constBufferReference() const { return point_buffer_; }
+    void addLidarPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
+    StampedRingBufferIterator<PointXYZT> lowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
 private:
     StampedRingBuffer<PointXYZT> point_buffer_;
 
