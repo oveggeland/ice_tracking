@@ -1,19 +1,9 @@
 #include "SurfaceEstimation.h"
 
-SurfaceEstimation::SurfaceEstimation(ros::NodeHandle nh) {
-    // Initialize buffer
-    double buffer_size = getParamOrThrow<double>(nh, "/navigation/surface_estimation/buffer_size");
-    getParamOrThrow(nh, "/navigation/surface_estimation/lidar_point_interval", point_interval_);
-    point_buffer_ = StampedRingBuffer<PointXYZT>(buffer_size / point_interval_);
-
+SurfaceEstimation::SurfaceEstimation(const ros::NodeHandle& nh, const LidarBuffer& lidar_buffer) : point_buffer_(lidar_buffer.constBufferReference()){
     // Read extrinsics
     std::string ext_file = getParamOrThrow<std::string>(nh, "/ext_file");
     bTl_ = bTl(ext_file);
-
-    // Lidar Config
-    getParamOrThrow(nh, "/navigation/surface_estimation/lidar_min_intensity", min_intensity_);
-    min_dist_squared_ = pow(getParamOrThrow<double>(nh, "/navigation/surface_estimation/lidar_min_dist"), 2);
-    max_dist_squared_ = pow(getParamOrThrow<double>(nh, "/navigation/surface_estimation/lidar_max_dist"), 2);
 
     // Ransac config
     getParamOrThrow(nh, "/navigation/surface_estimation/ransac_frame_size", ransac_frame_size_);
@@ -25,47 +15,6 @@ SurfaceEstimation::SurfaceEstimation(ros::NodeHandle nh) {
     // Factor config
     getParamOrThrow(nh, "/navigation/surface_estimation/sigma_altitude", sigma_altitude_);
     getParamOrThrow(nh, "/navigation/surface_estimation/sigma_attitude", sigma_attitude_);
-}
-
-void SurfaceEstimation::addLidarFrame(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    double ts_point = msg->header.stamp.toSec() - point_interval_; // Track stamp of points as we iterate
-    for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
-        ts_point += point_interval_;
-
-        // Initial rejections
-        if (
-            it[0] == 0.0 ||             // Empty point
-            it[3] < min_intensity_ ||   // Outlier
-            ts_point <= ts_head_        // Time error
-        )
-            continue;
-
-        // Range filtering
-        double dist_squared = it[0]*it[0] + it[1]*it[1] + it[2]*it[2];
-        if (dist_squared < min_dist_squared_ || dist_squared > max_dist_squared_)
-            continue;
-
-        // Point accepted
-        point_buffer_.addPoint({
-            it[0],
-            it[1],
-            it[2],
-            ts_point
-        });
-    }
-    
-    if (ts_point > ts_head_){
-        ts_head_ = ts_point;
-    }
-}
-
-
-AltitudeFactor SurfaceEstimation::getAltitudeFactor(Key pose_key){
-    return AltitudeFactor(pose_key, -surface_distance_, noiseModel::Isotropic::Sigma(1, sigma_altitude_));
-}
-
-Pose3AttitudeFactor SurfaceEstimation::getAttitudeFactor(Key pose_key){
-    return Pose3AttitudeFactor(pose_key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, sigma_attitude_), surface_normal_);
 }
 
 bool SurfaceEstimation::estimateSurface(double ts){
@@ -106,8 +55,18 @@ bool SurfaceEstimation::estimateSurface(double ts){
         plane_model = -plane_model;
 
     // Transform plane model from Lidar to IMU frame
-    surface_normal_ = Unit3(bTl_.rotation().rotate(plane_model.head<3>()));
-    surface_distance_ = abs(plane_model[3] - bTl_.translation().dot(surface_normal_.unitVector()));
+    normal_ = Unit3(bTl_.rotation().rotate(plane_model.head<3>()));
+    distance_ = plane_model[3] - bTl_.translation().dot(normal_.unitVector());
 
     return true;
+}
+
+
+
+AltitudeFactor SurfaceEstimation::getAltitudeFactor(Key pose_key) const{
+    return AltitudeFactor(pose_key, -getSurfaceDistance(), noiseModel::Isotropic::Sigma(1, sigma_altitude_));
+}
+
+Pose3AttitudeFactor SurfaceEstimation::getAttitudeFactor(Key pose_key) const{
+    return Pose3AttitudeFactor(pose_key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, sigma_attitude_), getSurfaceNormal());
 }

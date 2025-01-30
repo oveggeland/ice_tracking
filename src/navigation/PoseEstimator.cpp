@@ -1,7 +1,7 @@
 #include "PoseEstimator.h"
 
 PoseEstimator::PoseEstimator(ros::NodeHandle nh)
-    : imu_integration_(nh), gnss_correction_(nh), surface_estimation_(nh){
+    : imu_integration_(nh), gnss_correction_(nh), lidar_buffer_(nh), surface_estimation_(nh, lidar_buffer_), lidar_odometry_(nh, lidar_buffer_){
 
     // Fixed lag smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
@@ -82,7 +82,7 @@ void PoseEstimator::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg
 
 
 void PoseEstimator::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    surface_estimation_.addLidarFrame(msg);
+    lidar_buffer_.addLidarFrame(msg);
 };
 
 

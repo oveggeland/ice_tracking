@@ -10,7 +10,9 @@
 
 #include "ImuIntegration.h"
 #include "GnssCorrection.h"
+#include "LidarBuffer.h"
 #include "SurfaceEstimation.h"
+#include "LidarOdometry.h"
 
 #include "factors/NormConstraintFactor.h"
 #include "factors/LeveredAltitudeFactor.h"
@@ -53,7 +55,10 @@ private:
     // Factor generating submodules
     ImuIntegration imu_integration_;
     GnssCorrection gnss_correction_;
+    
+    LidarBuffer lidar_buffer_;
     SurfaceEstimation surface_estimation_;
+    LidarOdometry lidar_odometry_;
 
     // Optimization
     NonlinearFactorGraph graph_; 
