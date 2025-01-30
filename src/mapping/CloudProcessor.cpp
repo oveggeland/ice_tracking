@@ -19,6 +19,7 @@ void CloudProcessor::processCloud(double ts, open3d::t::geometry::PointCloud& pc
     gridDownSample(pcd);
     smoothCloud(pcd);
     estimateLocalDeformation(pcd);
+    estimatePlaneDeviations(pcd);
 
     if (save_clouds_)
         saveCloud(ts, pcd);
@@ -69,8 +70,7 @@ void CloudProcessor::smoothCloud(open3d::t::geometry::PointCloud& pcd) const{
         z_smooth.push_back(z_sum / num_neighbors);
     }
 
-    //pcd.GetPointPositions().Slice(1, 2, 3) = open3d::core::Tensor(std::move(z_smooth), {num_points, 1});
-    pcd.SetPointAttr("z_smooth", open3d::core::Tensor(std::move(z_smooth), {num_points, 1}));
+    pcd.GetPointPositions().Slice(1, 2, 3) = open3d::core::Tensor(std::move(z_smooth), {num_points, 1});
 };
 
 void CloudProcessor::estimateLocalDeformation(open3d::t::geometry::PointCloud& pcd) const{
@@ -114,6 +114,34 @@ void CloudProcessor::estimateLocalDeformation(open3d::t::geometry::PointCloud& p
 
     pcd.SetPointAttr("deformation", open3d::core::Tensor(std::move(deformation), {num_points, 1}));
 };
+
+
+
+void CloudProcessor::estimatePlaneDeviations(open3d::t::geometry::PointCloud& pcd) const {
+    // Perform RANSAC-based plane segmentation
+    auto [plane_model, inliers] = pcd.SegmentPlane(0.2, 10, 100);
+
+    // Extract plane coefficients (a, b, c, d)
+    double a = plane_model[0].Item<double>();
+    double b = plane_model[1].Item<double>();
+    double c = plane_model[2].Item<double>();
+    double d = plane_model[3].Item<double>();
+
+    // Retrieve point cloud coordinates
+    open3d::core::Tensor points = pcd.GetPointPositions(); // (N, 3) tensor
+
+    // Compute signed distances from each point to the plane
+    open3d::core::Tensor distances = 
+        (points.Slice(1, 0, 1) * a + 
+         points.Slice(1, 1, 2) * b + 
+         points.Slice(1, 2, 3) * c + d) / 
+        std::sqrt(a*a + b*b + c*c);
+
+    // Store distances as a new attribute in the point cloud
+    pcd.SetPointAttr("plane_dev", distances);
+
+    std::cout << "Plane deviations added to point cloud." << std::endl;
+}
 
 
 

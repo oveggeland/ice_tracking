@@ -26,6 +26,7 @@ private:
     void gridDownSample(open3d::t::geometry::PointCloud& pcd) const;
     void smoothCloud(open3d::t::geometry::PointCloud& pcd) const;
     void estimateLocalDeformation(open3d::t::geometry::PointCloud& pcd) const;
+    void estimatePlaneDeviations(open3d::t::geometry::PointCloud& pcd) const;
 
     // Output
     bool save_clouds_;
