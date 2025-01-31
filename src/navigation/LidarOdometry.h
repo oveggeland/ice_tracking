@@ -6,7 +6,7 @@
 #include <open3d/geometry/PointCloud.h>
 
 #include "navigation/navigation.h"
-#include "navigation/LidarFrameBuffer.h"
+#include "navigation/LidarBuffer.h"
 
 struct OdometryFrame{
     Pose3 pose;
@@ -15,10 +15,10 @@ struct OdometryFrame{
 
 class LidarOdometry{
 public:
-    LidarOdometry(const ros::NodeHandle& nh, const LidarFrameBuffer& frame_buffer);
+    LidarOdometry(const ros::NodeHandle& nh, const LidarBuffer& lidar_buffer);
 
 private:
-    const LidarFrameBuffer& frame_buffer_;
+    const LidarBuffer& lidar_buffer_;
 
     // Config
     int min_point_count_ = 10000;              // Minimum number of points per frame

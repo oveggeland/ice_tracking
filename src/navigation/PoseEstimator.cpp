@@ -3,10 +3,9 @@
 PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     :   imu_integration_(nh), 
         gnss_correction_(nh), 
-        point_buffer_(nh), 
-        frame_buffer_(nh, point_buffer_),
-        surface_estimation_(nh, point_buffer_), 
-        lidar_odometry_(nh, frame_buffer_){
+        lidar_buffer_(nh), 
+        surface_estimation_(nh, lidar_buffer_), 
+        lidar_odometry_(nh, lidar_buffer_){
 
     // Fixed lag smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
@@ -87,7 +86,7 @@ void PoseEstimator::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg
 
 
 void PoseEstimator::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    point_buffer_.addLidarPoints(msg);
+    lidar_buffer_.addPoints(msg);
 };
 
 
@@ -196,7 +195,7 @@ void PoseEstimator::addState(double ts){
     // New states? Let's generate a new LiDAR frame
     if (state_count_ > 0){
         Pose3 prev_pose = smoother_.calculateEstimate<Pose3>(X(state_count_-1));
-        frame_buffer_.createFrame(state_count_, ts_, ts, prev_pose, pose_);
+        lidar_buffer_.createFrame(state_count_, ts_, ts, prev_pose, pose_);
     }
 
     // Reset IMU preintegration

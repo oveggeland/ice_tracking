@@ -31,7 +31,7 @@ void visualizeAlignment(std::shared_ptr<open3d::geometry::PointCloud> cloud0,
                                           800, 600);
 }
 
-LidarOdometry::LidarOdometry(const ros::NodeHandle& nh, const LidarFrameBuffer& frame_buffer) : frame_buffer_(frame_buffer){
+LidarOdometry::LidarOdometry(const ros::NodeHandle& nh, const LidarBuffer& lidar_buffer) : lidar_buffer_(lidar_buffer){
 }
 
 
@@ -40,8 +40,8 @@ bool LidarOdometry::estimateOdometry(int idx1) {
     int idx0 = idx1 - frame_interval_;
     
     // Get frames
-    auto frame0 = frame_buffer_.getFrame(idx0);
-    auto frame1 = frame_buffer_.getFrame(idx1);
+    auto frame0 = lidar_buffer_.getFrame(idx0);
+    auto frame1 = lidar_buffer_.getFrame(idx1);
     if (!frame0 || !frame1)
         return false;
 

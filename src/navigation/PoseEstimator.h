@@ -11,9 +11,7 @@
 #include "ImuIntegration.h"
 #include "GnssCorrection.h"
 
-#include "LidarPointBuffer.h"
-#include "LidarFrameBuffer.h"
-
+#include "LidarBuffer.h"
 #include "SurfaceEstimation.h"
 #include "LidarOdometry.h"
 
@@ -55,9 +53,8 @@ private:
 
     void addState(double ts);
 
-    // PointCloud buffers
-    LidarPointBuffer point_buffer_;
-    LidarFrameBuffer frame_buffer_;
+    // LidarBuffer
+    LidarBuffer lidar_buffer_;
 
     // Factor generator modules
     ImuIntegration imu_integration_;
