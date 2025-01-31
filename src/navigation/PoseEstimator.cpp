@@ -87,10 +87,10 @@ void PoseEstimator::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg
 
 void PoseEstimator::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     lidar_buffer_.addPoints(msg);
-};
+}
 
 
-void PoseEstimator::initializeState(){
+void PoseEstimator::initializeStates(double ts){
     // Pose
     Point2 xy = gnss_correction_.getPosition();
     double z = -surface_estimation_.getSurfaceDistance();
@@ -105,12 +105,15 @@ void PoseEstimator::initializeState(){
     vel_ = Point3(v_xy.x(), v_xy.y(), 0);
 
     // Bias
-    Point3 acc_bias = Point3(0, 0, 0);      // Point3(-0.03, 0.07, -0.14)
-    Point3 gyro_bias = Point3(0, 0, 0);     // Point3(-0.002, 0.002, -0.0024)
+    Point3 acc_bias = Point3(0, 0, 0); //Point3(-0.03, 0.11, -0.14);
+    Point3 gyro_bias = Point3(0, 0, 0); //Point3(-0.002, 0.002, -0.0024);
     bias_ = imuBias::ConstantBias(acc_bias, gyro_bias);
 
     // Lever arm
     lever_arm_ = pose_.rotation().inverse().rotate(Point3(0, 0, -z));
+
+    // Timestamp
+    ts_ = ts;
 }
 
 void PoseEstimator::addPriors(){
@@ -125,6 +128,9 @@ void PoseEstimator::addPriors(){
     graph_.addPrior(B(0), bias_, initial_bias_noise);
 
     // Lever arm priors
+    auto levered_factor = LeveredAltitudeFactor(X(0), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
+    graph_.add(levered_factor);
+
     auto lever_norm_factor = NormConstraintFactor(L(0), lever_norm_threshold_, noiseModel::Isotropic::Sigma(1, lever_norm_sigma_));
     graph_.add(lever_norm_factor);
 }
@@ -132,50 +138,59 @@ void PoseEstimator::addPriors(){
 void PoseEstimator::initialize(double ts){
     ROS_INFO_STREAM("Initializing navigation system at " << std::fixed << ts);
     
-    initializeState();
+    initializeStates(ts);
     addPriors();
-    addState(ts);
+
+    values_.insert(X(0), pose_);
+    values_.insert(V(0), vel_);
+    values_.insert(B(0), bias_);
+    values_.insert(L(0), lever_arm_); 
+
+    stamps_[X(0)] = ts;
+    stamps_[V(0)] = ts;
+    stamps_[B(0)] = ts;
+
+    imu_integration_.resetIntegration(ts_, bias_);
+    state_count_ = 1;
     init_ = true;
 }
 
-/*
-This is a generic uppdate function, called when a new state variable is added. 
-*/
-void PoseEstimator::addState(double ts){
-    ROS_INFO_STREAM("Add state: " << state_count_);
 
-    // Add altitude constraint
+/*
+Add new factors to graph_ at ts.
+*/
+void PoseEstimator::addFactors(double ts){
+    // Motion constraint
     auto levered_factor = LeveredAltitudeFactor(X(state_count_), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
     graph_.add(levered_factor);
 
-    if (state_count_ > 0){
-        // Imu integration
-        imu_integration_.finishIntegration(ts);
-        auto imu_factor = imu_integration_.getIntegrationFactor(state_count_);
-        graph_.add(imu_factor);
+    // Imu integration
+    imu_integration_.finishIntegration(ts);
+    auto imu_factor = imu_integration_.getIntegrationFactor(state_count_);
+    graph_.add(imu_factor);
 
-        // Always add surface correction for previous state (symmetry reasons)
-        if (surface_estimation_.estimateSurface(ts_)){
-            graph_.add(surface_estimation_.getAltitudeFactor(X(state_count_-1)));
-            graph_.add(surface_estimation_.getAttitudeFactor(X(state_count_-1)));
-        }
-
-        // Predict next state
-        NavState pred_state = imu_integration_.predict(pose_, vel_, bias_);
-        pose_ = pred_state.pose();
-        vel_ = pred_state.velocity();
+    // Try to get a surface estimate
+    if (surface_estimation_.estimateSurface(ts_)){
+        graph_.add(surface_estimation_.getAltitudeFactor(X(state_count_-1)));
+        graph_.add(surface_estimation_.getAttitudeFactor(X(state_count_-1)));
     }
-    else{
-        // Only on initial state
-        values_.insert(L(0), lever_arm_);
-    }
+}
 
-    // Add to values_
+void PoseEstimator::predictStates(double ts){
+    // Predict next state
+    NavState pred_state = imu_integration_.predict(pose_, vel_, bias_);
+    pose_ = pred_state.pose();
+    vel_ = pred_state.velocity();
+    ts_ = ts;
+}
+
+void PoseEstimator::updateSmoother(double ts){
+    // Add to predictions to values_
     values_.insert(X(state_count_), pose_);
     values_.insert(V(state_count_), vel_);
     values_.insert(B(state_count_), bias_);
 
-    // Key timestamps
+    // Set timestamps
     stamps_[X(state_count_)] = ts;
     stamps_[V(state_count_)] = ts;
     stamps_[B(state_count_)] = ts;
@@ -191,31 +206,57 @@ void PoseEstimator::addState(double ts){
     vel_ = smoother_.calculateEstimate<Point3>(V(state_count_));
     bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(state_count_));
     lever_arm_ = smoother_.calculateEstimate<Point3>(L(0));
+}
 
-    // New states? Let's generate a new LiDAR frame
-    if (state_count_ > 0){
-        Pose3 prev_pose = smoother_.calculateEstimate<Pose3>(X(state_count_-1));
-        lidar_buffer_.createFrame(state_count_, ts_, ts, prev_pose, pose_);
-    }
 
-    // Reset IMU preintegration
-    imu_integration_.resetIntegration(ts, bias_);
+void PoseEstimator::generateLidarFrame(){
+    Key key0 = X(state_count_-1);
+    Key key1 = X(state_count_);
 
-    // Control parameters
-    ts_ = ts;
+    double t0 = smoother_.timestamps().at(key0);
+    double t1 = smoother_.timestamps().at(key1);
+
+    Pose3 pose0 = smoother_.calculateEstimate<Pose3>(key0);
+    Pose3 pose1 = smoother_.calculateEstimate<Pose3>(key1);
+
+    lidar_buffer_.createFrame(state_count_, t0, t1, pose0, pose1);
+}
+
+/*
+This is a generic function for adding new state nodes, which typically
+happens on GNSS corrections or when the IMU integration times out.  
+*/
+void PoseEstimator::addState(double ts){
+    ROS_INFO_STREAM("Add state: " << state_count_);
+
+    // Add common factors
+    addFactors(ts);
+
+    // Predict next state
+    predictStates(ts);
+
+    // Update fixed-lag smoother with new info
+    updateSmoother(ts);
+
+    // Add new frame
+    generateLidarFrame();
+
+    // Generic logic when update is finished
+    imu_integration_.resetIntegration(ts_, bias_);
     state_count_ ++;
 
     writeToFile();
     publishPose();
 }
 
-
 void PoseEstimator::publishPose(){
-    geometry_msgs::PoseStamped msg;
-    msg.header.stamp = ros::Time(ts_);
-    msg.pose = poseGtsamToRos(pose_);
+    if (pose_pub_.getNumSubscribers() > 0){
+        geometry_msgs::PoseStamped msg;
+        msg.header.stamp = ros::Time(ts_);
+        msg.pose = poseGtsamToRos(pose_);
 
-    pose_pub_.publish(msg);
+        pose_pub_.publish(msg);
+    }
 }
 
 void PoseEstimator::writeToFile(){

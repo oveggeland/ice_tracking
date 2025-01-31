@@ -46,7 +46,7 @@ public:
     const PointBufferIterator lowerBoundPointIterator(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
 
     // Modify and access frame buffer
-    void createFrame(int idx, double t0, double t1, const Pose3& pose0, const Pose3& pose1);
+    void createFrame(int state_idx, double t0, double t1, const Pose3& pose0, const Pose3& pose1);
     PointCloudSharedPtr getFrame(int idx) const;
 
     // Const accesors for buffers

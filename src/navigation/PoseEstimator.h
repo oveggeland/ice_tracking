@@ -46,12 +46,21 @@ private:
     void gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    // Private functionality
+    // When initializing
     void initialize(double ts);
-    void initializeState();
+
+    void initializeStates(double ts);
     void addPriors();
 
+
+    // When new state are added
     void addState(double ts);
+
+    void addFactors(double ts);
+    void predictStates(double ts);
+    void updateSmoother(double ts);
+
+    void generateLidarFrame();
 
     // LidarBuffer
     LidarBuffer lidar_buffer_;

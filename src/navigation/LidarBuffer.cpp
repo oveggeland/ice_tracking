@@ -53,20 +53,21 @@ void LidarBuffer::addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg){
 
 
 /*
-Create a LidarFrame, i.e. a cloud containing the set of points from t0 to t1, represented in the frame of pose1 (body/imu frame at t1).
-Undistortion is performed by interpolation between the two posese.  
+Create a Lidar for state_idx, containing points collected between t0 and t1. 
+Interpolation between the poses is used to represent all points in pose1 frame (corresponding to the state_idx pose). 
 */
-void LidarBuffer::createFrame(int idx, double t0, double t1, const Pose3& pose0, const Pose3& pose1){
-    assert(t1 > t0);
+void LidarBuffer::createFrame(int state_idx, double t0, double t1, const Pose3& pose0, const Pose3& pose1){
+    // Precompute inverse time delta (needed for interpolation)
     double dt_inv = 1 / (t1 - t0);
+    assert (dt_inv > 0);
 
-    // Find lidar pose relative to pose0 TODO: Fix this shit
-    Pose3 pose0_rel = bTl_;
-    Pose3 pose1_rel = pose0.between(pose1).compose(bTl_);
+    // Find transformations to pose1, we will be interpolating between these two transformations. 
+    Pose3 T0 = pose1.inverse().compose(pose0).compose(bTl_);         // Transformation from lidar frame at t0 to body frame at t1.
+    Pose3 T1 = bTl_;                                                 // Transformation from lidar frame at t1 to body frame at t1. 
 
-    // Precompute logmap differences between the two poses (for efficient interpolation)
-    Vector3 dt_log = pose1_rel.translation() - pose0_rel.translation();
-    Vector3 dR_log = Rot3::Logmap(pose0_rel.rotation().between(pose1_rel.rotation()));
+    // Precompute logmap differences between the two transformations (for efficient interpolation)
+    Vector3 dt_log = T1.translation() - T0.translation();
+    Vector3 dR_log = Rot3::Logmap(T0.rotation().between(T1.rotation()));
 
     // Find bounds for point buffer iteration
     auto start = lowerBoundPointIterator(t0);
@@ -77,7 +78,7 @@ void LidarBuffer::createFrame(int idx, double t0, double t1, const Pose3& pose0,
     auto cloud = std::make_shared<PointCloud>();
     cloud->points_.reserve(num_points);
 
-    // Transform to pose0_lidar and add to cloud
+    // Iterate through points, interpolate transformation and add to cloud
     for (auto it = start; it != end; ++it){
         // Get stamp
         double ts_point = it->ts;
@@ -87,19 +88,20 @@ void LidarBuffer::createFrame(int idx, double t0, double t1, const Pose3& pose0,
         double alpha = (ts_point - t0)*dt_inv;
         assert(alpha >= 0 & alpha <= 1);
         
-        // Align point (from lidar frame at ts_point to body frame 'pose0')
+        // Transformation from lidar frame to 'pose1'
         Pose3 T_align(
-            pose0_rel.rotation().retract(alpha*dR_log),
-            pose0_rel.translation() + alpha*dt_log
+            T0.rotation().retract(alpha*dR_log),
+            T0.translation() + alpha*dt_log
         );
         gtsam::Point3 point = T_align.transformFrom(Point3(it->x, it->y, it->z));
 
         // Add to cloud
-        cloud->points_.push_back(point); // Raw Lidar points
+        cloud->points_.push_back(point);
     }
 
-    frame_buffer_[idx] = cloud;
-    frame_buffer_.erase(idx - 10); // TODO: Implement better maintenance haha
+    // Add to frame
+    frame_buffer_[state_idx] = cloud;
+    frame_buffer_.erase(state_idx - 10); // TODO: Implement better maintenance haha
 }
 
 
