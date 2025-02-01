@@ -1,89 +1,68 @@
 #pragma once
 
 #include "ros/ros.h"
-#include <geometry_msgs/PoseStamped.h>
 
-#include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/NavSatFix.h>
+#include <sensor_msgs/PointCloud2.h>
 
-#include "navigation/navigation.h"
+#include "LidarBuffer.h"
+#include "PoseGraphManager.h"
 
-#include "ImuIntegration.h"
-#include "GnssCorrection.h"
 
-#include "CloudManager.h"
-#include "SurfaceEstimation.h"
+// TODO: Apply this structure to the system
+// class FixedLagMapper {
+// public:
+//     FixedLagMapper(ros::NodeHandle nh);
 
-#include "factors/NormConstraintFactor.h"
-#include "factors/LeveredAltitudeFactor.h"
+//     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
+//     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+//     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-#include "utils/file_system.h"
-#include "utils/ros_params.h"
-#include "utils/conversions.h"
+// private:
+//     // Shared resources
+//     PointBuffer point_buffer_;
+//     FixedLagFrameBuffer frame_buffer_ (point_buffer_);
 
-using namespace gtsam;
+//     PoseGraphManager pose_graph_manager_;                // This is essentially PoseEstimator
+
+
+//     const Smoother& smoother_;                           // We have a reference to the pose graph smoother. 
+// };
+/*
+Flow is:
+
+On lidar message, add to point buffer.
+
+On IMU or GNSS message, check return type from PoseGraphManager, indicating a new state is added.
+If a new state is added, generate a Frame. Check then if it is time to publish a new cloud.
+
+Whenever 
+*/
 
 class FixedLagMapper{
 public:
-    FixedLagMapper(ros::NodeHandle nh);
+    FixedLagMapper(ros::NodeHandle& nh);
 
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
 private:
-    // When initializing
-    void initialize(double ts);
+    LidarBuffer lidar_buffer_;
+    //     FixedLagFrameBuffer frame_buffer_ (point_buffer_);
 
-    void initializeStates(double ts);
-    void addPriors();
+    // Pose optimization
+    PoseGraphManager pose_graph_manager_;
+    const BatchFixedLagSmoother& pose_graph_; // Reference to pose graph smoother
+
+    void newPose(int pose_idx);
+//     PointBuffer point_buffer_;
+//     FixedLagFrameBuffer frame_buffer_ (point_buffer_);
+
+//     PoseGraphManager pose_graph_manager_;                // This is essentially PoseEstimator
 
 
-    // When new state are added
-    void addState(double ts);
+//     const Smoother& smoother_;                           // We have a reference to the pose graph smoother. 
 
-    void addFactors(double ts);
-    void predictStates(double ts);
-    void updateSmoother(double ts);
-
-    void generateLidarFrame();
-
-    // LidarBuffer
-    CloudManager cloud_manager_;
-
-    // Factor generator modules
-    ImuIntegration imu_integration_;
-    GnssCorrection gnss_correction_;
-    SurfaceEstimation surface_estimation_;
-
-    // Optimization
-    NonlinearFactorGraph graph_; 
-    Values values_;
-
-    BatchFixedLagSmoother smoother_;
-    FixedLagSmoother::KeyTimestampMap stamps_;
-
-    // Filter control
-    bool init_ = false;
-    int state_count_ = 0;
-
-    // State
-    double ts_;
-    Pose3 pose_;
-    Point3 vel_;
-    imuBias::ConstantBias bias_;
-    Point3 lever_arm_;
-    
-    // General configuration parameters
-    double initial_acc_bias_sigma_;
-    double initial_gyro_bias_sigma_;
-    double lever_norm_threshold_; 
-    double lever_norm_sigma_;
-    double lever_altitude_sigma_;
-
-    // Output
-    ros::Publisher pose_pub_;
-    void publishPose();
-
-    std::ofstream f_out_;
-    void writeToFile();
 };

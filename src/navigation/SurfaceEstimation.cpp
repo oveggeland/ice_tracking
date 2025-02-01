@@ -1,6 +1,6 @@
 #include "SurfaceEstimation.h"
 
-SurfaceEstimation::SurfaceEstimation(const ros::NodeHandle& nh, const PointBuffer& point_buffer) : point_buffer_(point_buffer){
+SurfaceEstimation::SurfaceEstimation(const ros::NodeHandle& nh, const LidarBuffer& lidar_buffer) : point_buffer_(lidar_buffer.pointBuffer()){
     // Read extrinsics
     std::string ext_file = getParamOrThrow<std::string>(nh, "/ext_file");
     bTl_ = bTl(ext_file);
