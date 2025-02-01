@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 
     // Initialize nodes
     FixedLagMapperInterface fixed_lag_mapper_interface(nh);
-    CloudManager cloud_manager(nh);
+    CloudManager2 cloud_manager(nh);
 
     // Collect bag files
     std::vector<std::filesystem::path> files;

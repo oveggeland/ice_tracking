@@ -10,7 +10,7 @@
 #include <open3d/geometry/PointCloud.h>
 
 #include "navigation/navigation.h"
-#include "navigation/LidarBuffer.h"
+#include "navigation/CloudManager.h"
 #include "navigation/factors/AltitudeFactor.h"
 
 #include "utils/ros_params.h"
@@ -21,7 +21,7 @@ using namespace gtsam;
 
 class SurfaceEstimation{
 public: 
-    SurfaceEstimation(const ros::NodeHandle& nh, const LidarBuffer& point_buffer);
+    SurfaceEstimation(const ros::NodeHandle& nh, const PointBuffer& point_buffer);
 
     bool estimateSurface(double ts);
     double getSurfaceDistance() const{ return distance_; }
@@ -33,7 +33,7 @@ public:
 private:
     Pose3 bTl_; // Extrinsic matrix (Lidar->Imu)
 
-    const LidarBuffer& lidar_buffer_;
+    const PointBuffer& point_buffer_;
 
     // Plane parameters
     double distance_;

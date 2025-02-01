@@ -3,13 +3,9 @@
 FixedLagMapper::FixedLagMapper(ros::NodeHandle nh)
     :   imu_integration_(nh), 
         gnss_correction_(nh), 
-        lidar_buffer_(nh), 
-        surface_estimation_(nh, lidar_buffer_), 
-        lidar_odometry_(nh, lidar_buffer_){
-
-    // Fixed lag smoother
-    double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
-    smoother_ = BatchFixedLagSmoother(lag);
+        smoother_(getParamOrThrow<double>(nh, "/navigation/fixed_lag")),
+        cloud_manager_(nh, smoother_), 
+        surface_estimation_(nh, cloud_manager_.pointBuffer()){
    
     // General config
     getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);
@@ -63,7 +59,7 @@ void FixedLagMapper::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 
 
 void FixedLagMapper::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    lidar_buffer_.addPoints(msg);
+    cloud_manager_.addPoints(msg);
 }
 
 
@@ -186,18 +182,18 @@ void FixedLagMapper::updateSmoother(double ts){
 }
 
 
-void FixedLagMapper::generateLidarFrame(){
-    Key key0 = X(state_count_-1);
-    Key key1 = X(state_count_);
+// void FixedLagMapper::generateLidarFrame(){
+//     Key key0 = X(state_count_-1);
+//     Key key1 = X(state_count_);
 
-    double t0 = smoother_.timestamps().at(key0);
-    double t1 = smoother_.timestamps().at(key1);
+//     double t0 = smoother_.timestamps().at(key0);
+//     double t1 = smoother_.timestamps().at(key1);
 
-    Pose3 pose0 = smoother_.calculateEstimate<Pose3>(key0);
-    Pose3 pose1 = smoother_.calculateEstimate<Pose3>(key1);
+//     Pose3 pose0 = smoother_.calculateEstimate<Pose3>(key0);
+//     Pose3 pose1 = smoother_.calculateEstimate<Pose3>(key1);
 
-    lidar_buffer_.createFrame(state_count_, t0, t1, pose0, pose1);
-}
+//     cloud_manager_.createFrame(state_count_, t0, t1, pose0, pose1);
+// }
 
 /*
 This is a generic function for adding new state nodes, which typically
@@ -215,8 +211,8 @@ void FixedLagMapper::addState(double ts){
     // Update fixed-lag smoother with new info
     updateSmoother(ts);
 
-    // Add new frame
-    generateLidarFrame();
+    // Generate new cloud frame
+    // cloud_manager_.createFrame(state_count_);
 
     // Generic logic when update is finished
     imu_integration_.resetIntegration(ts_, bias_);

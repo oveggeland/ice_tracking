@@ -13,9 +13,9 @@
 #include "utils/ros_params.h"
 #include "utils/CallbackSequencer.h"
 
-class CloudManager{
+class CloudManager2{
 public:
-    CloudManager(ros::NodeHandle nh);
+    CloudManager2(ros::NodeHandle nh);
 
 private:
     // Callback sequencing

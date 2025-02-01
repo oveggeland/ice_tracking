@@ -4,16 +4,14 @@
 #include <geometry_msgs/PoseStamped.h>
 
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/nonlinear/BatchFixedLagSmoother.h>
 
 #include "navigation/navigation.h"
 
 #include "ImuIntegration.h"
 #include "GnssCorrection.h"
 
-#include "LidarBuffer.h"
+#include "CloudManager.h"
 #include "SurfaceEstimation.h"
-#include "LidarOdometry.h"
 
 #include "factors/NormConstraintFactor.h"
 #include "factors/LeveredAltitudeFactor.h"
@@ -50,13 +48,12 @@ private:
     void generateLidarFrame();
 
     // LidarBuffer
-    LidarBuffer lidar_buffer_;
+    CloudManager cloud_manager_;
 
     // Factor generator modules
     ImuIntegration imu_integration_;
     GnssCorrection gnss_correction_;
     SurfaceEstimation surface_estimation_;
-    LidarOdometry lidar_odometry_;
 
     // Optimization
     NonlinearFactorGraph graph_; 
