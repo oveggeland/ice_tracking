@@ -1,6 +1,6 @@
-#include "PoseEstimator.h"
+#include "FixedLagMapper.h"
 
-PoseEstimator::PoseEstimator(ros::NodeHandle nh)
+FixedLagMapper::FixedLagMapper(ros::NodeHandle nh)
     :   imu_integration_(nh), 
         gnss_correction_(nh), 
         lidar_buffer_(nh), 
@@ -10,18 +10,7 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
     // Fixed lag smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
     smoother_ = BatchFixedLagSmoother(lag);
-
-    // Setup sequencer and subscribers
-    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
-
-    std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
-    std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
-    std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
-
-    imu_sub_ = nh.subscribe(imu_topic, 2000, &PoseEstimator::imuCallback, this);
-    gnss_sub_ = nh.subscribe(gnss_topic, 10, &PoseEstimator::gnssCallback, this);
-    lidar_sub_ = nh.subscribe(lidar_topic, 100, &PoseEstimator::lidarCallback, this);
-
+   
     // General config
     getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);
     getParamOrThrow(nh, "/navigation/initial_gyro_bias_sigma", initial_gyro_bias_sigma_);
@@ -45,31 +34,19 @@ PoseEstimator::PoseEstimator(ros::NodeHandle nh)
 }
 
 
-// Subscriber callbacks. All we do is add the callbacks to the sequencer to assert chronological order of messages
-void PoseEstimator::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
-    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&PoseEstimator::imuSafeCallback, this, msg));
-};
-void PoseEstimator::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
-    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&PoseEstimator::gnssSafeCallback, this, msg));
-};
-void PoseEstimator::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&PoseEstimator::lidarSafeCallback, this, msg));
-};
-
-
-void PoseEstimator::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
+void FixedLagMapper::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     // Integrate new measurement
     imu_integration_.newMeasurement(msg);
 
     // Check for potential timeout (if we are initialized)
     if (init_ && imu_integration_.timeOut()){
-        ROS_WARN("PoseEstimator: IMU integration timeout, add new state variable");
+        ROS_WARN("FixedLagMapper: IMU integration timeout, add new state variable");
         addState(msg->header.stamp.toSec());
     }
 }
 
 
-void PoseEstimator::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+void FixedLagMapper::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     double ts = msg->header.stamp.toSec();
     gnss_correction_.newMeasurement(msg);
 
@@ -85,12 +62,12 @@ void PoseEstimator::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg
 }
 
 
-void PoseEstimator::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+void FixedLagMapper::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     lidar_buffer_.addPoints(msg);
 }
 
 
-void PoseEstimator::initializeStates(double ts){
+void FixedLagMapper::initializeStates(double ts){
     // Pose
     Point2 xy = gnss_correction_.getPosition();
     double z = -surface_estimation_.getSurfaceDistance();
@@ -116,7 +93,7 @@ void PoseEstimator::initializeStates(double ts){
     ts_ = ts;
 }
 
-void PoseEstimator::addPriors(){
+void FixedLagMapper::addPriors(){
     // From GNSS
     auto gnss_factor = gnss_correction_.getCorrectionFactor(X(0));
     graph_.add(gnss_factor); // Planar position prior
@@ -135,7 +112,7 @@ void PoseEstimator::addPriors(){
     graph_.add(lever_norm_factor);
 }
 
-void PoseEstimator::initialize(double ts){
+void FixedLagMapper::initialize(double ts){
     ROS_INFO_STREAM("Initializing navigation system at " << std::fixed << ts);
     
     initializeStates(ts);
@@ -159,7 +136,7 @@ void PoseEstimator::initialize(double ts){
 /*
 Add new factors to graph_ at ts.
 */
-void PoseEstimator::addFactors(double ts){
+void FixedLagMapper::addFactors(double ts){
     // Motion constraint
     auto levered_factor = LeveredAltitudeFactor(X(state_count_), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
     graph_.add(levered_factor);
@@ -176,7 +153,7 @@ void PoseEstimator::addFactors(double ts){
     }
 }
 
-void PoseEstimator::predictStates(double ts){
+void FixedLagMapper::predictStates(double ts){
     // Predict next state
     NavState pred_state = imu_integration_.predict(pose_, vel_, bias_);
     pose_ = pred_state.pose();
@@ -184,7 +161,7 @@ void PoseEstimator::predictStates(double ts){
     ts_ = ts;
 }
 
-void PoseEstimator::updateSmoother(double ts){
+void FixedLagMapper::updateSmoother(double ts){
     // Add to predictions to values_
     values_.insert(X(state_count_), pose_);
     values_.insert(V(state_count_), vel_);
@@ -209,7 +186,7 @@ void PoseEstimator::updateSmoother(double ts){
 }
 
 
-void PoseEstimator::generateLidarFrame(){
+void FixedLagMapper::generateLidarFrame(){
     Key key0 = X(state_count_-1);
     Key key1 = X(state_count_);
 
@@ -226,7 +203,7 @@ void PoseEstimator::generateLidarFrame(){
 This is a generic function for adding new state nodes, which typically
 happens on GNSS corrections or when the IMU integration times out.  
 */
-void PoseEstimator::addState(double ts){
+void FixedLagMapper::addState(double ts){
     ROS_INFO_STREAM("Add state: " << state_count_);
 
     // Add common factors
@@ -249,7 +226,7 @@ void PoseEstimator::addState(double ts){
     publishPose();
 }
 
-void PoseEstimator::publishPose(){
+void FixedLagMapper::publishPose(){
     if (pose_pub_.getNumSubscribers() > 0){
         geometry_msgs::PoseStamped msg;
         msg.header.stamp = ros::Time(ts_);
@@ -259,7 +236,7 @@ void PoseEstimator::publishPose(){
     }
 }
 
-void PoseEstimator::writeToFile(){
+void FixedLagMapper::writeToFile(){
     f_out_ << ts_ << ",";
     f_out_ << pose_.translation()[0] << "," << pose_.translation()[1] << "," << pose_.translation()[2] << ",";
     f_out_ << vel_[0] << "," << vel_[1] << "," << vel_[2] << ",";

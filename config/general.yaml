@@ -7,6 +7,15 @@ ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yam
 imu_topic: "/arduino_node/imu"
 gnss_topic: "/arduino_node/gnss"
 lidar_topic: "/livox_lidar_node/pointcloud2"
-pose_topic: "/icetrack/pose"
+
+pose_topic: "/fixed_lag_mapper/pose"
+cloud_topic: "/fixed_lag_mapper/cloud"
+
+imu_queue_size: 2000
+gnss_queue_size: 10
+lidar_queue_size: 100
+
+pose_queue_size: 10
+cloud_queue_size: 10
 
 max_publish_rate: 20 # For fixed rate node

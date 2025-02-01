@@ -21,31 +21,18 @@
 #include "utils/file_system.h"
 #include "utils/ros_params.h"
 #include "utils/conversions.h"
-#include "utils/CallbackSequencer.h"
 
 using namespace gtsam;
 
-class PoseEstimator{
+class FixedLagMapper{
 public:
-    PoseEstimator(ros::NodeHandle nh);
-
-private:
-    // Subscribers and subscriber callbacks
-    ros::Subscriber imu_sub_;
-    ros::Subscriber gnss_sub_;
-    ros::Subscriber lidar_sub_;
+    FixedLagMapper(ros::NodeHandle nh);
 
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    // Safe callback sequencing
-    CallbackSequencer sequencer_;
-    
-    void imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg);
-    void gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
-    void lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-
+private:
     // When initializing
     void initialize(double ts);
 

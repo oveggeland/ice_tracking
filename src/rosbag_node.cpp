@@ -12,7 +12,7 @@
 #include <gperftools/profiler.h>
 
 #include "utils/ros_params.h"
-#include "navigation/PoseEstimator.h"
+#include "navigation/FixedLagMapperInterface.h"
 #include "mapping/CloudManager.h"
 
 int main(int argc, char** argv) {
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     ros::Publisher clock_pub = nh.advertise<rosgraph_msgs::Clock>("/clock", 10);
 
     // Initialize nodes
-    PoseEstimator pose_estimator(nh);
+    FixedLagMapperInterface fixed_lag_mapper_interface(nh);
     CloudManager cloud_manager(nh);
 
     // Collect bag files
