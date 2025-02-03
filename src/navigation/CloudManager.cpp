@@ -14,6 +14,16 @@ CloudManager::CloudManager(ros::NodeHandle& nh){
     getParamOrThrow(nh, "/navigation/surface_estimation/lidar_min_intensity", min_intensity_);
     min_dist_squared_ = pow(getParamOrThrow<double>(nh, "/navigation/surface_estimation/lidar_min_dist"), 2);
     max_dist_squared_ = pow(getParamOrThrow<double>(nh, "/navigation/surface_estimation/lidar_max_dist"), 2);
+
+    // Publisher
+    std::string cloud_topic = getParamOrThrow<std::string>(nh, "/cloud_topic");
+    int cloud_queue_size = getParamOrThrow<int>(nh, "/cloud_queue_size");
+    cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_topic, cloud_queue_size);
+
+    // Output
+    std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
+    cloud_path_ = joinPath(outpath, "clouds/");
+    makePath(cloud_path_, true);
 }
 
 /*
@@ -104,8 +114,10 @@ void CloudManager::createFrame(int state_idx){
     }
 
     // Add to frame
-    frame_buffer_[state_idx] = cloud;
-    frame_buffer_.erase(state_idx - 10); // TODO: Implement better maintenance haha
+    frame_buffer_[t1] = {state_idx, cloud};
+    
+    auto it = frame_buffer_.lower_bound(t1 - cloud_size_);
+    frame_buffer_.erase(frame_buffer_.begin(), it);
 }
 
 PointCloudSharedPtr CloudManager::alignFrames(std::vector<Pose3> poses, std::vector<PointCloudSharedPtr> clouds, int point_count){
@@ -114,6 +126,8 @@ PointCloudSharedPtr CloudManager::alignFrames(std::vector<Pose3> poses, std::vec
     Point3 offset = poses[0].translation();
 
     PointCloud pcd_total;
+    pcd_total.points_.reserve(point_count);
+
     for (int i; i < poses.size(); ++i){
         PointCloud cloud(*clouds[i]);
 
@@ -137,21 +151,90 @@ void CloudManager::createCloud(){
     int point_count = 0;
     for (auto it: frame_buffer_){
         // Add pose
-        auto [ts, pose] = pose_graph_manager_->getStampedPose(it.first);
+        auto [ts, pose] = pose_graph_manager_->getStampedPose(it.second.first);
         poses.push_back(pose);
 
         // Add cloud
-        auto cloud = it.second;
+        auto cloud = it.second.second;
         clouds.push_back(cloud);
 
         point_count += cloud->points_.size();
     }
 
-    // Combine frames
-    if (point_count > 50000){
-        auto pcd = alignFrames(poses, clouds, point_count);
-        open3d::visualization::DrawGeometries({pcd}, "Point Cloud Viewer");
-    }
+    // Align all frames
+    auto pcd = alignFrames(poses, clouds, point_count);
 
     // Publish?
+    publishCloud(pcd);
+
+    // Save cloud in a separate thread
+    std::thread(&CloudManager::saveCloud, this, ts_head_, pcd).detach();
 }   
+
+
+void CloudManager::publishCloud(const PointCloudSharedPtr pcd) const{
+    if (cloud_pub_.getNumSubscribers() < 1)
+        return;
+    // Create a ROS PointCloud2 message
+    sensor_msgs::PointCloud2 cloud_msg;
+
+    // Set the header for the message
+    cloud_msg.header.stamp = ros::Time::now();
+    cloud_msg.header.frame_id = "world";  // Set your frame here
+
+    // Set the fields for the PointCloud2 message (for XYZ data)
+    cloud_msg.fields.resize(3);
+    cloud_msg.fields[0].name = "x";
+    cloud_msg.fields[0].offset = 0;
+    cloud_msg.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
+    cloud_msg.fields[0].count = 1;
+
+    cloud_msg.fields[1].name = "y";
+    cloud_msg.fields[1].offset = 4;
+    cloud_msg.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
+    cloud_msg.fields[1].count = 1;
+
+    cloud_msg.fields[2].name = "z";
+    cloud_msg.fields[2].offset = 8;
+    cloud_msg.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
+    cloud_msg.fields[2].count = 1;
+
+    // Set the point step and row step
+    cloud_msg.point_step = 12;  // 3 float32 values (x, y, z), each 4 bytes
+    cloud_msg.row_step = cloud_msg.point_step * pcd->points_.size();
+
+    // Resize the data array to hold the point cloud data
+    cloud_msg.data.resize(cloud_msg.row_step);
+
+    // Fill the point cloud data
+    size_t offset = 0;
+    for (const auto& point : pcd->points_) {
+        // Copy x, y, z values into the data array
+        memcpy(&cloud_msg.data[offset], &point(0), sizeof(float));
+        offset += sizeof(float);
+        memcpy(&cloud_msg.data[offset], &point(1), sizeof(float));
+        offset += sizeof(float);
+        memcpy(&cloud_msg.data[offset], &point(2), sizeof(float));
+        offset += sizeof(float);
+    }
+
+    // Set the width, height, and is_dense (for the PointCloud2 message)
+    cloud_msg.width = pcd->points_.size();
+    cloud_msg.height = 1;
+    cloud_msg.is_dense = true;
+
+    // Publish the PointCloud2 message
+    cloud_pub_.publish(cloud_msg);
+}
+
+void CloudManager::saveCloud(double ts, const PointCloudSharedPtr pcd) const{
+    std::stringstream fname;
+    fname << std::fixed << static_cast<int>(ts) << ".ply";
+    std::string fpath = joinPath(cloud_path_, fname.str());
+
+    // Save the point cloud as a .ply file
+    if (open3d::io::WritePointCloud(fpath, *pcd))
+        ROS_INFO_STREAM("Saved cloud at " << fpath);
+    else
+        ROS_WARN_STREAM("Failed to save cloud at " << fpath);
+};

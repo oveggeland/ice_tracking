@@ -1,5 +1,7 @@
 #pragma once
 
+#include <thread>
+
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
@@ -16,7 +18,7 @@
 // Some useful naming
 using PointCloud = open3d::geometry::PointCloud;
 using PointCloudSharedPtr = std::shared_ptr<PointCloud>;
-using FrameBuffer = std::map<int, PointCloudSharedPtr>;
+using FrameBuffer = std::map<double, std::pair<int, PointCloudSharedPtr>>;
 
 using PointType = PointXYZT;
 using PointBuffer = StampedRingBuffer<PointType>;
@@ -41,8 +43,14 @@ public:
     // Interface (stuff called from Navigation module)
     void newState(int idx){
         createFrame(idx);
-        if (idx % 10 == 0)
+
+        if (ts_cloud_ == 0.0)
+            ts_cloud_ = ts_head_;
+
+        if (ts_head_ - ts_cloud_ > cloud_interval_){
             createCloud();
+            ts_cloud_ = ts_head_;
+        }
     };
     const PointBufferIterator pointIteratorLowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
 
@@ -64,6 +72,11 @@ private:
     // Calibration matrix (lidar->imu)
     gtsam::Pose3 bTl_;
 
+    // Cloud management
+    double ts_cloud_ = 0.0;
+    double cloud_interval_ = 60; 
+    double cloud_size_ = 60;
+
     // Timestamp management
     double ts_head_ = 0.0;
     double point_interval_;
@@ -72,4 +85,12 @@ private:
     double min_intensity_;
     double min_dist_squared_;
     double max_dist_squared_;
+
+    // Publisher
+    ros::Publisher cloud_pub_;
+    void publishCloud(PointCloudSharedPtr pcd) const;
+
+    // Save clouds
+    std::string cloud_path_;
+    void saveCloud(double ts, const PointCloudSharedPtr pcd) const;
 };
