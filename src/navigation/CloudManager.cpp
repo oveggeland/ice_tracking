@@ -103,12 +103,55 @@ void CloudManager::createFrame(int state_idx){
         cloud->points_.push_back(point);
     }
 
-    ROS_INFO_STREAM("Added Lidar frame of size: " << cloud->points_.size());
-    if (cloud->points_.size() > 10000){
-        // Visualize the point cloud
-        open3d::visualization::DrawGeometries({cloud});
-    }
     // Add to frame
     frame_buffer_[state_idx] = cloud;
     frame_buffer_.erase(state_idx - 10); // TODO: Implement better maintenance haha
 }
+
+PointCloudSharedPtr CloudManager::alignFrames(std::vector<Pose3> poses, std::vector<PointCloudSharedPtr> clouds, int point_count){
+    assert(poses.size() == clouds.size());
+
+    Point3 offset = poses[0].translation();
+
+    PointCloud pcd_total;
+    for (int i; i < poses.size(); ++i){
+        PointCloud cloud(*clouds[i]);
+
+        Pose3 pose = Pose3(
+            poses[i].rotation(),
+            poses[i].translation() - offset
+        );
+        cloud.Transform(pose.matrix());
+
+        pcd_total += cloud;
+    }
+
+    return std::make_shared<PointCloud>(pcd_total);
+}
+
+void CloudManager::createCloud(){
+    // Initialize arrays for poses and clouds
+    std::vector<Pose3> poses;
+    std::vector<PointCloudSharedPtr> clouds;
+
+    int point_count = 0;
+    for (auto it: frame_buffer_){
+        // Add pose
+        auto [ts, pose] = pose_graph_manager_->getStampedPose(it.first);
+        poses.push_back(pose);
+
+        // Add cloud
+        auto cloud = it.second;
+        clouds.push_back(cloud);
+
+        point_count += cloud->points_.size();
+    }
+
+    // Combine frames
+    if (point_count > 50000){
+        auto pcd = alignFrames(poses, clouds, point_count);
+        open3d::visualization::DrawGeometries({pcd}, "Point Cloud Viewer");
+    }
+
+    // Publish?
+}   

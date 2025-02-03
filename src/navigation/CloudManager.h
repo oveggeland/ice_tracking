@@ -22,6 +22,8 @@ using PointType = PointXYZT;
 using PointBuffer = StampedRingBuffer<PointType>;
 using PointBufferIterator = StampedRingBufferIterator<PointType>;
 
+using namespace gtsam;
+
 // Forward declaration
 class PoseGraphManager;
 
@@ -39,6 +41,8 @@ public:
     // Interface (stuff called from Navigation module)
     void newState(int idx){
         createFrame(idx);
+        if (idx % 10 == 0)
+            createCloud();
     };
     const PointBufferIterator pointIteratorLowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
 
@@ -52,6 +56,10 @@ private:
     // Modify and access buffers
     void addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
     void createFrame(int state_idx);
+
+    // Cloud generation
+    PointCloudSharedPtr alignFrames(std::vector<Pose3> poses, std::vector<PointCloudSharedPtr> clouds, int point_count);
+    void createCloud();
 
     // Calibration matrix (lidar->imu)
     gtsam::Pose3 bTl_;
