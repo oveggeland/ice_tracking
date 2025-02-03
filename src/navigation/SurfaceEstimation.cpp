@@ -1,6 +1,7 @@
 #include "SurfaceEstimation.h"
+#include "CloudManager.h"
 
-SurfaceEstimation::SurfaceEstimation(const ros::NodeHandle& nh, const LidarBuffer& lidar_buffer) : point_buffer_(lidar_buffer.pointBuffer()){
+SurfaceEstimation::SurfaceEstimation(const ros::NodeHandle& nh){
     // Read extrinsics
     std::string ext_file = getParamOrThrow<std::string>(nh, "/ext_file");
     bTl_ = bTl(ext_file);
@@ -19,8 +20,8 @@ SurfaceEstimation::SurfaceEstimation(const ros::NodeHandle& nh, const LidarBuffe
 
 bool SurfaceEstimation::estimateSurface(double ts){
     // Find bounds in point buffer
-    auto start = point_buffer_.iteratorLowerBound(ts - 0.5*ransac_frame_size_);
-    auto end = point_buffer_.iteratorLowerBound(ts + 0.5*ransac_frame_size_);
+    auto start = cloud_manager_->pointIteratorLowerBound(ts - 0.5*ransac_frame_size_);
+    auto end = cloud_manager_->pointIteratorLowerBound(ts + 0.5*ransac_frame_size_);
 
     // Check number of elements in window
     int num_points = start.distance_to(end);

@@ -1,12 +1,12 @@
 #include <ros/ros.h>
-#include "navigation/FixedLagMapperInterface.h"
+#include "navigation/FixedLagMapper.h"
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "navigation_node");
     ros::NodeHandle nh;
     
-    FixedLagMapperInterface fixed_lag_mapper_interface(nh);
+    FixedLagMapper fixed_lag_mapper(nh);
 
     ros::spin(); 
     return 0;

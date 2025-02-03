@@ -1,10 +1,11 @@
 #include "PoseGraphManager.h"
+#include "CloudManager.h"
 
-PoseGraphManager::PoseGraphManager(ros::NodeHandle& nh, const LidarBuffer& lidar_buffer)
+PoseGraphManager::PoseGraphManager(ros::NodeHandle& nh)
     :   imu_integration_(nh), 
         gnss_correction_(nh),
-        surface_estimation_(nh, lidar_buffer){
-   
+        surface_estimation_(nh){
+            
     // Smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
     smoother_ = BatchFixedLagSmoother(lag);
@@ -30,6 +31,13 @@ PoseGraphManager::PoseGraphManager(ros::NodeHandle& nh, const LidarBuffer& lidar
     f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
     f_out_ << std::endl << std::fixed; 
 }
+
+
+void PoseGraphManager::setCloudManager(CloudManager& cloud_manager){
+    cloud_manager_ = &cloud_manager;
+    surface_estimation_.setCloudManager(cloud_manager);
+}
+
 
 int PoseGraphManager::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     // Integrate new measurement

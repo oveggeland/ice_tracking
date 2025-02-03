@@ -1,6 +1,7 @@
 #include "navigation/CloudManager.h"
+#include "navigation/PoseGraphManager.h"
 
-CloudManager::CloudManager(const ros::NodeHandle& nh, const gtsam::BatchFixedLagSmoother& smoother): smoother_(smoother){
+CloudManager::CloudManager(ros::NodeHandle& nh){
     // Initialize point buffer
     double buffer_size = getParamOrThrow<double>(nh, "/navigation/surface_estimation/buffer_size");
     getParamOrThrow(nh, "/navigation/surface_estimation/lidar_point_interval", point_interval_);
@@ -14,6 +15,8 @@ CloudManager::CloudManager(const ros::NodeHandle& nh, const gtsam::BatchFixedLag
     min_dist_squared_ = pow(getParamOrThrow<double>(nh, "/navigation/surface_estimation/lidar_min_dist"), 2);
     max_dist_squared_ = pow(getParamOrThrow<double>(nh, "/navigation/surface_estimation/lidar_max_dist"), 2);
 }
+
+void CloudManager::setPoseGraphManager(PoseGraphManager& pose_graph_manager) { pose_graph_manager_ = &pose_graph_manager; }
 
 /*
 Add raw lidar points in point buffer. Outliers are removed. 

@@ -21,16 +21,23 @@
 #include "utils/conversions.h"
 
 
+// Forward declarations
+class CloudManager;
+
 class PoseGraphManager{
 public:
-    PoseGraphManager(ros::NodeHandle& nh, const LidarBuffer& lidar_buffer);
+    // Initialize
+    PoseGraphManager(ros::NodeHandle& nh);
+    void setCloudManager(CloudManager& cloud_manager);
 
+    // Callbacks
     int imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     int gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
 
-    const BatchFixedLagSmoother& graph() const { return smoother_; }
-
 private:
+    // Interface to cloud manager
+    CloudManager* cloud_manager_;
+
     // When initializing
     void initialize(double ts);
 

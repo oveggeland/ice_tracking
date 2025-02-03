@@ -10,18 +10,19 @@
 #include <open3d/geometry/PointCloud.h>
 
 #include "navigation/navigation.h"
-#include "navigation/LidarBuffer.h"
 #include "navigation/factors/AltitudeFactor.h"
 
 #include "utils/ros_params.h"
 #include "utils/calibration.h"
-#include "utils/StampedRingBuffer.h"
 
-using namespace gtsam;
+// Forward declaration
+class CloudManager;
 
 class SurfaceEstimation{
 public: 
-    SurfaceEstimation(const ros::NodeHandle& nh, const LidarBuffer& point_buffer);
+    // Initialize
+    SurfaceEstimation(const ros::NodeHandle& nh);
+    void setCloudManager(const CloudManager& cloud_manager){ cloud_manager_ = &cloud_manager; }
 
     bool estimateSurface(double ts);
     double getSurfaceDistance() const{ return distance_; }
@@ -33,7 +34,7 @@ public:
 private:
     Pose3 bTl_; // Extrinsic matrix (Lidar->Imu)
 
-    const PointBuffer& point_buffer_;
+    const CloudManager* cloud_manager_;
 
     // Plane parameters
     double distance_;

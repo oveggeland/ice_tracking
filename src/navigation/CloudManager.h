@@ -5,7 +5,6 @@
 #include <sensor_msgs/point_cloud2_iterator.h>
 
 #include <gtsam/geometry/Pose3.h>
-#include <gtsam_unstable/nonlinear/BatchFixedLagSmoother.h>
 
 #include <open3d/Open3D.h>
 #include <open3d/geometry/PointCloud.h>
@@ -23,9 +22,25 @@ using PointType = PointXYZT;
 using PointBuffer = StampedRingBuffer<PointType>;
 using PointBufferIterator = StampedRingBufferIterator<PointType>;
 
+// Forward declaration
+class PoseGraphManager;
+
 class CloudManager{
 public: 
-    CloudManager(const ros::NodeHandle& nh, const gtsam::BatchFixedLagSmoother& smoother);
+    // Initialize
+    CloudManager(ros::NodeHandle& nh);
+    void setPoseGraphManager(PoseGraphManager& pose_graph_manager);
+
+    // Callback
+    void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {};
+
+    // Interface
+    // void newState(int idx); // Signal that a new pose is available
+
+    const PointBufferIterator pointIteratorLowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
+
+private:
+    PoseGraphManager* pose_graph_manager_;
 
     // Modify and access point buffer
     void addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
@@ -33,16 +48,10 @@ public:
     // Modify and access frame buffer
     void createFrame(int state_idx);
 
-    const FrameBuffer& frameBuffer() const { return frame_buffer_; }
-    const PointBuffer& pointBuffer() const { return point_buffer_; }
 
-private:
     // Buffers
     PointBuffer point_buffer_;
     FrameBuffer frame_buffer_;
-
-    // Reference to pose smoother
-    const gtsam::BatchFixedLagSmoother& smoother_;
 
     // Calibration matrix (lidar->imu)
     gtsam::Pose3 bTl_;

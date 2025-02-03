@@ -12,7 +12,7 @@
 #include <gperftools/profiler.h>
 
 #include "utils/ros_params.h"
-#include "navigation/FixedLagMapperInterface.h"
+#include "navigation/FixedLagMapper.h"
 #include "mapping/CloudManager.h"
 
 int main(int argc, char** argv) {
@@ -38,8 +38,8 @@ int main(int argc, char** argv) {
     ros::Publisher clock_pub = nh.advertise<rosgraph_msgs::Clock>("/clock", 10);
 
     // Initialize nodes
-    FixedLagMapperInterface fixed_lag_mapper_interface(nh);
-    CloudManager2 cloud_manager(nh);
+    FixedLagMapper fixed_lag_mapper(nh);
+    // CloudManager2 cloud_manager(nh);
 
     // Collect bag files
     std::vector<std::filesystem::path> files;
