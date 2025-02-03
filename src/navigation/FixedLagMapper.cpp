@@ -8,6 +8,9 @@ FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh)
     pose_graph_manager_.setCloudManager(cloud_manager_);
     cloud_manager_.setPoseGraphManager(pose_graph_manager_);
     
+    // Setup callback sequencer
+    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
+
     // Setup subscribers
     std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
@@ -20,9 +23,6 @@ FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh)
     imu_sub_ = nh.subscribe(imu_topic, imu_queue_size, &FixedLagMapper::imuCallback, this);
     gnss_sub_ = nh.subscribe(gnss_topic, gnss_queue_size, &FixedLagMapper::gnssCallback, this);
     lidar_sub_ = nh.subscribe(lidar_topic, lidar_queue_size, &FixedLagMapper::lidarCallback, this);
-
-    // Setup callback sequencer
-    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
 }
 
 
@@ -38,6 +38,7 @@ void FixedLagMapper::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg
 }
 
 
+// Sequenced "safe" callbacks. These will always be called in chronological order according to message timestamps. 
 void FixedLagMapper::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
     pose_graph_manager_.imuCallback(msg);
 }

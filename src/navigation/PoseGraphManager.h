@@ -34,6 +34,9 @@ public:
     int imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     int gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
 
+    // Interface to cloud manager
+    std::tuple<double, Pose3> getStampedPose(int idx);
+
 private:
     // Interface to cloud manager
     CloudManager* cloud_manager_;

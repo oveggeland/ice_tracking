@@ -207,12 +207,26 @@ int PoseGraphManager::addState(double ts){
     // Generic logic when update is finished
     imu_integration_.resetIntegration(ts_, bias_);
 
+    // Signal new pose
+    cloud_manager_->newState(state_count_);
+
     // Distribute pose somehow
     writeToFile();
     publishPose();
 
     return state_count_++;
 }
+
+
+std::tuple<double, Pose3> PoseGraphManager::getStampedPose(int idx){
+    Key key = X(idx);
+
+    double ts = smoother_.timestamps().at(key);
+    Pose3 pose = smoother_.calculateEstimate<Pose3>(key);
+
+    return {ts, pose};
+}
+
 
 void PoseGraphManager::publishPose(){
     if (pose_pub_.getNumSubscribers() > 0){

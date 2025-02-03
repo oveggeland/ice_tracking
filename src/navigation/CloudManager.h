@@ -29,29 +29,29 @@ class CloudManager{
 public: 
     // Initialize
     CloudManager(ros::NodeHandle& nh);
-    void setPoseGraphManager(PoseGraphManager& pose_graph_manager);
+    void setPoseGraphManager(PoseGraphManager& pose_graph_manager) {pose_graph_manager_ = &pose_graph_manager; }
 
     // Callback
-    void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {};
+    void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {
+        addPoints(msg);
+    };
 
-    // Interface
-    // void newState(int idx); // Signal that a new pose is available
-
+    // Interface (stuff called from Navigation module)
+    void newState(int idx){
+        createFrame(idx);
+    };
     const PointBufferIterator pointIteratorLowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
 
 private:
     PoseGraphManager* pose_graph_manager_;
 
-    // Modify and access point buffer
-    void addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
-
-    // Modify and access frame buffer
-    void createFrame(int state_idx);
-
-
     // Buffers
     PointBuffer point_buffer_;
     FrameBuffer frame_buffer_;
+
+    // Modify and access buffers
+    void addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    void createFrame(int state_idx);
 
     // Calibration matrix (lidar->imu)
     gtsam::Pose3 bTl_;
