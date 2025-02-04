@@ -23,11 +23,10 @@ public:
     void setCloudManager(const CloudManager& cloud_manager){ cloud_manager_ = &cloud_manager; }
 
     // Estimate odometry from state_idx!
-    boost::shared_ptr<gtsam::NonlinearFactor> estimateOdometry(int idx1);
+    boost::shared_ptr<gtsam::NonlinearFactor> estimateOdometry(int idx1, bool estimate_ice_drift);
 private:
     const CloudManager* cloud_manager_;
     const BatchFixedLagSmoother& smoother_;
 
     gtsam::noiseModel::Base::shared_ptr noise_model_;
-    boost::shared_ptr<gtsam::NonlinearFactor> createOdometryFactor(int idx0, int idx1, Pose3 T_align);
 };

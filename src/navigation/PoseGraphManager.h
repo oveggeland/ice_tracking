@@ -38,6 +38,7 @@ public:
 
     // Interface to cloud manager
     std::tuple<double, Pose3> getStampedPose(int idx);
+    Point2 getIceDrift(int idx);
 
 private:
     // Interface to cloud manager
@@ -81,8 +82,7 @@ private:
     imuBias::ConstantBias bias_;
     Point3 lever_arm_;
 
-    Point2 ice_pos_;
-    Point2 ice_vel_;
+    Point2 ice_drift_;
     bool estimate_ice_drift_ = true;
 
     // General configuration parameters

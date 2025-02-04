@@ -91,8 +91,7 @@ void PoseGraphManager::initializeStates(double ts){
     lever_arm_ = pose_.rotation().inverse().rotate(Point3(0, 0, -z));
 
     // Ice state
-    ice_pos_ = Point2(0, 0);
-    ice_vel_ = Point2(0, 0);
+    ice_drift_ = Point2(0, 0);
 
     // Timestamp
     ts_ = ts;
@@ -118,8 +117,7 @@ void PoseGraphManager::addPriors(){
 
     // Ice drift
     if (estimate_ice_drift_){
-        graph_.addPrior(Q(0), ice_pos_, noiseModel::Isotropic::Sigma(2, 1e-9));
-        graph_.addPrior(R(0), ice_vel_, noiseModel::Isotropic::Sigma(2, 1.0));
+        graph_.addPrior(D(0), ice_drift_, noiseModel::Isotropic::Sigma(2, 1.0));
     }
 }
 
@@ -139,11 +137,8 @@ void PoseGraphManager::initialize(double ts){
     stamps_[B(0)] = ts;
 
     if (estimate_ice_drift_){
-        values_.insert(Q(0), ice_pos_);
-        values_.insert(R(0), ice_vel_);
-
-        stamps_[Q(0)] = ts;
-        stamps_[R(0)] = ts;
+        values_.insert(D(0), ice_drift_);
+        stamps_[D(0)] = ts;
     }
 
     imu_integration_.resetIntegration(ts_, bias_);
@@ -173,7 +168,9 @@ void PoseGraphManager::addFactors(double ts){
 
     if (estimate_ice_drift_){
         double dt = ts - ts_;
-        auto cv_factor = ConstantVelocityFactor2D(Q(state_count_-1), Q(state_count_), R(state_count_-1), R(state_count_), dt);
+        auto noise = noiseModel::Isotropic::Sigma(2, 0.05*dt);
+
+        auto cv_factor = BetweenFactor<Point2>(D(state_count_-1), D(state_count_), Point2(0, 0), noise);
         graph_.add(cv_factor);
     }
 }
@@ -183,9 +180,6 @@ void PoseGraphManager::predictStates(double ts){
     NavState pred_state = imu_integration_.predict(pose_, vel_, bias_);
     pose_ = pred_state.pose();
     vel_ = pred_state.velocity();
-
-    if (estimate_ice_drift_)
-        ice_pos_ = ice_pos_ + (ts - ts_)*ice_vel_;
 
     ts_ = ts;
 }
@@ -202,11 +196,8 @@ void PoseGraphManager::updateSmoother(double ts){
     stamps_[B(state_count_)] = ts;
 
     if (estimate_ice_drift_){
-        values_.insert(Q(state_count_), ice_pos_);
-        values_.insert(R(state_count_), ice_vel_);
-
-        stamps_[Q(state_count_)] = ts;
-        stamps_[R(state_count_)] = ts;
+        values_.insert(D(state_count_), ice_drift_);
+        stamps_[D(state_count_)] = ts;
     }
 
     // Update smoother
@@ -221,13 +212,8 @@ void PoseGraphManager::updateSmoother(double ts){
     bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(state_count_));
     lever_arm_ = smoother_.calculateEstimate<Point3>(L(0));
 
-    if (estimate_ice_drift_){
-        ice_pos_ = smoother_.calculateEstimate<Point2>(Q(state_count_));
-        ice_vel_ = smoother_.calculateEstimate<Point2>(R(state_count_));
-
-        ROS_INFO_STREAM("Ice position: " << ice_pos_.transpose());
-        ROS_INFO_STREAM("Ice velocity: " << ice_vel_.transpose());
-    }
+    if (estimate_ice_drift_)
+        ice_drift_ = smoother_.calculateEstimate<Point2>(D(state_count_));
 }
 
 
@@ -254,7 +240,7 @@ int PoseGraphManager::addState(double ts){
     cloud_manager_->newState(state_count_);
 
     // Estimate odometry
-    auto odometry_factor = lidar_odometry_.estimateOdometry(state_count_);
+    auto odometry_factor = lidar_odometry_.estimateOdometry(state_count_, estimate_ice_drift_);
     if (odometry_factor)
         graph_.add(odometry_factor);
 
@@ -274,6 +260,11 @@ std::tuple<double, Pose3> PoseGraphManager::getStampedPose(int idx){
 
     return {ts, pose};
 }
+
+Point2 PoseGraphManager::getIceDrift(int idx){
+    return smoother_.calculateEstimate<Point2>(D(idx));
+}
+
 
 
 void PoseGraphManager::publishPose(){
