@@ -54,6 +54,14 @@ public:
     };
     const PointBufferIterator pointIteratorLowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
 
+    PointCloudSharedPtr getFrame(int idx) const{
+        for (auto it: frame_buffer_){
+            if (it.second.first == idx)
+                return it.second.second;
+        }   
+        return nullptr;
+    };
+
 private:
     PoseGraphManager* pose_graph_manager_;
 

@@ -4,11 +4,9 @@
 PoseGraphManager::PoseGraphManager(ros::NodeHandle& nh)
     :   imu_integration_(nh), 
         gnss_correction_(nh),
-        surface_estimation_(nh){
-            
-    // Smoother
-    double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
-    smoother_ = BatchFixedLagSmoother(lag);
+        surface_estimation_(nh),
+        smoother_(getParamOrThrow<double>(nh, "/navigation/fixed_lag")),
+        lidar_odometry_(nh, smoother_){
 
     // General config
     getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);
@@ -36,6 +34,7 @@ PoseGraphManager::PoseGraphManager(ros::NodeHandle& nh)
 void PoseGraphManager::setCloudManager(CloudManager& cloud_manager){
     cloud_manager_ = &cloud_manager;
     surface_estimation_.setCloudManager(cloud_manager);
+    lidar_odometry_.setCloudManager(cloud_manager);
 }
 
 
@@ -209,6 +208,11 @@ int PoseGraphManager::addState(double ts){
 
     // Signal new pose
     cloud_manager_->newState(state_count_);
+
+    // Estimate odometry
+    auto odometry_factor = lidar_odometry_.estimateOdometry(state_count_);
+    if (odometry_factor)
+        graph_.add(odometry_factor);
 
     // Distribute pose somehow
     writeToFile();
