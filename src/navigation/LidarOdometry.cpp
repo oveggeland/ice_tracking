@@ -36,9 +36,11 @@ boost::shared_ptr<gtsam::NonlinearFactor> LidarOdometry::estimateOdometry(int id
     // Get current frame cloud and pose
     auto cloud0 = cloud_manager_->getFrame(idx0);
     Pose3 pose0 = smoother_.calculateEstimate<Pose3>(X(idx0));
+    double t0 = smoother_.timestamps().at(X(idx0));
 
     auto cloud1 = cloud_manager_->getFrame(idx1);
     Pose3 pose1 = smoother_.calculateEstimate<Pose3>(X(idx1));
+    double t1 = smoother_.timestamps().at(X(idx1));
 
     Pose3 T_initial = pose0.between(pose1);
     
@@ -68,5 +70,8 @@ boost::shared_ptr<gtsam::NonlinearFactor> LidarOdometry::estimateOdometry(int id
     if (result.fitness_ < 0.2)  // Fitness threshold (tune based on environment)
         return nullptr;
 
-    return boost::make_shared<BetweenFactor<Pose3>>(X(idx0), X(idx1), T_align, noise_model_);
+    if (estimate_ice_drift)
+        return boost::make_shared<IceOdometryFactor>(X(idx0), X(idx1), D(idx1-1), T_align, t1 - t0, noise_model_);
+    else
+        return boost::make_shared<BetweenFactor<Pose3>>(X(idx0), X(idx1), T_align, noise_model_);
 }

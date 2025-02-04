@@ -66,6 +66,14 @@ def plot_navigation(nav_data, save_path=""):
     plt.legend()
     plt.tight_layout()
     
+    try:
+        plt.figure()
+        plt.plot(nav_data['ts'].values, nav_data[["Dx", "Dy"]], label=["Dx", "Dy"])
+        plt.legend()
+        plt.tight_layout()
+    except:
+        print("Could not plot drift")
+    
     if save_path:
         plt.savefig(save_path)
 

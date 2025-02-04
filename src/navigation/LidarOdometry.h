@@ -7,6 +7,7 @@
 #include <open3d/geometry/PointCloud.h>
 
 #include "navigation/navigation.h"
+#include "navigation/factors/IceOdometryFactor.h"
 
 #include "utils/ros_params.h"
 #include "utils/calibration.h"

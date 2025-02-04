@@ -26,7 +26,7 @@ PoseGraphManager::PoseGraphManager(ros::NodeHandle& nh)
     makePath(nav_path);
 
     f_out_ = std::ofstream(nav_path);
-    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
+    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz,Dx,Dy";
     f_out_ << std::endl << std::fixed; 
 }
 
@@ -285,5 +285,6 @@ void PoseGraphManager::writeToFile(){
     f_out_ << bias_.accelerometer()[0] << "," << bias_.accelerometer()[1] << "," << bias_.accelerometer()[2] << ",";
     f_out_ << bias_.gyroscope()[0] << "," << bias_.gyroscope()[1] << "," << bias_.gyroscope()[2];
     f_out_ << "," << lever_arm_.x() << "," << lever_arm_.y() << "," << lever_arm_.z();
+    f_out_ << "," << ice_drift_.x() << "," << ice_drift_.y();
     f_out_ << std::endl;
 }
