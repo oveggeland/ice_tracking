@@ -16,6 +16,7 @@
 
 #include "factors/NormConstraintFactor.h"
 #include "factors/LeveredAltitudeFactor.h"
+#include "factors/ConstantVelocityFactor2D.h"
 
 #include "utils/file_system.h"
 #include "utils/ros_params.h"
@@ -79,7 +80,11 @@ private:
     Point3 vel_;
     imuBias::ConstantBias bias_;
     Point3 lever_arm_;
-    
+
+    Point2 ice_pos_;
+    Point2 ice_vel_;
+    bool estimate_ice_drift_ = true;
+
     // General configuration parameters
     double initial_acc_bias_sigma_;
     double initial_gyro_bias_sigma_;
