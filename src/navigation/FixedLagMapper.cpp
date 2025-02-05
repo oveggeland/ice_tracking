@@ -3,7 +3,9 @@
 #include "CloudManager.h"
 
 FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh)
-    :   pose_graph_manager_(nh), cloud_manager_(nh), lidar_front_end_(nh){
+    :   pose_graph_manager_(nh), cloud_manager_(nh),
+        pose_graph_(nh),
+        lidar_front_end_(nh, pose_graph_){
     // Link mapping and navigation modules
     pose_graph_manager_.setCloudManager(cloud_manager_);
     cloud_manager_.setPoseGraphManager(pose_graph_manager_);
@@ -40,13 +42,14 @@ void FixedLagMapper::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg
 
 // Sequenced "safe" callbacks. These will always be called in chronological order according to message timestamps. 
 void FixedLagMapper::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
-    pose_graph_manager_.imuCallback(msg);
+    //pose_graph_manager_.imuCallback(msg);
+    pose_graph_.imuCallback(msg);
 }
 void FixedLagMapper::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
-    pose_graph_manager_.gnssCallback(msg);
+    //pose_graph_manager_.gnssCallback(msg);
+    pose_graph_.gnssCallback(msg);
 }
 void FixedLagMapper::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    cloud_manager_.lidarCallback(msg);
-
+    //cloud_manager_.lidarCallback(msg);
     lidar_front_end_.lidarCallback(msg);
 }

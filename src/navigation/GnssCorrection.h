@@ -18,9 +18,7 @@ public:
     void newMeasurement(const sensor_msgs::NavSatFix::ConstPtr msg);
 
     bool isFix() { return fix_; }
-    bool isInit() { return !v_xy_.isZero() && isFix(); }
     Point2 getPosition() const { return xy_; }
-    Point2 getVelocity() const { return v_xy_; }
 
     GNSSFactor getCorrectionFactor(Key key) const { return GNSSFactor(key, xy_, correction_noise_); }
 
@@ -28,7 +26,6 @@ private:
     // State
     double ts_ = 0.0;
     Point2 xy_ = Point2::Zero();
-    Point2 v_xy_ = Point2::Zero();
     bool fix_ = false; 
 
     bool checkFix(double ts, Point2 xy);

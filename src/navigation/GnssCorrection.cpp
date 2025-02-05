@@ -21,12 +21,6 @@ void GnssCorrection::newMeasurement(const sensor_msgs::NavSatFix::ConstPtr msg){
 
     // Check validity of measurement
     fix_ = checkFix(ts, xy);
-
-    // Look fo
-    if (!xy_.isZero()){
-        v_xy_ = (xy - xy_) / (ts - ts_);
-    }
-
     ts_ = ts;
     xy_ = xy;
 }

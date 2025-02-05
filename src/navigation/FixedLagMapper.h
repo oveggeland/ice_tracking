@@ -8,6 +8,7 @@
 
 
 #include "LidarFrontEnd.h"
+#include "PoseGraph.h"
 
 #include "PoseGraphManager.h"
 #include "CloudManager.h"
@@ -25,6 +26,7 @@ private:
 
     // Refactored modules
     LidarFrontEnd lidar_front_end_;
+    PoseGraph pose_graph_;
 
     // Subscribers and subscriber callbacks
     ros::Subscriber imu_sub_;
