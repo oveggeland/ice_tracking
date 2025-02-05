@@ -6,6 +6,9 @@
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
 
+
+#include "LidarFrontEnd.h"
+
 #include "PoseGraphManager.h"
 #include "CloudManager.h"
 
@@ -19,6 +22,9 @@ private:
     // Main modules
     PoseGraphManager pose_graph_manager_;
     CloudManager cloud_manager_;
+
+    // Refactored modules
+    LidarFrontEnd lidar_front_end_;
 
     // Subscribers and subscriber callbacks
     ros::Subscriber imu_sub_;
