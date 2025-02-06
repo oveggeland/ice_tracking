@@ -34,6 +34,7 @@ public:
 
     // Iterators TODO: Make const?
     const StampedRingBufferIterator<T> begin() const;
+    const StampedRingBufferIterator<T> last() const;
     const StampedRingBufferIterator<T> end() const;
     const StampedRingBufferIterator<T> iteratorLowerBound(double ts) const;
 

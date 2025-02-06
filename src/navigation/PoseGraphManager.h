@@ -6,8 +6,6 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam_unstable/nonlinear/BatchFixedLagSmoother.h>
 
-#include "LidarBuffer.h"
-
 #include "navigation.h"
 #include "ImuIntegration.h"
 #include "GnssCorrection.h"

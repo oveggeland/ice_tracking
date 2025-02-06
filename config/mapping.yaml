@@ -1,5 +1,5 @@
 # Cloud manager
-enabled: true               # Use this do disbale/enable the cloud manager (useful to debug navigation)
+enabled: false               # Use this do disbale/enable the cloud manager (useful to debug navigation)
 safe_delay: 1.0             # Wait this period for possible message lag (e.g. from sensor latency or navigation processing)
 window_size: 60.0
 save_clouds: true

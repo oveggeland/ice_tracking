@@ -16,9 +16,12 @@
 
 class LidarFrontEnd{
 public:
+    // Constructor
     LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph);
 
+    // Interface
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    void pollUpdates();
 
 private:
     PoseGraph& pose_graph_;
@@ -27,4 +30,8 @@ private:
     FrameBuffer frame_buffer_;
 
     SurfaceEstimator surface_estimator_;
+    
+    // Actions
+    void planeFitting(int state_idx);
+    void odometry(int state_idx) {} // TODO
 };

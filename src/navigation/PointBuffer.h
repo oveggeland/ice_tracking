@@ -38,6 +38,9 @@ public:
     void addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
     // Accessors
+    double head() const { return ts_head_; }
+    double tail() const { return begin()->ts; }
+
     PointCloudPtr getPointCloud(double t0, double t1) const;
 
     PointBufferIterator begin() const { return buffer_.begin(); }

@@ -18,11 +18,10 @@
 // Some useful naming
 using PointCloud = open3d::geometry::PointCloud;
 using PointCloudSharedPtr = std::shared_ptr<PointCloud>;
-using FrameBuffer = std::map<double, std::pair<int, PointCloudSharedPtr>>;
+using FrameBuffer1 = std::map<double, std::pair<int, PointCloudSharedPtr>>;
 
-using PointType = PointXYZT;
-using PointBuffer = StampedRingBuffer<PointType>;
-using PointBufferIterator = StampedRingBufferIterator<PointType>;
+using PointBufferType1 = StampedRingBuffer<PointXYZT>;
+using PointBufferIterator1 = StampedRingBufferIterator<PointXYZT>;
 
 using namespace gtsam;
 
@@ -52,7 +51,7 @@ public:
             ts_cloud_ = ts_head_;
         }
     };
-    const PointBufferIterator pointIteratorLowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
+    const PointBufferIterator1 pointIteratorLowerBound(double ts) const { return point_buffer_.iteratorLowerBound(ts); }
 
     PointCloudSharedPtr getFrame(int idx) const{
         for (auto it: frame_buffer_){
@@ -62,12 +61,16 @@ public:
         return nullptr;
     };
 
+
+    // Generate a cohorent map, with frames in range (idx0, idx1)
+    PointCloudSharedPtr buildMap(int idx0, int idx1) const;
+
 private:
     PoseGraphManager* pose_graph_manager_;
 
     // Buffers
-    PointBuffer point_buffer_;
-    FrameBuffer frame_buffer_;
+    PointBufferType1 point_buffer_;
+    FrameBuffer1 frame_buffer_;
 
     // Modify and access buffers
     void addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);

@@ -10,6 +10,7 @@
 #include "navigation.h"
 #include "ImuIntegration.h"
 #include "GnssCorrection.h"
+#include "SurfaceCorrection.h"
 
 #include "factors/NormConstraintFactor.h"
 #include "factors/LeveredAltitudeFactor.h"
@@ -31,57 +32,64 @@ public:
 
     // Measurement callbacks from front end
     void odometryCallback(int pose_idx0, int pose_idx1, Eigen::Matrix4d T_align) {};
-    void planeFitCallback(int pose_idx, Eigen::Vector4d plane_coeffs);
+    void planeFitCallback(int pose_idx, const Eigen::Vector4d& plane_coeffs);
 
     // Accessors
     bool isInit() const { return init_; }
     bool exists(int idx) const { return smoother_.getLinearizationPoint().exists(X(idx)); }
 
-    int getCurrentStateIdx() const { return state_idx_; }
-    double getTimeStamp(int idx) const { return smoother_.timestamps().at(X(idx)); }
+    int getCurrentStateIdx() const { return state_count_-1; }
+    double getCurrentTimeStamp() const { return ts_; }
+
+    double getTimeStamp(int idx) const { return (idx == getCurrentStateIdx())? ts_ : smoother_.timestamps().at(X(idx)); }
     Pose3 getPose(int idx) const { return smoother_.calculateEstimate<Pose3>(X(idx)); }
 
 private:
-    // When initializing
-    void initialize(double ts);
+    // Initialization
+    bool init_ = false;
 
-    void initializeState(double ts);
-    void addPriors(double ts);
+    void initialize();
 
-    // When new state are added
+    // State 
+    int state_count_ = 0;
+
+    void initializeState();
     void addState(double ts);
-
     void predictState(double ts);
-    void addVariables(double ts);
-    void addFactors(double ts);
+    void updateState(int idx);
 
-    void updateSmoother(double ts);
+    // Graph 
+    void addPriors(int idx);
+    void updateTimeStamps(int idx, double ts);
+    void updateValues(int idx);
+    void updateFactors(int idx, double ts);
+    void updateSmoother();
+
+    // Optimization
+    FixedLagSmoother::KeyTimestampMap stamps_;
+    Values values_;
+    NonlinearFactorGraph factors_; 
+
+    double lag_;
+    BatchFixedLagSmoother smoother_;
 
     // Factor generator modules
     ImuIntegration imu_integration_;
     GnssCorrection gnss_correction_;
+    SurfaceCorrection surface_correction_;
 
-    // Optimization
-    NonlinearFactorGraph graph_; 
-    Values values_;
-
-    BatchFixedLagSmoother smoother_;
-    FixedLagSmoother::KeyTimestampMap stamps_;
-
-    // Filter config
-    bool estimate_ice_drift_ = true;
-    bool init_ = false;
-
-    // Current state
-    double prior_z_ = 0.0;
-
-    int state_idx_ = 0;
+    // State definition
     double ts_ = 0.0;
     Pose3 pose_;
-    Point3 vel_ = Point3::Zero();
+    Point3 vel_ = Point3(0, 0, 0);
     imuBias::ConstantBias bias_;
-    Point3 lever_arm_;
-    Point2 ice_drift_;
+
+    bool estimate_lever_arm_ = true;
+    Point3 lever_arm_ = Point3(0, 0, 0);
+
+    bool estimate_ice_drift_ = true;
+    Point2 ice_drift_ = Point2(0, 0);
+
 
     // General configuration parameters
     double initial_acc_bias_sigma_;

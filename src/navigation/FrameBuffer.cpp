@@ -14,6 +14,8 @@ void FrameBuffer::generateFrames(){
 
 
 void FrameBuffer::addFrame(int idx){
+    ROS_INFO_STREAM("Add frame: " << idx);
+
     if (!pose_graph_.exists(idx-1) || !pose_graph_.exists(idx)){
         ROS_WARN_STREAM("Pose not available at idx: " << idx);
         return;

@@ -21,15 +21,8 @@ class ImuIntegration{
         void resetIntegration(double ts, imuBias::ConstantBias bias);
 
         NavState predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias) const;
-        bool timeOut() const { 
-            bool ret =  (ts_head_ - ts_tail_) > timeout_interval_; 
-            if (ret){
-                ROS_INFO_STREAM(std::fixed << ts_head_ << ", " << ts_tail_ << ", " << timeout_interval_);
-            }
-            return ret;
-        };
+        bool timeOut() const { return (ts_head_ - ts_tail_) > timeout_interval_; };
 
-        
         CombinedImuFactor getIntegrationFactor(int state_idx);
 
         Rot3 estimateAttitude() const;
@@ -37,14 +30,14 @@ class ImuIntegration{
 
     private:
         // Control
-        int seq_ = 0;
-        double ts_head_;
-        double ts_tail_; 
+        double ts_head_ = 0.0;
+        double ts_tail_ = 0.0; 
         double timeout_interval_;
 
         // Measurements
         Vector3 acc_;
         Vector3 rate_;
+
         void setAcc(const sensor_msgs::Imu::ConstPtr& msg);
         void setRate(const sensor_msgs::Imu::ConstPtr& msg);
 

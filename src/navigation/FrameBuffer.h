@@ -31,8 +31,10 @@ public:
     
     // Interface
     void generateFrames();
+    void addFrame(int idx);
 
     // Accessors
+    int getIndex() const { return end()->first; }
     FrameType getFrame(int idx) const { 
         auto it = buffer_.find(idx);
         return (it != buffer_.end()) ? it->second : nullptr;
@@ -44,7 +46,6 @@ public:
 
 private:
     FrameBufferType buffer_;
-    void addFrame(int idx);
 
     // Keep track of latest count
     int frame_count_ = 0;

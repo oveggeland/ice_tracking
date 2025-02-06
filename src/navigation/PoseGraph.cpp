@@ -1,11 +1,11 @@
 #include "PoseGraph.h"
 
 PoseGraph::PoseGraph(ros::NodeHandle& nh)
-    :   imu_integration_(nh), gnss_correction_(nh){
+    : imu_integration_(nh), gnss_correction_(nh), surface_correction_(nh){
 
     // Initialize smoother
-    double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
-    smoother_ = BatchFixedLagSmoother(lag);
+    getParamOrThrow<double>(nh, "/navigation/fixed_lag", lag_);
+    smoother_ = BatchFixedLagSmoother(DBL_MAX); // Initialize with infinite lag
 
     // General config
     getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);
@@ -35,187 +35,196 @@ void PoseGraph::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     imu_integration_.newMeasurement(msg);
 
     // Check for potential timeout (if we are initialized)
-    if (isInit() && imu_integration_.timeOut()){
+    if (init_ && imu_integration_.timeOut()){
         ROS_WARN("PoseGraph: IMU integration timeout, add new state variable");
         addState(msg->header.stamp.toSec());
     }
 }
 
 void PoseGraph::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
-    double ts = msg->header.stamp.toSec();
+    // Parse new gnss measurement
     gnss_correction_.newMeasurement(msg);
+    double ts = msg->header.stamp.toSec();
 
+    // Is measurement valid?
     if (!gnss_correction_.isFix())
         return;
-    else if (init_){
-        auto gnss_factor = gnss_correction_.getCorrectionFactor(X(state_idx_));
-        graph_.add(gnss_factor);
+
+    if (init_){
+        // Woho! add factor and update
+        auto gnss_factor = gnss_correction_.getCorrectionFactor(X(state_count_));
+        factors_.add(gnss_factor);
 
         addState(ts);
     }
-    else if (prior_z_ != 0.0){
-        initialize(ts);
+    else{
+        // Save stamp, reset IMU and wait for planeFitCallback to finish initialization
+        updateTimeStamps(state_count_, ts);
+        updateSmoother();
+        imu_integration_.resetIntegration(ts, bias_);
+        state_count_ ++;
+        ts_ = ts;
     }
 }
 
-void PoseGraph::planeFitCallback(int state_idx, Eigen::Vector4d plane_coeffs){
-    prior_z_ = -abs(plane_coeffs[3]);
+void PoseGraph::planeFitCallback(int state_idx, const Eigen::Vector4d& plane_coeffs){
+    surface_correction_.setPlaneCoeffs(plane_coeffs);
+
+    if (init_){
+        if (surface_correction_.planeCount() % 100 == 0)
+            factors_.add(surface_correction_.getAltitudeFactor(X(state_idx)));
+        // factors_.add(surface_correction_.getAttitudeFactor(X(state_idx)));
+    }
+    else
+        initialize();
 }
 
-void PoseGraph::initializeState(double ts){
-    // Pose
-    Point2 xy = gnss_correction_.getPosition();
-    double z = -prior_z_;
-    Point3 pos = Point3(xy.x(), xy.y(), z);
 
-    Rot3 rot = imu_integration_.estimateAttitude();
+void PoseGraph::initialize(){
+    // Reset smoother
+    smoother_ = BatchFixedLagSmoother(lag_);
 
-    pose_ = Pose3(rot, pos);
+    int prior_idx = getCurrentStateIdx();
+    ROS_WARN_STREAM("Initialize pose graph at idx: " << prior_idx);
 
-    // Velcocity
-    vel_ = Point3(0, 0, 0);
+    initializeState();
+    updateValues(prior_idx);
+    updateTimeStamps(prior_idx, ts_);
+    addPriors(prior_idx);
 
-    // Bias
-    Point3 acc_bias = Point3(0, 0, 0); //Point3(-0.03, 0.11, -0.14);
-    Point3 gyro_bias = Point3(0, 0, 0); //Point3(-0.002, 0.002, -0.0024);
-    bias_ = imuBias::ConstantBias(acc_bias, gyro_bias);
+    init_ = true;
+}
 
-    // Lever arm
-    lever_arm_ = pose_.rotation().inverse().rotate(Point3(0, 0, -z));
 
-    // Ice state
-    ice_drift_ = Point2(0, 0);
+/*
+Generic, called even before initialization
+*/
+void PoseGraph::addState(double ts){
+    int state_idx = state_count_;
+    ROS_INFO_STREAM("Add state at idx: " << state_idx);
 
-    // Timestamp
-    state_idx_ = 0;
+    predictState(ts);
+    updateTimeStamps(state_idx, ts);
+    updateValues(state_idx);
+    updateFactors(state_idx, ts);
+    updateSmoother();
+    updateState(state_idx);
+
+    // Reset
+    imu_integration_.resetIntegration(ts, bias_);
+    state_count_ ++;
     ts_ = ts;
+    
+    // Distribute pose
+    writeToFile();
+    publishPose();
 }
 
-void PoseGraph::addPriors(double ts){
-    // From GNSS
-    auto gnss_factor = gnss_correction_.getCorrectionFactor(X(0));
-    graph_.add(gnss_factor); // Planar position prior
+void PoseGraph::addPriors(int idx){
+    // GNSS prior
+    auto gnss_factor = gnss_correction_.getCorrectionFactor(X(idx));
+    factors_.add(gnss_factor);
+
+    // Altitude prior
+    factors_.add(surface_correction_.getAltitudeFactor(X(idx)));
 
     // Bias prior
     auto initial_bias_noise = noiseModel::Diagonal::Sigmas(
         (Vector6() << Vector::Constant(3, initial_acc_bias_sigma_), Vector::Constant(3, initial_gyro_bias_sigma_)).finished()
     );
-    graph_.addPrior(B(0), bias_, initial_bias_noise);
+    factors_.addPrior(B(idx), bias_, initial_bias_noise);
 
     // Lever arm priors
-    auto levered_factor = LeveredAltitudeFactor(X(0), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
-    graph_.add(levered_factor);
+    auto levered_factor = LeveredAltitudeFactor(X(idx), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
+    factors_.add(levered_factor);
 
     auto lever_norm_factor = NormConstraintFactor(L(0), lever_norm_threshold_, noiseModel::Isotropic::Sigma(1, lever_norm_sigma_));
-    graph_.add(lever_norm_factor);
+    factors_.add(lever_norm_factor);
+
+    // Drift prior
+    if (estimate_ice_drift_){
+        factors_.addPrior(D(idx), ice_drift_, noiseModel::Isotropic::Sigma(2, 2));
+    }
 }
 
-void PoseGraph::initialize(double ts){
-    ROS_INFO_STREAM("Initializing navigation system at " << std::fixed << ts);
+void PoseGraph::initializeState(){
+    Point2 xy = gnss_correction_.getPosition();
+    double z = -surface_correction_.getSurfaceDistance();
+    pose_ = Pose3(
+        imu_integration_.estimateAttitude(), 
+        Point3(xy.x(), xy.y(), z)
+    );
 
-    initializeState(ts);
-    addVariables(ts);
-    addPriors(ts);
-
-    imu_integration_.resetIntegration(ts_, bias_);
-    init_ = true;
+    lever_arm_ = pose_.rotation().inverse().rotate(Point3(0, 0, -z));
 }
-
 
 void PoseGraph::predictState(double ts){
-    // Predict next state
     imu_integration_.finishIntegration(ts);
     NavState pred_state = imu_integration_.predict(pose_, vel_, bias_);
     pose_ = pred_state.pose();
     vel_ = pred_state.velocity();
 }
 
-void PoseGraph::addVariables(double ts){
-    // Add to predictions to values_
-    values_.insert(X(state_idx_), pose_);
-    values_.insert(V(state_idx_), vel_);
-    values_.insert(B(state_idx_), bias_);
+void PoseGraph::updateState(int idx){
+    pose_ = smoother_.calculateEstimate<Pose3>(X(idx));
+    vel_ = smoother_.calculateEstimate<Point3>(V(idx));
+    bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(idx));
+    lever_arm_ = smoother_.calculateEstimate<Point3>(L(0));
 
-    // Set timestamps
-    stamps_[X(state_idx_)] = ts;
-    stamps_[V(state_idx_)] = ts;
-    stamps_[B(state_idx_)] = ts;
-
-    // Only add lever arm on initial s
-    if (state_idx_ == 0)
-        values_.insert(L(0), lever_arm_);
-
-    // Optionally add ice drift
-    if (estimate_ice_drift_){
-        values_.insert(D(state_idx_), ice_drift_);
-        stamps_[D(state_idx_)] = ts;
-    }
+    if (estimate_ice_drift_)
+        ice_drift_ = smoother_.calculateEstimate<Point2>(D(idx));
 }
 
-void PoseGraph::addFactors(double ts){
+
+void PoseGraph::updateValues(int idx){
+    // Add to predictions to values_
+    values_.insert(X(idx), pose_);
+    values_.insert(V(idx), vel_);
+    values_.insert(B(idx), bias_);
+
+    if (!init_)
+        values_.insert(L(0), lever_arm_);
+
+    if (estimate_ice_drift_)
+        values_.insert(D(idx), ice_drift_);
+}
+
+void PoseGraph::updateTimeStamps(int idx, double ts){
+    stamps_[X(idx)] = ts;
+    stamps_[V(idx)] = ts;
+    stamps_[B(idx)] = ts;
+
+    if (estimate_ice_drift_)
+        stamps_[D(idx)] = ts;
+}
+
+void PoseGraph::updateFactors(int idx, double ts){
     // Motion constraint
-    auto levered_factor = LeveredAltitudeFactor(X(state_idx_), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
-    graph_.add(levered_factor);
+    auto levered_factor = LeveredAltitudeFactor(X(idx), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
+    factors_.add(levered_factor);
 
     // Imu integration
-    auto imu_factor = imu_integration_.getIntegrationFactor(state_idx_);
-    graph_.add(imu_factor);
+    imu_integration_.finishIntegration(ts);
+    auto imu_factor = imu_integration_.getIntegrationFactor(idx);
+    factors_.add(imu_factor);
 
     // Drift estimation
     if (estimate_ice_drift_){
         double dt = ts - ts_;
         auto noise = noiseModel::Isotropic::Sigma(2, 0.05*dt);
 
-        auto cv_factor = BetweenFactor<Point2>(D(state_idx_-1), D(state_idx_), Point2(0, 0), noise);
-        graph_.add(cv_factor);
+        auto cv_factor = BetweenFactor<Point2>(D(idx-1), D(idx), Point2(0, 0), noise);
+        factors_.add(cv_factor);
     }
 }
 
-void PoseGraph::updateSmoother(double ts){
-    // Update smoother
-    smoother_.update(graph_, values_, stamps_);
+void PoseGraph::updateSmoother(){
+    smoother_.update(factors_, values_, stamps_);
     stamps_.clear();
     values_.clear();
-    graph_.resize(0);
-
-    // Update current state
-    pose_ = smoother_.calculateEstimate<Pose3>(X(state_idx_));
-    vel_ = smoother_.calculateEstimate<Point3>(V(state_idx_));
-    bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(state_idx_));
-    lever_arm_ = smoother_.calculateEstimate<Point3>(L(0));
-
-    if (estimate_ice_drift_)
-        ice_drift_ = smoother_.calculateEstimate<Point2>(D(state_idx_));
+    factors_.resize(0);
 }
 
-
-/*
-This is a generic function for adding new state nodes, which typically
-happens on GNSS corrections or when the IMU integration times out.  
-*/
-void PoseGraph::addState(double ts){
-    state_idx_ ++;
-
-    // Predict new state
-    predictState(ts);
-
-    // variables and factors
-    addVariables(ts);
-    addFactors(ts);
-
-    // Update fixed-lag smoother with new info
-    updateSmoother(ts);
-
-    // Generic after update
-    imu_integration_.resetIntegration(ts, bias_);
-    ts_ = ts;
-    
-    // Distribute pose somehow
-    writeToFile();
-    publishPose();
-
-    ROS_INFO_STREAM("State added: " << state_idx_);
-}
 
 void PoseGraph::publishPose(){
     if (pose_pub_.getNumSubscribers() > 0){

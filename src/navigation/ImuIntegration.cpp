@@ -1,6 +1,6 @@
 #include "ImuIntegration.h"
 
-ImuIntegration::ImuIntegration(ros::NodeHandle nh) {
+ImuIntegration::ImuIntegration(ros::NodeHandle nh){
     // Get config
     getParamOrThrow(nh, "/navigation/gravity_norm", gravity_norm_);
     getParamOrThrow(nh, "/navigation/imu_timeout_interval", timeout_interval_);
@@ -21,17 +21,16 @@ ImuIntegration::ImuIntegration(ros::NodeHandle nh) {
 
 
 void ImuIntegration::newMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
-    // Timestamp
     double ts = msg->header.stamp.toSec();
+
+    // Initialized?
+    if (ts_head_ == 0.0)
+        resetIntegration(ts, preintegration_->biasHat());
+
+    // Timestamp
     double dt = ts - ts_head_;
     assert(dt >= 0);
 
-    // Check message sequence
-    int seq = msg->header.seq;
-    if ((seq != seq_ + 1) && seq_ != 0){
-        ROS_WARN_STREAM("ImuIntegration: Wrong sequence number (" << seq_ << " to " << seq << ")");
-    }
-    
     // All good, set new measurement
     setAcc(msg);
     setRate(msg);
@@ -41,7 +40,6 @@ void ImuIntegration::newMeasurement(const sensor_msgs::Imu::ConstPtr& msg){
         preintegration_->integrateMeasurement(acc_, rate_, dt);
 
     ts_head_ = ts;
-    seq_ = seq;
 }
 
 void ImuIntegration::setAcc(const sensor_msgs::Imu::ConstPtr& msg){

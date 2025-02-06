@@ -4,6 +4,10 @@ template <typename T>
 StampedRingBuffer<T>::StampedRingBuffer(size_t capacity)
     : capacity_(capacity), buffer_(capacity), head_(0), size_(0) {}
 
+template <typename T>
+const StampedRingBufferIterator<T> StampedRingBuffer<T>::last() const{
+    return StampedRingBufferIterator<T>(buffer_, capacity_, idxLast());
+}
 
 template <typename T>
 const StampedRingBufferIterator<T> StampedRingBuffer<T>::begin() const{

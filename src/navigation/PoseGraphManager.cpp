@@ -61,7 +61,7 @@ int PoseGraphManager::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 
         return addState(ts);
     }
-    else if (gnss_correction_.isInit() && surface_estimation_.estimateSurface(ts)){
+    else if (surface_estimation_.estimateSurface(ts)){
         initialize(ts);
     }
 
@@ -79,8 +79,7 @@ void PoseGraphManager::initializeStates(double ts){
     pose_ = Pose3(rot, pos);
 
     // Velcocity
-    Point2 v_xy = gnss_correction_.getVelocity();
-    vel_ = Point3(v_xy.x(), v_xy.y(), 0);
+    vel_ = Point3(0, 0, 0);
 
     // Bias
     Point3 acc_bias = Point3(0, 0, 0); //Point3(-0.03, 0.11, -0.14);

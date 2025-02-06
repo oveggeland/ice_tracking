@@ -5,7 +5,7 @@ CloudManager::CloudManager(ros::NodeHandle& nh){
     // Initialize point buffer
     double buffer_size = getParamOrThrow<double>(nh, "/navigation/surface_estimation/buffer_size");
     getParamOrThrow(nh, "/navigation/surface_estimation/lidar_point_interval", point_interval_);
-    point_buffer_ = PointBuffer(buffer_size / point_interval_);
+    point_buffer_ = PointBufferType1(buffer_size / point_interval_);
 
     // Extrinsic calibration
     bTl_ = bTl(getParamOrThrow<std::string>(nh, "/ext_file"));
@@ -226,6 +226,54 @@ void CloudManager::publishCloud(const PointCloudSharedPtr pcd) const{
     // Publish the PointCloud2 message
     cloud_pub_.publish(cloud_msg);
 }
+
+PointCloudSharedPtr CloudManager::buildMap(int idx0, int idx1) const{
+    std::vector<Pose3> poses;
+    std::vector<PointCloudSharedPtr> clouds;
+    std::vector<Point2> drift_vectors;
+
+    int n_frames = idx1 - idx0 + 1;
+    poses.reserve(n_frames);
+    clouds.reserve(n_frames);
+    drift_vectors.reserve(n_frames);
+
+    int total_point_count = 0;
+    for (int idx = idx0; idx <= idx1; ++idx){
+        auto [ts, pose] = pose_graph_manager_->getStampedPose(idx);
+        poses.push_back(pose);
+        
+        auto cloud = getFrame(idx);
+        clouds.push_back(getFrame(idx));
+        total_point_count += cloud->points_.size();
+
+        drift_vectors.push_back(pose_graph_manager_->getIceDrift(idx));
+    }
+
+    PointCloud map;
+    map.points_.reserve(total_point_count);
+
+    for (int i = 0; i < n_frames; ++i){
+        Pose3 bTw = Pose3(
+            poses[i].rotation(),
+            poses[i].translation()// - poses[0].translation()
+        );
+
+        // Transform to map
+        PointCloud cloud(*clouds[i]);
+        cloud.Transform(bTw.matrix());
+
+        // Add to map
+        map += cloud;
+
+        // Move entire map
+        // Point2 drift = drift_vectors[i];
+        // map.Translate(Point3(drift.x(), drift.y(), 0));
+    }
+
+    return std::make_shared<PointCloud>(map);
+}
+
+
 
 void CloudManager::saveCloud(double ts, const PointCloudSharedPtr pcd) const{
     std::stringstream fname;
