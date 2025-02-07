@@ -30,7 +30,7 @@ private:
     double ts_plane_ = 0.0;
     double ts_plane_fit_ = 0.0;
 
-    double plane_interval_ = 60;
+    double plane_interval_ = 5;
     double window_size_ = 0.1;
 
     // Ransac configuration

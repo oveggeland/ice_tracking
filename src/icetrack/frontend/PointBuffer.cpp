@@ -25,7 +25,7 @@ void PointBuffer::addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg){
     for (sensor_msgs::PointCloud2ConstIterator<float> it(*msg, "x"); it != it.end(); ++it) {
         if (acceptPoint(ts_point, it[0], it[1], it[2], it[3])) {
             Eigen::Vector3f point_imu = bRl_ * Eigen::Vector3f(it[0], it[1], it[2]) + btl_; // Transform to IMU frame
-            buffer_.addPoint({ it[0], it[1], it[2], it[3], ts_point });
+            buffer_.addPoint({point_imu.x(), point_imu.y(), point_imu.z(), it[3], ts_point });
         }
         ts_point += point_interval_;
     }

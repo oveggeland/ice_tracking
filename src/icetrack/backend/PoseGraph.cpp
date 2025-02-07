@@ -88,6 +88,9 @@ void PoseGraph::planeFitCallback(int state_idx, const Eigen::Vector4d& plane_coe
     if (init_){
         ROS_WARN("Add plane factor...");
         factors_.add(surface_correction_.getAltitudeFactor(X(state_idx)));
+        factors_.add(surface_correction_.getAttitudeFactor(X(state_idx)));
+
+        updateSmoother();
     }
     else
         initialize();
@@ -133,7 +136,7 @@ void PoseGraph::addPriors(int idx){
 
     // Altitude prior
     factors_.add(surface_correction_.getAltitudeFactor(X(idx)));
-    // factors_.add(surface_correction_.getAttitudeFactor(X(idx)));
+    factors_.add(surface_correction_.getAttitudeFactor(X(idx)));
 
     // Bias prior
     auto initial_bias_noise = noiseModel::Diagonal::Sigmas(

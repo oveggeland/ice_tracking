@@ -11,5 +11,5 @@ AltitudeFactor SurfaceCorrection::getAltitudeFactor(Key pose_key) const{
 }
 
 Pose3AttitudeFactor SurfaceCorrection::getAttitudeFactor(Key pose_key) const{
-    return Pose3AttitudeFactor(pose_key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, sigma_attitude_), getSurfaceNormal());
+    return Pose3AttitudeFactor(pose_key, Unit3(0, 0, -1), noiseModel::Isotropic::Sigma(2, sigma_attitude_), getSurfaceNormal());
 }

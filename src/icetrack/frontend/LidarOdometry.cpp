@@ -47,8 +47,9 @@ void LidarOdometry::alignFrame(int idx0, int idx1) {
     Eigen::Matrix4d T_align = result.transformation_;
 
     // Check if ICP converged
-    if (result.fitness_ < 0.95)  // Fitness threshold (tune based on environment)
+    if (result.fitness_ < 0.8)  // Fitness threshold (tune based on environment)
         return;
+    //visualizeAlignment(cloud0_ds, cloud1_ds, T_initial, T_align);
 
     pose_graph_.odometryCallback(idx0, idx1, T_align);
 }
