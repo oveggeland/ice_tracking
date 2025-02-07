@@ -47,7 +47,7 @@ private:
     // Keep track of latest count
     int frame_count_ = 0;
 
-    bool undistort_ = false;
+    bool undistort_ = true;
     bool visualize_ = false;
     int visualize_count_ = 5000;
 

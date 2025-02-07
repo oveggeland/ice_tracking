@@ -15,6 +15,7 @@
 #include "factors/NormConstraintFactor.h"
 #include "factors/LeveredAltitudeFactor.h"
 #include "factors/ConstantVelocityFactor2D.h"
+#include "factors/IceOdometryFactor.h"
 
 #include "utils/file_system.h"
 #include "utils/ros_params.h"
@@ -31,7 +32,7 @@ public:
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
 
     // Measurement callbacks from front end
-    void odometryCallback(int pose_idx0, int pose_idx1, Eigen::Matrix4d T_align) {};
+    void odometryCallback(int pose_idx0, int pose_idx1, Eigen::Matrix4d T_align);
     void planeFitCallback(int pose_idx, const Eigen::Vector4d& plane_coeffs);
 
     // Accessors
@@ -40,8 +41,9 @@ public:
 
     int getCurrentStateIdx() const { return state_idx_; }
     double getCurrentTimeStamp() const { return ts_; }
+    const Pose3& getCurrentPose() const { return pose_; }
 
-    double getTimeStamp(int idx) const { return (idx == getCurrentStateIdx())? ts_ : smoother_.timestamps().at(X(idx)); }
+    double getTimeStamp(int idx) const { return smoother_.timestamps().at(X(idx)); }
     Pose3 getPose(int idx) const { return smoother_.calculateEstimate<Pose3>(X(idx)); }
 
 private:

@@ -13,3 +13,12 @@ void visualizeCloud(const PointCloudPtr cloud);
 
 void visualizeCloud(const TensorCloud& cloud);
 void visualizeCloud(const TensorCloudPtr cloud);
+
+void visualizeAlignment(const PointCloudPtr pcd0, const PointCloudPtr pcd1, Eigen::Matrix4d T_initial, Eigen::Matrix4d T_align);
+void visualizeAlignment(const PointCloud pcd0, const PointCloud pcd1, Eigen::Matrix4d T_initial, Eigen::Matrix4d T_align);
+void visualizeAlignment(const TensorCloud& pcd0, const TensorCloud& pcd1, Eigen::Matrix4d T_initial, Eigen::Matrix4d T_align);
+
+int getCloudSize(const PointCloud& cloud);
+int getCloudSize(const PointCloudPtr cloud);
+int getCloudSize(const TensorCloud& cloud);
+int getCloudSize(const TensorCloudPtr cloud);

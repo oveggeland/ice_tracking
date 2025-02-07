@@ -33,12 +33,12 @@ void FrameBuffer::addFrame(int idx){
     assert (dt_inv > 0);
 
     // Find transformations to pose1, we will be interpolating between these two transformations. 
-    gtsam::Pose3 T0 = pose1.between(pose0);
-    gtsam::Pose3 T1 = gtsam::Pose3();
+    Pose3 T0 = pose1.between(pose0);         // Transformation from lidar frame at t0 to body frame at t1.
+    Pose3 T1 = Pose3::Identity();                                                 // Transformation from lidar frame at t1 to body frame at t1. 
 
     // Precompute logmap differences between the two transformations (for efficient interpolation)
-    gtsam::Vector3 dt_log = T1.translation() - T0.translation();
-    gtsam::Vector3 dR_log = Rot3::Logmap(T0.rotation().between(T1.rotation()));
+    Vector3 dt_log = T1.translation() - T0.translation();
+    Vector3 dR_log = Rot3::Logmap(T0.rotation().between(T1.rotation()));
 
     // Find bounds for point buffer iteration
     auto start = point_buffer_.lowerBound(t0);
@@ -72,7 +72,8 @@ void FrameBuffer::addFrame(int idx){
                 T0.rotation().retract(alpha*dR_log),
                 T0.translation() + alpha*dt_log
             );
-            point = T_align.transformFrom(Point3(it->x, it->y, it->z));
+            
+            point = T_align.transformFrom(point);
         }
 
         // Store transformed point and intensity

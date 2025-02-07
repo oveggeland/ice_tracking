@@ -64,6 +64,24 @@ void PoseGraph::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
     }
 }
 
+void PoseGraph::odometryCallback(int idx0, int idx1, Eigen::Matrix4d T_align){
+    auto noise_model = noiseModel::Diagonal::Sigmas(
+        (Vector6() << Vector3::Constant(0.1), Vector3::Constant(2.0)).finished()
+    );
+
+    if (estimate_ice_drift_){
+        double dt = getTimeStamp(idx1) - getTimeStamp(idx0);
+        auto odom_factor = IceOdometryFactor(X(idx0), X(idx1), D(idx0), Pose3(T_align), dt, noise_model);
+        factors_.add(odom_factor);
+    }
+    else{
+        auto odom_factor = BetweenFactor<Pose3>(X(idx0), X(idx1), Pose3(T_align), noise_model);
+        factors_.add(odom_factor);
+    }
+
+    updateSmoother();
+}
+
 void PoseGraph::planeFitCallback(int state_idx, const Eigen::Vector4d& plane_coeffs){
     surface_correction_.setPlaneCoeffs(plane_coeffs);
 
@@ -115,6 +133,7 @@ void PoseGraph::addPriors(int idx){
 
     // Altitude prior
     factors_.add(surface_correction_.getAltitudeFactor(X(idx)));
+    // factors_.add(surface_correction_.getAttitudeFactor(X(idx)));
 
     // Bias prior
     auto initial_bias_noise = noiseModel::Diagonal::Sigmas(
