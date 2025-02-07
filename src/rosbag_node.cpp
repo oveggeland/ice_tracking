@@ -11,9 +11,8 @@
 #include <filesystem>
 #include <gperftools/profiler.h>
 
-#include "utils/ros_params.h"
-#include "navigation/FixedLagMapper.h"
-#include "mapping/CloudManager.h"
+#include "icetrack/utils/ros_params.h"
+#include "icetrack/FixedLagMapper.h"
 
 int main(int argc, char** argv) {
     // Initialize node
@@ -39,7 +38,6 @@ int main(int argc, char** argv) {
 
     // Initialize nodes
     FixedLagMapper fixed_lag_mapper(nh);
-    // CloudManager2 cloud_manager(nh);
 
     // Collect bag files
     std::vector<std::filesystem::path> files;

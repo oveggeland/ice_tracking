@@ -6,12 +6,8 @@
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
 
-
-#include "LidarFrontEnd.h"
-#include "PoseGraph.h"
-
-#include "PoseGraphManager.h"
-#include "CloudManager.h"
+#include "frontend/LidarFrontEnd.h"
+#include "backend/PoseGraph.h"
 
 #include "utils/CallbackSequencer.h"
 
@@ -21,10 +17,6 @@ public:
 
 private:
     // Main modules
-    PoseGraphManager pose_graph_manager_;
-    CloudManager cloud_manager_;
-
-    // Refactored modules
     LidarFrontEnd lidar_front_end_;
     PoseGraph pose_graph_;
 
@@ -36,7 +28,6 @@ private:
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-
 
     // Callback sequencing
     CallbackSequencer sequencer_;

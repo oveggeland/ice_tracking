@@ -27,33 +27,21 @@ catkin_package(
 ## Include directories ##
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/icetrack
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Define navigation library ##
-file(GLOB NAVIGATION_SOURCES 
-  "src/navigation/*.cpp"
+file(GLOB ICETRACK_SOURCES 
+  "src/icetrack/*.cpp"
+  "src/icetrack/frontend/*.cpp"
+  "src/icetrack/backend/*.cpp"
+  "src/icetrack/utils/*.cpp"
 )
-add_library(navlib 
-  ${NAVIGATION_SOURCES}
+add_library(licetrack 
+  ${ICETRACK_SOURCES}
 )
-target_link_libraries(navlib 
-  gtsam 
-  gtsam_unstable 
-  proj
-  yaml-cpp
-  Open3D::Open3D
-  ${catkin_LIBRARIES}
-)
-
-## Define mapping library ##
-file(GLOB MAPPING_SOURCES 
-  "src/mapping/*.cpp"
-)
-add_library(maplib 
-  ${MAPPING_SOURCES}
-)
-target_link_libraries(maplib 
+target_link_libraries(licetrack 
   gtsam 
   gtsam_unstable 
   proj
@@ -63,34 +51,19 @@ target_link_libraries(maplib
 )
 
 ## Executables ##
-add_executable(navigation_node src/navigation_node.cpp)
-add_executable(mapping_node src/mapping_node.cpp)
+add_executable(icetrack_node src/icetrack_node.cpp)
 add_executable(rosbag_node src/rosbag_node.cpp)
-add_executable(rosbag_fixed_rate_node src/rosbag_fixed_rate_node.cpp)
-
 
 ## Link executables ##
-target_link_libraries(navigation_node
+target_link_libraries(icetrack_node
   ${catkin_LIBRARIES}
-  navlib
-)
-
-target_link_libraries(mapping_node
-  ${catkin_LIBRARIES}
-  maplib
+  licetrack
 )
 
 target_link_libraries(rosbag_node
   ${catkin_LIBRARIES}
-  navlib
-  maplib
+  licetrack
   -lprofiler
-)
-
-target_link_libraries(rosbag_fixed_rate_node
-  ${catkin_LIBRARIES}
-  navlib
-  maplib
 )
 
 # Python stuff
