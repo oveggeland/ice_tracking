@@ -19,3 +19,9 @@ pose_queue_size: 10
 cloud_queue_size: 10
 
 max_publish_rate: 20 # For fixed rate node
+
+
+### Clean up this later ###
+
+
+frame_buffer/undistort_frames: true

@@ -28,11 +28,9 @@ public:
     
     // Interface
     void generateFrames();
-    void addFrame(int idx);
 
     // Accessors
-    int getIndex() const { return end()->first; }
-    FrameType getFrame(int idx) const { 
+    const FrameType getFrame(int idx) const { 
         auto it = buffer_.find(idx);
         return (it != buffer_.end()) ? it->second : nullptr;
     }
@@ -44,14 +42,18 @@ public:
 private:
     FrameBufferType buffer_;
 
-    // Keep track of latest count
-    int frame_count_ = 0;
+    // Add frame with points between t_{idx-1} and t_{idx}
+    void addFrame(int idx);
 
-    bool undistort_ = true;
-    bool visualize_ = false;
-    int visualize_count_ = 5000;
+    // Remove out of scope frames
+    void removeOldFrames();
 
-    // Access
+    // Option to undistort frames by pose interpolation
+    bool undistort_frames_;
+
+    // Reference to buffer of incoming lidar points
     const PointBuffer& point_buffer_;
+
+    // Reference to posegraph object
     const PoseGraph& pose_graph_;
 };
