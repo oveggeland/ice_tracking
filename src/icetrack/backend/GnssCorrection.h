@@ -7,8 +7,8 @@
 #include <proj.h>
 
 #include "utils/ros_params.h"
-#include "navigation/navigation.h"
-#include "navigation/factors/GNSSFactor.h"
+#include "backend/navigation.h"
+#include "backend/factors/GNSSFactor.h"
 
 class GnssCorrection{
 public:

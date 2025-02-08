@@ -4,9 +4,9 @@
 #include <gtsam/geometry/Unit3.h>
 
 #include <gtsam/navigation/AttitudeFactor.h>
-#include "navigation/factors/AltitudeFactor.h"
+#include "backend/factors/AltitudeFactor.h"
 
-#include "navigation/navigation.h"
+#include "backend/navigation.h"
 #include "utils/ros_params.h"
 
 class SurfaceCorrection{

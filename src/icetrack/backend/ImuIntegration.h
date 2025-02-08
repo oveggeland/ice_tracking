@@ -7,7 +7,7 @@
 #include <gtsam/navigation/AttitudeFactor.h>
 
 #include "utils/ros_params.h"
-#include "navigation/navigation.h"
+#include "backend/navigation.h"
 
 class ImuIntegration{
     public:
