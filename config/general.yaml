@@ -23,5 +23,22 @@ max_publish_rate: 20 # For fixed rate node
 
 ### Clean up this later ###
 
-
+# Frame buffer
 frame_buffer/undistort_frames: true
+
+# Surface estimator
+surface_estimator/update_interval: 10
+surface_estimator/window_size: 0.1
+surface_estimator/voxel_size: 1.0
+surface_estimator/min_inlier_count: 25
+    
+surface_estimator/ransac_threshold: 0.5
+surface_estimator/ransac_sample_size: 10
+surface_estimator/ransac_iterations: 5
+
+# Odometry
+lidar_odometry/frame_interval: 1
+lidar_odometry/min_frame_size: 5000
+lidar_odometry/voxel_size: 1.0
+lidar_odometry/icp_threshold: 2.0
+lidar_odometry/icp_min_fitness: 0.8

@@ -12,8 +12,9 @@
 
 #include "utils/ros_params.h"
 
-
-
+/*
+Main class of the front end. Most functionality is distributed to submodules which are frequently polled for updates upon arrival of new messages. 
+*/
 class LidarFrontEnd{
 public:
     // Constructor
@@ -21,20 +22,20 @@ public:
 
     // Interface
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-    void pollUpdates();
 
 private:
-    PoseGraph& pose_graph_;
+    // Polls all submodules for updates
+    void pollUpdates();
 
+    // Buffer for incoming lidar points
     PointBuffer point_buffer_;
+
+    // Buffer for maintaining pointcloud "frames"
     FrameBuffer frame_buffer_;
 
+    // Estimate the ice sheet as under a plane assumption
     SurfaceEstimator surface_estimator_;
+
+    // Frame-to-frame odometry
     LidarOdometry lidar_odometry_;
-    
-    // Actions
-    double ts_plane_; // Timestamp of last fitted plane
-    void planeFitting();
-    
-    void odometry(int state_idx) {} // TODO
 };

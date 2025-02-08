@@ -3,22 +3,27 @@
 
 LidarOdometry::LidarOdometry(const ros::NodeHandle& nh, PoseGraph& pose_graph, const FrameBuffer& frame_buffer)
                         : pose_graph_(pose_graph), frame_buffer_(frame_buffer) {
-    // Initialize
+    // Import config
+    getParamOrThrow(nh, "/lidar_odometry/frame_interval", frame_interval_);
+    getParamOrThrow(nh, "/lidar_odometry/min_frame_size", min_frame_size_);
+    getParamOrThrow(nh, "/lidar_odometry/voxel_size", voxel_size_);
+    getParamOrThrow(nh, "/lidar_odometry/icp_threshold", icp_threshold_);
+    getParamOrThrow(nh, "/lidar_odometry/icp_min_fitness", icp_min_fitness_);
 };
 
-void LidarOdometry::alignFrames() {
+void LidarOdometry::pollUpdates() {
     if (!pose_graph_.isInit())
         return;
 
     int state_idx = pose_graph_.getCurrentStateIdx();
     while (aligned_idx_ < state_idx){
         aligned_idx_++;
-        alignFrame(aligned_idx_-1, aligned_idx_);
+        alignFrames(aligned_idx_-frame_interval_, aligned_idx_);
     }
 };
 
 
-void LidarOdometry::alignFrame(int idx0, int idx1) {
+void LidarOdometry::alignFrames(int idx0, int idx1) {
     // Get frames
     auto cloud0 = frame_buffer_.getFrame(idx0);
     auto cloud1 = frame_buffer_.getFrame(idx1);
@@ -26,7 +31,7 @@ void LidarOdometry::alignFrame(int idx0, int idx1) {
         return;
 
     // Assert a size threshold
-    if (getCloudSize(cloud0) < 5000 || getCloudSize(cloud1) < 5000)
+    if (getCloudSize(cloud0) < min_frame_size_ || getCloudSize(cloud1) < min_frame_size_)
         return;
     
     // Get pose and initial alignment
@@ -36,18 +41,18 @@ void LidarOdometry::alignFrame(int idx0, int idx1) {
     Eigen::Matrix4d T_initial = pose0.between(pose1).matrix();
 
     // Downsample
-    auto cloud0_ds = cloud0->ToLegacy().VoxelDownSample(1.0);
-    auto cloud1_ds = cloud1->ToLegacy().VoxelDownSample(1.0);
+    auto cloud0_ds = cloud0->ToLegacy().VoxelDownSample(voxel_size_);
+    auto cloud1_ds = cloud1->ToLegacy().VoxelDownSample(voxel_size_);
 
     // Perform ICP alignment
     auto result = open3d::pipelines::registration::RegistrationICP(
-        *cloud1_ds, *cloud0_ds, 2.0, T_initial.matrix(),
+        *cloud1_ds, *cloud0_ds, icp_threshold_, T_initial.matrix(),
         open3d::pipelines::registration::TransformationEstimationPointToPoint()
     );
     Eigen::Matrix4d T_align = result.transformation_;
 
     // Check if ICP converged
-    if (result.fitness_ < 0.8)  // Fitness threshold (tune based on environment)
+    if (result.fitness_ < icp_min_fitness_)  // Fitness threshold (tune based on environment)
         return;
     //visualizeAlignment(cloud0_ds, cloud1_ds, T_initial, T_align);
 

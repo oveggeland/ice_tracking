@@ -7,7 +7,7 @@ FrameBuffer::FrameBuffer(const ros::NodeHandle& nh, const PoseGraph& pose_graph,
 }
 
 // Check for non-created frames
-void FrameBuffer::generateFrames(){
+void FrameBuffer::pollUpdates(){
     int last_pose_idx = pose_graph_.getCurrentStateIdx();
     int last_frame_idx = buffer_.empty() ? 0 : buffer_.rbegin()->first;
     while (last_frame_idx < last_pose_idx)

@@ -3,40 +3,45 @@
 #include <open3d/geometry/PointCloud.h>
 
 #include "frontend/PointBuffer.h"
+#include "backend/PoseGraph.h"
 
 #include "utils/ros_params.h"
 
 class SurfaceEstimator{
 public: 
     // Initialize
-    SurfaceEstimator(const ros::NodeHandle& nh, const PointBuffer& point_buffer);
+    SurfaceEstimator(const ros::NodeHandle& nh, PoseGraph& pose_graph, const PointBuffer& point_buffer);
 
     // Interface
-    bool fitSurface(double ts);
+    void pollUpdates();
 
     // Accessors
+    double getPlaneStamp() const { return plane_stamp_; }
+    int getPlaneIdx() const { return plane_idx_; }
     const Eigen::Vector4d& getPlaneCoeffs() const { return plane_coeffs_; }
-    double getPlaneStamp() const { return ts_plane_; }
-    double getPlaneFitStamp() const { return ts_plane_fit_; }
 
 private: 
+    // Reference to necesary resources
     const PointBuffer& point_buffer_;
+    PoseGraph& pose_graph_;
 
-    // Plane model
+    void estimateSurface(int state_idx, double ts);
+
+    // Plane info
+    double plane_stamp_;
+    int plane_idx_;
     Eigen::Vector4d plane_coeffs_;
-    bool estimateSurface(double ts);
 
-    // Time stamp management
-    double ts_plane_ = 0.0;
-    double ts_plane_fit_ = 0.0;
+    double ts_update_;              // Last succesful update
 
-    double plane_interval_ = 5;
-    double window_size_ = 0.1;
+    // General config
+    double update_interval_;        // Minimum interval between updates
+    double window_size_;            // Size of point cloud window [in seconds] used to fit a plane.
+    double voxel_size_;             // Voxel size on downsample (0 means no downsample)
+    int min_inlier_count_;          // Minimum amounts of inliers to accept plane
 
     // Ransac configuration
-    double ransac_frame_size_;
     double ransac_threshold_;
     int ransac_sample_size_;
-    int ransac_inlier_count_;
     int ransac_iterations_;
 };

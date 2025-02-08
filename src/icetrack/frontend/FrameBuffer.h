@@ -21,7 +21,7 @@ public:
     FrameBuffer(const ros::NodeHandle& nh, const PoseGraph& pose_graph, const PointBuffer& point_buffer);
     
     // Interface
-    void generateFrames();
+    void pollUpdates();
 
     // Accessors
     const FrameType getFrame(int idx) const { 

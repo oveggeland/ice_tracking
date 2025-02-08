@@ -65,6 +65,8 @@ void PoseGraph::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 }
 
 void PoseGraph::odometryCallback(int idx0, int idx1, Eigen::Matrix4d T_align){
+    ROS_INFO_STREAM("Add odometry factor between states " << idx0 << " and " << idx1);
+
     auto noise_model = noiseModel::Diagonal::Sigmas(
         (Vector6() << Vector3::Constant(0.1), Vector3::Constant(2.0)).finished()
     );
@@ -82,11 +84,11 @@ void PoseGraph::odometryCallback(int idx0, int idx1, Eigen::Matrix4d T_align){
     updateSmoother();
 }
 
-void PoseGraph::planeFitCallback(int state_idx, const Eigen::Vector4d& plane_coeffs){
+void PoseGraph::surfaceCallback(int state_idx, const Eigen::Vector4d& plane_coeffs){
     surface_correction_.setPlaneCoeffs(plane_coeffs);
 
     if (init_){
-        ROS_WARN("Add plane factor...");
+        ROS_INFO_STREAM("Add plane factor at state " << state_idx);
         factors_.add(surface_correction_.getAltitudeFactor(X(state_idx)));
         factors_.add(surface_correction_.getAttitudeFactor(X(state_idx)));
 
@@ -111,7 +113,7 @@ void PoseGraph::initialize(){
 
 void PoseGraph::addState(double ts){
     state_idx_++;
-    ROS_INFO_STREAM("Add state at idx: " << state_idx_);
+    ROS_INFO_STREAM("Add state " << state_idx_);
 
     predictState(ts);
     updateTimeStamps(state_idx_, ts);

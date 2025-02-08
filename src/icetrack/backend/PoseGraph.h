@@ -33,7 +33,7 @@ public:
 
     // Measurement callbacks from front end
     void odometryCallback(int pose_idx0, int pose_idx1, Eigen::Matrix4d T_align);
-    void planeFitCallback(int pose_idx, const Eigen::Vector4d& plane_coeffs);
+    void surfaceCallback(int pose_idx, const Eigen::Vector4d& plane_coeffs);
 
     // Accessors
     bool isInit() const { return init_; }
