@@ -45,6 +45,7 @@ public:
     int getLastFrameIdx() const { return buffer_.empty()? 0: buffer_.back().frame_idx; }
     int getPointCount() const { return point_count_; }
 
+    bool hasFrame(int idx) const;
     const FrameType& getFrame(int idx) const;
 
     FrameBufferConstIterator begin() const { return buffer_.begin(); }

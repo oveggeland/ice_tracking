@@ -108,3 +108,12 @@ const FrameType& FrameBuffer::getFrame(int idx) const {
     
     throw std::out_of_range("Frame not found");  // Handle the case when no matching frame is found
 }
+
+bool FrameBuffer::hasFrame(int idx) const {
+    for (const auto& it : buffer_) {
+        if (it.frame_idx == idx) {
+            return true;  
+        }
+    }
+    return false;
+}

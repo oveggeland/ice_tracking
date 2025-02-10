@@ -38,7 +38,7 @@ private:
     SurfaceEstimator surface_estimator_;
 
     // Frame-to-frame odometry
-    // LidarOdometry lidar_odometry_;
+    LidarOdometry lidar_odometry_;
 
     // Building coherent maps from pose graph and lidar frames
     MapBuilder map_builder_;

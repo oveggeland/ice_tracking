@@ -2,6 +2,9 @@
 
 #include <ros/ros.h>
 
+#include <open3d/Open3D.h>
+#include <open3d/t/pipelines/registration/TransformationEstimation.h>
+
 #include "backend/PoseGraph.h"
 #include "frontend/FrameBuffer.h"
 

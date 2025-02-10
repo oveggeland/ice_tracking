@@ -46,3 +46,25 @@ int getCloudSize(const PointCloud& cloud){
 int getCloudSize(const PointCloudPtr cloud){
     return cloud->points_.size();
 }
+
+// Copy memory
+PointCloudPtr EigenToPointCloudPtr(const Eigen::Matrix3Xd& positions) {
+    int n_points = positions.cols();
+
+    PointCloudPtr cloud = std::make_shared<PointCloud>();
+    cloud->points_.reserve(positions.cols());
+    
+    for (int i=0; i<n_points; ++i)
+        cloud->points_.push_back(positions.col(i));
+
+    return cloud;
+}
+
+// Shared memory
+TensorCloud EigenToTensorCloud(Eigen::Matrix3Xd& positions) {
+    // Create Open3D tensor from the Eigen matrix. Since we are using `Eigen::Map`, there is no memory copy.
+    open3d::core::Tensor tensor(positions.data(), open3d::core::Dtype::Float64, {positions.cols(), 3});
+
+    // Create the TensorCloud from the Open3D Tensor
+    return TensorCloud(tensor);
+}

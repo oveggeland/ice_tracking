@@ -41,7 +41,7 @@ void MapBuilder::updateMap(){
     }
     
     // What now?
-    if (point_counter > 1e6 && last_frame_idx_ > 1500)
+    if (point_counter > 1e6)
         visualizeMap();
 }
 
