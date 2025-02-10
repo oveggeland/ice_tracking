@@ -8,15 +8,15 @@ FrameBuffer::FrameBuffer(const ros::NodeHandle& nh, const PoseGraph& pose_graph,
 
 // Check for non-created frames
 void FrameBuffer::pollUpdates(){
-    int last_pose_idx = pose_graph_.getCurrentStateIdx();
-    int last_frame_idx = buffer_.empty() ? 0 : buffer_.rbegin()->first;
-    while (last_frame_idx < last_pose_idx)
-        addFrame(++last_frame_idx);
+    int pose_idx = pose_graph_.getCurrentStateIdx();
+    int frame_idx = getLastFrameIdx();
+    while (frame_idx < pose_idx)
+        createFrame(++frame_idx);
 }
 
 // Add a frame associated with state "idx"
-void FrameBuffer::addFrame(int idx){
-    ROS_DEBUG_STREAM("Add frame: " << idx << " to buffer");
+void FrameBuffer::createFrame(int idx){
+    ROS_INFO_STREAM("Add frame: " << idx << " to buffer");
 
     if (!pose_graph_.exists(idx-1) || !pose_graph_.exists(idx)){
         ROS_WARN_STREAM("Pose not available at idx: " << idx); // If everything goes according to plan, we never end up in this situation?
@@ -44,15 +44,14 @@ void FrameBuffer::addFrame(int idx){
     auto end = point_buffer_.lowerBound(t1);
     int num_points = start.distance_to(end);
 
-    // Allocate memory for position and intensity
-    std::vector<double> points;
-    std::vector<float> intensities;
-    points.reserve(3*num_points);
-    intensities.reserve(num_points);
+    // Add new frame to the container
+    FrameType& frame = newFrame(num_points);
+    frame.frame_idx = idx;
+    int point_counter = 0;
 
     // Iterate through points, optionally undistorting by interpolation between poses. 
     for (auto it = start; it != end; ++it) {
-        gtsam::Point3 point = Point3(it->x, it->y, it->z);
+        Eigen::Vector3d point = Point3(it->x, it->y, it->z);
 
         if (undistort_frames_){
             // Get stamp
@@ -70,31 +69,42 @@ void FrameBuffer::addFrame(int idx){
             point = T_int.transformFrom(point);
         }
 
-        // Store transformed point and intensity
-        points.push_back(point.x());
-        points.push_back(point.y());
-        points.push_back(point.z());
-        intensities.push_back(it->intensity);
+        frame.positions.col(point_counter) = point;
+        frame.intensities(point_counter) = it->intensity;
+        ++ point_counter;
     }
 
-    // Convert to Open3D tensor cloud
-    auto cloud = std::make_shared<TensorCloud>();
-    cloud->SetPointPositions(open3d::core::Tensor(std::move(points), {num_points, 3}, open3d::core::Float64, open3d::core::Device("CPU:0")));
-    cloud->SetPointAttr("intensities", open3d::core::Tensor(std::move(intensities), {num_points, 1}, open3d::core::Float32, open3d::core::Device("CPU:0")));
-
-    // Add to buffer
-    buffer_[idx] = cloud;
+    // 
+    point_count_ += frame.size();
 
     // Remove old frames
     removeOldFrames();
 }
 
+
+FrameType& FrameBuffer::newFrame(int num_points){
+    buffer_.emplace_back(num_points);  // Add a new frame (initialized with num_points)
+    return buffer_.back();  // Return reference to the newly added frame
+}
+
+
 void FrameBuffer::removeOldFrames() {
     // Remove old frames which do not have a corresponding state in pose graph
     for (auto it = buffer_.begin(); it != buffer_.end(); ) {
-        if (pose_graph_.exists(it->first)) 
+        if (pose_graph_.exists(it->frame_idx)) 
             break;
 
+        point_count_ -= it->size();
         it = buffer_.erase(it);
     }
+}
+
+const FrameType& FrameBuffer::getFrame(int idx) const {
+    for (const auto& it : buffer_) {  // Iterate by reference to avoid copying
+        if (it.frame_idx == idx) {  // Check for the matching frame_idx
+            return it;  // Return the reference to the FrameType object
+        }
+    }
+    
+    throw std::out_of_range("Frame not found");  // Handle the case when no matching frame is found
 }
