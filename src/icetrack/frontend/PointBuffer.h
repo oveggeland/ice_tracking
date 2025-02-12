@@ -17,11 +17,11 @@
 
 // Define point type
 struct LidarPointType {
+    double ts;
     float x;
     float y;
     float z;
-    float intensity;
-    double ts;
+    uint8_t intensity;
 };
 
 using PointBufferType = StampedRingBuffer<LidarPointType>;
