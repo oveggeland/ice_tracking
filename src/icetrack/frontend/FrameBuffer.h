@@ -19,7 +19,7 @@ Definition of a Lidar Frame. That is, all Lidar Points between two timesteps, ty
 */
 struct FrameType{
     int frame_idx;
-    Eigen::Matrix3Xd positions;
+    Eigen::Matrix3Xf positions;
     Eigen::VectorXf intensities;
 
     // Constructor to enforce size allocation at initialization

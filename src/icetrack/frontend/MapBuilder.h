@@ -21,7 +21,7 @@ private:
     const FrameBuffer& frame_buffer_;
 
     double ts_map_;
-    Eigen::MatrixXd map_;
+    Eigen::MatrixXf map_;
 
     int last_frame_idx_ = 0;
     void updateMap();

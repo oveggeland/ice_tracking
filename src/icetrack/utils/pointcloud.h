@@ -23,5 +23,4 @@ int getCloudSize(const PointCloudPtr cloud);
 int getCloudSize(const TensorCloud& cloud);
 int getCloudSize(const TensorCloudPtr cloud);
 
-PointCloudPtr EigenToPointCloudPtr(const Eigen::Matrix3Xd& positions);
-TensorCloud EigenToTensorCloud(Eigen::Matrix3Xd& positions);
+TensorCloud EigenToTensorCloud(Eigen::Matrix3Xf positions);

@@ -51,7 +51,7 @@ void MapBuilder::updateMap(){
         return;
 
     // Allocate space for transformed points arrays
-    map_ = Eigen::MatrixXd(3, point_count);
+    map_ = Eigen::MatrixXf(3, point_count);
     int point_counter = 0; // Idx to current column (point)
 
     // Iterate through frames and transform into point buffer
@@ -62,8 +62,8 @@ void MapBuilder::updateMap(){
             throw std::out_of_range("updateMap(): Pose " + std::to_string(frame_idx) + " not found");
         
         gtsam::Pose3 pose = pose_graph_.getPose(frame_idx);     
-        Eigen::Matrix3d R = pose.rotation().matrix();
-        Eigen::Vector3d t = pose.translation();
+        Eigen::Matrix3f R = pose.rotation().matrix().cast<float>();
+        Eigen::Vector3f t = pose.translation().cast<float>();
 
         // Okay! All good, add transformed points
         int frame_size = it->size();
@@ -106,21 +106,6 @@ void MapBuilder::publishAsPointCloud2() {
 Make a open3d cloud and visualize
 */
 void MapBuilder::visualizeMap() {
-    // Ensure map_ is properly sized and contains points
-    int num_points = map_.cols();
-
-    // Create a vector of Eigen::Vector3d to store points
-    auto cloud = std::make_shared<open3d::geometry::PointCloud>();
-    cloud->points_.reserve(num_points);
-
-    // Convert the Eigen::Matrix3Xd to std::vector<Eigen::Vector3d>
-    for (int i = 0; i < num_points; ++i) {
-        cloud->points_.push_back(map_.col(i));
-    }
-
-    // Normalize
-    cloud->Translate(-cloud->GetCenter());
-        
-    // Visualize the point cloud using Open3D
-    open3d::visualization::DrawGeometries({cloud});
+    auto tensor_cloud = EigenToTensorCloud(map_);
+    open3d::visualization::DrawGeometries({std::make_shared<PointCloud>(tensor_cloud.ToLegacy())});
 }

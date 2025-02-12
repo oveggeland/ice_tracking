@@ -35,9 +35,9 @@ void FrameBuffer::createFrame(int idx){
     assert (dt_inv > 0);
 
     // Precompute logmap vectors for relative transformation from pose0 to pose1. 
-    Pose3 b1Tb0 = pose1.between(pose0);
-    Vector3 dt_log = b1Tb0.translation();
-    Vector3 dR_log = Rot3::Logmap(b1Tb0.rotation());
+    gtsam::Pose3 b1Tb0 = pose1.between(pose0);
+    gtsam::Vector3 dt_log = b1Tb0.translation();
+    gtsam::Vector3 dR_log = gtsam::traits<Rot3>::Logmap(b1Tb0.rotation());
 
     // Find bounds for point buffer iteration
     auto start = point_buffer_.lowerBound(t0);
@@ -51,7 +51,7 @@ void FrameBuffer::createFrame(int idx){
 
     // Iterate through points, optionally undistorting by interpolation between poses. 
     for (auto it = start; it != end; ++it) {
-        Eigen::Vector3d point = Point3(it->x, it->y, it->z);
+        gtsam::Point3 point(it->x, it->y, it->z);
 
         if (undistort_frames_){
             // Get stamp
@@ -60,8 +60,8 @@ void FrameBuffer::createFrame(int idx){
 
             // Interpolate transformation to pose1
             double alpha = (t1 - ts_point) * dt_inv;
-            Pose3 T_int(
-                Rot3::Expmap(alpha*dR_log),
+            gtsam::Pose3 T_int(
+                gtsam::traits<Rot3>::Expmap(alpha*dR_log),
                 alpha*dt_log
             );
             
@@ -69,7 +69,7 @@ void FrameBuffer::createFrame(int idx){
             point = T_int.transformFrom(point);
         }
 
-        frame.positions.col(point_counter) = point;
+        frame.positions.col(point_counter) = point.cast<float>();
         frame.intensities(point_counter) = it->intensity;
         ++ point_counter;
     }
