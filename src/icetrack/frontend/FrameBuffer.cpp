@@ -30,14 +30,10 @@ void FrameBuffer::createFrame(int idx){
     gtsam::Pose3 pose0 = pose_graph_.getPose(idx-1);
     gtsam::Pose3 pose1 = pose_graph_.getPose(idx);
 
-    // Precompute inverse time delta (needed for interpolation)
-    double dt_inv = 1 / (t1 - t0);
-    assert (dt_inv > 0);
-
-    // Precompute logmap vectors for relative transformation from pose0 to pose1. 
+    // Precompute logmap vectors for interpolation
     gtsam::Pose3 b1Tb0 = pose1.between(pose0);
-    gtsam::Vector3 dt_log = b1Tb0.translation();
-    gtsam::Vector3 dR_log = gtsam::traits<Rot3>::Logmap(b1Tb0.rotation());
+    gtsam::Vector3 dt_log = b1Tb0.translation() / (t1 - t0); // Velcocity
+    gtsam::Vector3 dR_log = gtsam::traits<Rot3>::Logmap(b1Tb0.rotation()) / (t1 - t0); // Angular velocity
 
     // Find bounds for point buffer iteration
     auto start = point_buffer_.lowerBound(t0);
@@ -51,26 +47,25 @@ void FrameBuffer::createFrame(int idx){
 
     // Iterate through points, optionally undistorting by interpolation between poses. 
     for (auto it = start; it != end; ++it) {
-        gtsam::Point3 point(it->x, it->y, it->z);
+        double ts_point = it->ts;
 
         if (undistort_frames_){
-            // Get stamp
-            double ts_point = it->ts;
-            assert(ts_point >= t0 && ts_point < t1);
-
             // Interpolate transformation to pose1
-            double alpha = (t1 - ts_point) * dt_inv;
-            gtsam::Pose3 T_int(
-                gtsam::traits<Rot3>::Expmap(alpha*dR_log),
-                alpha*dt_log
+            double dt = (t1 - ts_point);
+            gtsam::Pose3 T_int( // TODO: Consider first order approximation instead
+                gtsam::traits<Rot3>::Expmap(dt*dR_log),
+                dt*dt_log
             );
             
             // Transform to pose1
-            point = T_int.transformFrom(point);
+            frame.positions.col(point_counter) = T_int.transformFrom(gtsam::Point3(it->x, it->y, it->z)).cast<float>();
+        }
+        else{
+            frame.positions.col(point_counter) = Eigen::Vector3f(it->x, it->y, it->z);
         }
 
-        frame.positions.col(point_counter) = point.cast<float>();
         frame.intensities(point_counter) = it->intensity;
+        frame.timestamps(point_counter) = ts_point;
         ++ point_counter;
     }
 

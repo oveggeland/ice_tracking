@@ -21,10 +21,11 @@ struct FrameType{
     int frame_idx;
     Eigen::Matrix3Xf positions;
     Eigen::Matrix<uint8_t, 1, -1> intensities;
+    Eigen::Matrix<double, 1, -1> timestamps;
 
     // Constructor to enforce size allocation at initialization
     FrameType(int num_points)
-        : positions(3, num_points), intensities(num_points) {}
+        : positions(3, num_points), intensities(num_points), timestamps(num_points) {}
 
     int size() const { return positions.cols(); }
 };
