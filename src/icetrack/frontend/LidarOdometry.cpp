@@ -31,12 +31,13 @@ void LidarOdometry::alignFrames(int idx0, int idx1) {
     auto frame0 = frame_buffer_.getFrame(idx0);
     auto frame1 = frame_buffer_.getFrame(idx1);
 
+    // Assert a size threshold
+    if (frame0.size() < min_frame_size_ || frame1.size() < min_frame_size_)
+        return;
+    
+    // Convert to tensor clouds (shallow copy)
     TensorCloud cloud0 = EigenToTensorCloud(frame0.positions);
     TensorCloud cloud1 = EigenToTensorCloud(frame1.positions);
-
-    // Assert a size threshold
-    if (getCloudSize(cloud0) < min_frame_size_ || getCloudSize(cloud1) < min_frame_size_)
-        return;
     
     // Get pose and initial alignment
     Pose3 pose0 = pose_graph_.getPose(idx0);
@@ -51,7 +52,8 @@ void LidarOdometry::alignFrames(int idx0, int idx1) {
     // Perform ICP alignment
     auto result = open3d::pipelines::registration::RegistrationICP(
         cloud1_ds, cloud0_ds, icp_threshold_, T_initial.matrix(),
-        open3d::pipelines::registration::TransformationEstimationPointToPoint()
+        open3d::pipelines::registration::TransformationEstimationPointToPoint(),
+        open3d::pipelines::registration::ICPConvergenceCriteria(1.0e-6, 1.0e-6, 30)
     );
     Eigen::Matrix4d T_align = result.transformation_;
 

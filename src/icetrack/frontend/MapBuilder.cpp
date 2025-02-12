@@ -106,6 +106,6 @@ void MapBuilder::publishAsPointCloud2() {
 Make a open3d cloud and visualize
 */
 void MapBuilder::visualizeMap() {
-    auto tensor_cloud = EigenToTensorCloud(map_);
-    open3d::visualization::DrawGeometries({std::make_shared<PointCloud>(tensor_cloud.ToLegacy())});
+    auto cloud_ptr = EigenToPointCloudPtr(map_);
+    open3d::visualization::DrawGeometries({cloud_ptr});
 }

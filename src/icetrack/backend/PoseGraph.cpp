@@ -241,6 +241,7 @@ void PoseGraph::publishPose(){
     if (pose_pub_.getNumSubscribers() > 0){
         geometry_msgs::PoseStamped msg;
         msg.header.stamp = ros::Time(ts_);
+        msg.header.frame_id = "map";
         msg.pose = poseGtsamToRos(pose_);
 
         pose_pub_.publish(msg);
