@@ -26,6 +26,8 @@ private:
     // State
     double ts_ = 0.0;
     Point2 xy_ = Point2::Zero();
+
+    Point2 xy_offset_ = Point2::Zero();
     bool fix_ = false; 
 
     bool checkFix(double ts, Point2 xy);

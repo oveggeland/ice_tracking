@@ -19,6 +19,10 @@ void GnssCorrection::newMeasurement(const sensor_msgs::NavSatFix::ConstPtr msg){
     double ts = msg->header.stamp.toSec();
     Point2 xy = project(msg);
 
+    if (xy_offset_.isZero())
+        xy_offset_ = xy;
+    xy -= xy_offset_;
+
     // Check validity of measurement
     fix_ = checkFix(ts, xy);
     ts_ = ts;
