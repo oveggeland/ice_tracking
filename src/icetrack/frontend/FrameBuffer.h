@@ -29,8 +29,7 @@ public:
     int getLastFrameIdx() const { return buffer_.empty()? 0: buffer_.back().idx(); }
     int getPointCount() const { return point_count_; }
 
-    bool hasFrame(int idx) const;
-    const FrameType& getFrame(int idx) const;
+    const FrameType* getFrame(int idx) const;
 
     FrameBufferConstIterator begin() const { return buffer_.begin(); }
     FrameBufferConstIterator end() const { return buffer_.end(); }
@@ -41,8 +40,9 @@ private:
 
     // Buffer handling
     void createFrame(int idx); // Create a frame for specified idx
-    FrameType& newFrame(int idx, size_t capacity); // Initialize a new frame in buffer and return reference
-    void removeOldFrames(); // Remove out-of-scope frames
+    FrameType& addFrame(int idx, size_t capacity);
+    void removeOldFrames();
+    void refineFrames();
 
     // Configuration
     bool undistort_frames_;

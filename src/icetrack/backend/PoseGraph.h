@@ -46,6 +46,23 @@ public:
     double getTimeStamp(int idx) const { return smoother_.timestamps().at(X(idx)); }
     Pose3 getPose(int idx) const { return smoother_.calculateEstimate<Pose3>(X(idx)); }
 
+
+    bool poseQuery(int idx, Pose3& pose) const {
+        if (!exists(idx))
+            return false;
+        pose = smoother_.calculateEstimate<Pose3>(X(idx));
+        return true;
+    }
+
+    bool timePoseQuery(int idx, double& ts, Pose3& pose) const{
+        if (!exists(idx))
+            return false;
+        
+        ts = smoother_.timestamps().at(X(idx));
+        pose = smoother_.calculateEstimate<Pose3>(X(idx));
+        return true;
+    }
+
 private:
     // Initialization
     bool init_ = false;

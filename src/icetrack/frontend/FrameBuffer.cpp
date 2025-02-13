@@ -10,25 +10,32 @@ FrameBuffer::FrameBuffer(const ros::NodeHandle& nh, const PoseGraph& pose_graph,
 void FrameBuffer::pollUpdates(){
     int pose_idx = pose_graph_.getCurrentStateIdx();
     int frame_idx = getLastFrameIdx();
+
+    if (pose_idx == frame_idx)
+        return;
+
+    // Add new frames
     while (frame_idx < pose_idx)
         createFrame(++frame_idx);
+
+    // Delete old ones
+    removeOldFrames();
+
+    // Update frames
+    refineFrames();
 }
 
 // Add a frame associated with state "idx"
 void FrameBuffer::createFrame(int idx){
     ROS_INFO_STREAM("Add frame: " << idx << " to buffer");
 
-    if (!pose_graph_.exists(idx-1) || !pose_graph_.exists(idx)){
+    double t0, t1;
+    gtsam::Pose3 pose0, pose1;
+    
+    if (!pose_graph_.timePoseQuery(idx-1, t0, pose0) || !pose_graph_.timePoseQuery(idx, t1, pose1)){
         ROS_WARN_STREAM("Pose not available at idx: " << idx); // If everything goes according to plan, we never end up in this situation?
         return;
     }
-
-    // First access timestamps and poses for current and previous state
-    double t0 = pose_graph_.getTimeStamp(idx-1);
-    double t1 = pose_graph_.getTimeStamp(idx);
-
-    gtsam::Pose3 pose0 = pose_graph_.getPose(idx-1);
-    gtsam::Pose3 pose1 = pose_graph_.getPose(idx);
 
     // Precompute logmap vectors for interpolation
     gtsam::Pose3 b1Tb0 = pose1.between(pose0);
@@ -41,7 +48,7 @@ void FrameBuffer::createFrame(int idx){
     int num_points = start.distance_to(end);
 
     // Add new frame to the container
-    FrameType& frame = newFrame(idx, num_points);
+    FrameType& frame = addFrame(idx, num_points);
 
     // Iterate through points, optionally undistorting by interpolation between poses. 
     for (auto it = start; it != end; ++it) {
@@ -62,23 +69,21 @@ void FrameBuffer::createFrame(int idx){
 
         frame.addPoint(position, it->intensity, ts_point);
     }
-
-    // 
-    point_count_ += frame.size();
-
-    // Remove old frames
-    removeOldFrames();
 }
 
 
 /*
 Add new frame to buffer and return a reference to it.
 */
-FrameType& FrameBuffer::newFrame(int idx, size_t capacity){
+FrameType& FrameBuffer::addFrame(int idx, size_t capacity){
     buffer_.emplace_back(idx, capacity);
     return buffer_.back();
 }
 
+
+/*
+Iterate over frames and remove frames where pose graph state is not available.
+*/
 void FrameBuffer::removeOldFrames() {
     // Remove old frames which do not have a corresponding state in pose graph
     for (auto it = buffer_.begin(); it != buffer_.end(); ) {
@@ -90,21 +95,25 @@ void FrameBuffer::removeOldFrames() {
     }
 }
 
-const FrameType& FrameBuffer::getFrame(int idx) const {
-    for (const auto& it : buffer_) {
-        if (it.idx() == idx) {  // Check for the matching frame_idx
-            return it;  // Return the reference to the FrameType object
-        }
+/*
+Update global position with refined pose.
+*/
+void FrameBuffer::refineFrames() {
+    for (auto it = buffer_.begin(); it != buffer_.end(); ++it) {
+        gtsam::Pose3 pose = pose_graph_.getPose(it->idx());
+        it->transformPoints(pose.matrix().cast<float>());
     }
-    
-    throw std::out_of_range("Frame not found");  // Handle the case when no matching frame is found
 }
 
-bool FrameBuffer::hasFrame(int idx) const {
+
+/*
+Query a frame by index. Return nullptr if frame is non-existent.
+*/
+const FrameType* FrameBuffer::getFrame(int idx) const {
     for (const auto& it : buffer_) {
         if (it.idx() == idx) {
-            return true;  
+            return &it;  // Return a pointer to the found frame
         }
     }
-    return false;
+    return nullptr;  // Frame not found
 }
