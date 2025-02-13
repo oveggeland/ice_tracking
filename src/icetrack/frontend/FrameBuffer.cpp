@@ -23,6 +23,15 @@ void FrameBuffer::pollUpdates(){
 
     // Update frames
     refineFrames();
+
+    // Test point query and map quality
+    // double t1 = getLastTimeStamp();
+    // double t0 = t1 - 20.0;
+    // auto points = getPointsWithin(t0, t1);
+    // if (points.cols() > 1e6){
+    //     auto cloud = EigenToPointCloudPtr(points);
+    //     visualizeCloud(cloud);
+    // }
 }
 
 // Add a frame associated with state "idx"
@@ -89,8 +98,6 @@ void FrameBuffer::removeOldFrames() {
     for (auto it = buffer_.begin(); it != buffer_.end(); ) {
         if (pose_graph_.exists(it->idx())) 
             break;
-
-        point_count_ -= it->size();
         it = buffer_.erase(it);
     }
 }
@@ -116,4 +123,34 @@ const FrameType* FrameBuffer::getFrame(int idx) const {
         }
     }
     return nullptr;  // Frame not found
+}
+
+
+/*
+Merge all points within the interval.
+*/
+Eigen::Matrix3Xf FrameBuffer::getPointsWithin(double t0, double t1) const{
+    size_t num_points = 0;
+    std::vector<Eigen::Matrix3Xf> blocks;
+    blocks.reserve(size());
+
+    // Iterate through buffer and get view to all valid point blocks
+    for (const auto& it: buffer_){
+        Eigen::Matrix3Xf block = it.getPointsWithin(t0, t1);
+
+        if (block.cols() > 0){
+            blocks.push_back(block);
+            num_points += block.cols();
+        }
+    }
+
+    // Now merge all blocks
+    Eigen::Matrix3Xf points(3, num_points);
+    int p_cnt = 0;
+    for (const auto& block : blocks) {
+        points.block(0, p_cnt, 3, block.cols()) = block;
+        p_cnt += block.cols();
+    }
+    
+    return points;
 }

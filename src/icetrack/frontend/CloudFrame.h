@@ -12,9 +12,10 @@ class CloudFrame{
 public:
     // Construct with dynamic capacity
     CloudFrame(int idx, size_t capacity)
-        : idx_(idx), size_(0),
-        p_local_(3, capacity), p_global_(3, capacity),
-        intensities_(capacity), timestamps_(capacity) {}
+        : idx_(idx), p_local_(3, capacity), p_global_(3, capacity){
+            intensities_.reserve(capacity);
+            timestamps_.reserve(capacity);
+        }
 
     // Interface
     void addPoint(const Eigen::Vector3f& pos, const uint8_t i, const double ts){
@@ -23,11 +24,9 @@ public:
             return;
         }
 
-        p_local_.col(size_) = pos;
-        intensities_(size_) = i;
-        timestamps_(size_) = ts;
-
-        ++size_;
+        p_local_.col(size()) = pos;
+        intensities_.push_back(i);
+        timestamps_.push_back(ts);
     }
 
     void transformPoints(const Eigen::Matrix4f& T){
@@ -35,6 +34,25 @@ public:
         const Eigen::Vector3f& t = T.block<3, 1>(0, 3);
 
         p_global_ = (R * p_local_).colwise() + t;
+    }
+
+
+    int lowerBound(double ts) const {
+        // Handle edge cases manually for efficiency
+        if (ts < t0())
+            return 0;
+        else if (ts > t1())
+            return size();
+
+        // Binary search
+        auto it = std::lower_bound(timestamps_.begin(), timestamps_.end(), ts);
+        return std::distance(timestamps_.begin(), it);
+    }
+    
+    Eigen::Matrix3Xf getPointsWithin(double t0, double t1) const{
+        int idx0 = lowerBound(t0);
+        int idx1 = lowerBound(t1);
+        return p_global_.block(0, idx0, 3, idx1-idx0);
     }
 
     // Accessors
@@ -45,20 +63,19 @@ public:
         return EigenToPointCloudPtr(p_global_);
     }
     
-    size_t size() const { return size_; }
+    size_t size() const { return timestamps_.size(); }
     size_t capacity() const { return p_local_.cols(); }
-    bool empty() const { return size_ == 0; }
-    bool full() const { return size_ == capacity(); }
+    bool empty() const { return size() == 0; }
+    bool full() const { return size() == capacity(); }
 
     int idx() const { return idx_; }
-    double t0() const { return empty() ? 0.0:  timestamps_(0); }
-    double t1() const { return empty() ? 0.0:  timestamps_(size_-1); }
+    double t0() const { return empty() ? 0.0:  timestamps_.front(); }
+    double t1() const { return empty() ? 0.0:  timestamps_.back(); }
 
 private:
     int idx_;                                   // Idx of local frame in posegraph
-    size_t size_;                               // Number of points
     Eigen::Matrix3Xf p_local_;                  // Local frame vectors
     Eigen::Matrix3Xf p_global_;                 // Nav frame vectors
-    Eigen::Matrix<uint8_t, 1, -1> intensities_; // Lidar intensity
-    Eigen::Matrix<double, 1, -1> timestamps_;   // Timestamps
+    std::vector<uint8_t> intensities_;          // Lidar intensity
+    std::vector<double> timestamps_;            // Timestamps
 };
