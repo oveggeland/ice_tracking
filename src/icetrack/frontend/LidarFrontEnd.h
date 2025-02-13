@@ -9,7 +9,6 @@
 #include "frontend/FrameBuffer.h"
 #include "frontend/SurfaceEstimator.h"
 #include "frontend/LidarOdometry.h"
-#include "frontend/MapBuilder.h"
 
 #include "utils/ros_params.h"
 
@@ -23,6 +22,12 @@ public:
 
     // Interface
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+
+    // Const accessors to front end resources
+    const PointBuffer& pointBuffer();
+    const FrameBuffer& frameBuffer();
+    const SurfaceEstimator& surfaceEstimator();
+    const LidarOdometry& lidarOdometry();
 
 private:
     // Polls all submodules for updates
@@ -39,7 +44,4 @@ private:
 
     // Frame-to-frame odometry
     LidarOdometry lidar_odometry_;
-
-    // Building coherent maps from pose graph and lidar frames
-    // MapBuilder map_builder_;
 };
