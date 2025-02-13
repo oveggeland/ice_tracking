@@ -5,6 +5,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/Image.h>
 
 #include <rosgraph_msgs/Clock.h>
 
@@ -31,11 +32,13 @@ int main(int argc, char** argv) {
     std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
     std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
+    std::string image_topic = getParamOrThrow<std::string>(nh, "/image_topic"); // New Image Topic
 
-    // Publishers for IMU, GNSS, PointCloud2, and simulated clock
+    // Publishers for IMU, GNSS, PointCloud2, Image, and simulated clock
     ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>(imu_topic, 10);
     ros::Publisher gnss_pub = nh.advertise<sensor_msgs::NavSatFix>(gnss_topic, 10);
     ros::Publisher lidar_pub = nh.advertise<sensor_msgs::PointCloud2>(lidar_topic, 10);
+    ros::Publisher image_pub = nh.advertise<sensor_msgs::Image>(image_topic, 10); // New Image Publisher
     ros::Publisher clock_pub = nh.advertise<rosgraph_msgs::Clock>("/clock", 10);
 
     // Initialize nodes
@@ -73,38 +76,37 @@ int main(int argc, char** argv) {
             // Publish the message to the appropriate topic
             if (m.getDataType() == "sensor_msgs/Imu") {
                 auto msg = m.instantiate<sensor_msgs::Imu>();
-                if (msg) {
-                    imu_pub.publish(msg);
-                }
+                if (msg) imu_pub.publish(msg);
+
             } else if (m.getDataType() == "sensor_msgs/NavSatFix") {
                 auto msg = m.instantiate<sensor_msgs::NavSatFix>();
-                if (msg) {
-                    gnss_pub.publish(msg);
-                }
+                if (msg) gnss_pub.publish(msg);
+
             } else if (m.getDataType() == "sensor_msgs/PointCloud2") {
                 auto msg = m.instantiate<sensor_msgs::PointCloud2>();
-                if (msg) {
-                    lidar_pub.publish(msg);
-                }
+                if (msg) lidar_pub.publish(msg);
+
+            } else if (m.getDataType() == "sensor_msgs/Image") {  // Handling image messages
+                auto msg = m.instantiate<sensor_msgs::Image>();
+                if (msg) image_pub.publish(msg);
             }
 
             // Allow nodes to process messages
             ros::spinOnce();
 
-            // Everything ok?
+            // Check if ROS is still running
             if (!ros::ok())
                 break;
         }
 
         bag.close();
 
-        // Everything ok?
+        // Check if ROS is still running
         if (!ros::ok())
             break;
     }
 
     ProfilerStop();
-
 
     ROS_INFO_STREAM("Finished in " << ros::Time::now().toSec() - t0 << " seconds");
     return 0;

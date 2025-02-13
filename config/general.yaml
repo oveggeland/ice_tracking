@@ -1,12 +1,15 @@
 # Files
 bagpath: "/home/oskar/icetrack/data/long3/"
 outpath: "/home/oskar/icetrack/output/test/"
+
+int_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/int_right.yaml"
 ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
 
 # Topics
 imu_topic: "/arduino_node/imu"
 gnss_topic: "/arduino_node/gnss"
 lidar_topic: "/livox_lidar_node/pointcloud2"
+image_topic: "/blackfly_node/image"
 
 pose_topic: "/fixed_lag_mapper/pose"
 cloud_topic: "/fixed_lag_mapper/cloud"
@@ -14,6 +17,7 @@ cloud_topic: "/fixed_lag_mapper/cloud"
 imu_queue_size: 2000
 gnss_queue_size: 10
 lidar_queue_size: 100
+image_queue_size: 10
 
 pose_queue_size: 10
 cloud_queue_size: 10

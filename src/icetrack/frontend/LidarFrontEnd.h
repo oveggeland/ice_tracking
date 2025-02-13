@@ -24,10 +24,10 @@ public:
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
     // Const accessors to front end resources
-    const PointBuffer& pointBuffer();
-    const FrameBuffer& frameBuffer();
-    const SurfaceEstimator& surfaceEstimator();
-    const LidarOdometry& lidarOdometry();
+    const PointBuffer& pointBuffer() const { return point_buffer_; }
+    const FrameBuffer& frameBuffer() const { return frame_buffer_; }
+    const SurfaceEstimator& surfaceEstimator() const { return surface_estimator_; }
+    const LidarOdometry& lidarOdometry() const { return lidar_odometry_; }
 
 private:
     // Polls all submodules for updates
