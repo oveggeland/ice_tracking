@@ -41,13 +41,12 @@ void FrameBuffer::createFrame(int idx){
     int num_points = start.distance_to(end);
 
     // Add new frame to the container
-    FrameType& frame = newFrame(num_points);
-    frame.frame_idx = idx;
-    int point_counter = 0;
+    FrameType& frame = newFrame(idx, num_points);
 
     // Iterate through points, optionally undistorting by interpolation between poses. 
     for (auto it = start; it != end; ++it) {
         double ts_point = it->ts;
+        Eigen::Vector3f position(it->x, it->y, it->z);
 
         if (undistort_frames_){
             // Interpolate transformation to pose1
@@ -58,15 +57,10 @@ void FrameBuffer::createFrame(int idx){
             );
             
             // Transform to pose1
-            frame.positions.col(point_counter) = T_int.transformFrom(gtsam::Point3(it->x, it->y, it->z)).cast<float>();
-        }
-        else{
-            frame.positions.col(point_counter) = Eigen::Vector3f(it->x, it->y, it->z);
+            position = T_int.transformFrom(gtsam::Point3(it->x, it->y, it->z)).cast<float>();
         }
 
-        frame.intensities(point_counter) = it->intensity;
-        frame.timestamps(point_counter) = ts_point;
-        ++ point_counter;
+        frame.addPoint(position, it->intensity, ts_point);
     }
 
     // 
@@ -77,16 +71,18 @@ void FrameBuffer::createFrame(int idx){
 }
 
 
-FrameType& FrameBuffer::newFrame(int num_points){
-    buffer_.emplace_back(num_points);  // Add a new frame (initialized with num_points)
-    return buffer_.back();  // Return reference to the newly added frame
+/*
+Add new frame to buffer and return a reference to it.
+*/
+FrameType& FrameBuffer::newFrame(int idx, size_t capacity){
+    buffer_.emplace_back(idx, capacity);
+    return buffer_.back();
 }
-
 
 void FrameBuffer::removeOldFrames() {
     // Remove old frames which do not have a corresponding state in pose graph
     for (auto it = buffer_.begin(); it != buffer_.end(); ) {
-        if (pose_graph_.exists(it->frame_idx)) 
+        if (pose_graph_.exists(it->idx())) 
             break;
 
         point_count_ -= it->size();
@@ -95,8 +91,8 @@ void FrameBuffer::removeOldFrames() {
 }
 
 const FrameType& FrameBuffer::getFrame(int idx) const {
-    for (const auto& it : buffer_) {  // Iterate by reference to avoid copying
-        if (it.frame_idx == idx) {  // Check for the matching frame_idx
+    for (const auto& it : buffer_) {
+        if (it.idx() == idx) {  // Check for the matching frame_idx
             return it;  // Return the reference to the FrameType object
         }
     }
@@ -106,7 +102,7 @@ const FrameType& FrameBuffer::getFrame(int idx) const {
 
 bool FrameBuffer::hasFrame(int idx) const {
     for (const auto& it : buffer_) {
-        if (it.frame_idx == idx) {
+        if (it.idx() == idx) {
             return true;  
         }
     }

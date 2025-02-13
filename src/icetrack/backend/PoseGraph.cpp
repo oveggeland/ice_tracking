@@ -78,8 +78,6 @@ void PoseGraph::odometryCallback(int idx0, int idx1, Eigen::Matrix4d T_align){
         auto odom_factor = BetweenFactor<Pose3>(X(idx0), X(idx1), Pose3(T_align), noise_model);
         factors_.add(odom_factor);
     }
-
-    updateSmoother();
 }
 
 void PoseGraph::surfaceCallback(int state_idx, const Eigen::Vector4d& plane_coeffs){
@@ -88,8 +86,6 @@ void PoseGraph::surfaceCallback(int state_idx, const Eigen::Vector4d& plane_coef
     if (init_){
         factors_.add(surface_correction_.getAltitudeFactor(X(state_idx)));
         factors_.add(surface_correction_.getAttitudeFactor(X(state_idx)));
-
-        updateSmoother();
     }
     else
         initialize();

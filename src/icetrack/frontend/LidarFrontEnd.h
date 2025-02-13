@@ -41,5 +41,5 @@ private:
     LidarOdometry lidar_odometry_;
 
     // Building coherent maps from pose graph and lidar frames
-    MapBuilder map_builder_;
+    // MapBuilder map_builder_;
 };

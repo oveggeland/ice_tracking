@@ -35,23 +35,19 @@ void LidarOdometry::alignFrames(int idx0, int idx1) {
     if (frame0.size() < min_frame_size_ || frame1.size() < min_frame_size_)
         return;
     
-    // Convert to tensor clouds (shallow copy)
-    TensorCloud cloud0 = EigenToTensorCloud(frame0.positions);
-    TensorCloud cloud1 = EigenToTensorCloud(frame1.positions);
-    
     // Get pose and initial alignment
     Pose3 pose0 = pose_graph_.getPose(idx0);
     Pose3 pose1 = pose_graph_.getPose(idx1);
 
     Eigen::Matrix4d T_initial = pose0.between(pose1).matrix();
 
-    // Downsample
-    auto cloud0_ds = cloud0.VoxelDownSample(voxel_size_).ToLegacy();
-    auto cloud1_ds = cloud1.VoxelDownSample(voxel_size_).ToLegacy();
+    // Get clouds and downsample
+    PointCloudPtr cloud0_ds = frame0.localCloud()->VoxelDownSample(voxel_size_);
+    PointCloudPtr cloud1_ds = frame1.localCloud()->VoxelDownSample(voxel_size_);
 
     // Perform ICP alignment
     auto result = open3d::pipelines::registration::RegistrationICP(
-        cloud1_ds, cloud0_ds, icp_threshold_, T_initial.matrix(),
+        *cloud1_ds, *cloud0_ds, icp_threshold_, T_initial.matrix(),
         open3d::pipelines::registration::TransformationEstimationPointToPoint(),
         open3d::pipelines::registration::ICPConvergenceCriteria(1.0e-6, 1.0e-6, 30)
     );

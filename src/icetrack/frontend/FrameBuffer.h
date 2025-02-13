@@ -5,31 +5,14 @@
 #include <gtsam/geometry/Pose3.h>
 
 #include "frontend/PointBuffer.h"
+#include "frontend/CloudFrame.h"
+
 #include "backend/PoseGraph.h"
 
 #include "utils/ros_params.h"
 
 
-/*
-Definition of a Lidar Frame. That is, all Lidar Points between two timesteps, typically undistorted by interpolation between pose graph estimates
-
-- frame_idx: ID of frame. Corresponding to a pose idx in the pose graph. The frame is represented in this pose. 
-- positions: Position vectors of each point, represented in pose_{frame_idx}
-- intensities: The intensity values of each point. 
-*/
-struct FrameType{
-    int frame_idx;
-    Eigen::Matrix3Xf positions;
-    Eigen::Matrix<uint8_t, 1, -1> intensities;
-    Eigen::Matrix<double, 1, -1> timestamps;
-
-    // Constructor to enforce size allocation at initialization
-    FrameType(int num_points)
-        : positions(3, num_points), intensities(num_points), timestamps(num_points) {}
-
-    int size() const { return positions.cols(); }
-};
-
+using FrameType = CloudFrame;
 using FrameBufferType = std::deque<FrameType>;
 using FrameBufferConstIterator = FrameBufferType::const_iterator;
 
@@ -42,8 +25,8 @@ public:
     void pollUpdates();
 
     // Accessors
-    int getFirstFrameIdx() const { return buffer_.empty()? 0: buffer_.front().frame_idx; }
-    int getLastFrameIdx() const { return buffer_.empty()? 0: buffer_.back().frame_idx; }
+    int getFirstFrameIdx() const { return buffer_.empty()? 0: buffer_.front().idx(); }
+    int getLastFrameIdx() const { return buffer_.empty()? 0: buffer_.back().idx(); }
     int getPointCount() const { return point_count_; }
 
     bool hasFrame(int idx) const;
@@ -58,7 +41,7 @@ private:
 
     // Buffer handling
     void createFrame(int idx); // Create a frame for specified idx
-    FrameType& newFrame(int num_points); // Initialize a new frame in buffer and return reference
+    FrameType& newFrame(int idx, size_t capacity); // Initialize a new frame in buffer and return reference
     void removeOldFrames(); // Remove out-of-scope frames
 
     // Configuration
