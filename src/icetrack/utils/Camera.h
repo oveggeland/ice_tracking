@@ -50,6 +50,23 @@ public:
         return cv_bridge::toCvCopy(msg, "bgr8")->image;
     }
 
+    // Project 3D points onto the image plane
+    Eigen::Matrix2Xf project(const Eigen::Matrix3Xf& points, const Eigen::Matrix4f& cam_pose) const {
+        // Combine intrinsics and camera pose to create the projection matrix
+        Eigen::Matrix3f K = intrinsics_.getProjectionMatrix();
+        Eigen::Matrix<float, 3, 4> image_transform = K*cam_pose.topRows(3);
+
+        // Apply the camera transformation (camera pose and intrinsic matrix)
+        Eigen::Matrix3Xf proj_points = (image_transform.leftCols(3) * points).colwise() + image_transform.col(3);
+
+        // Normalize to get pixel coordinates (image plane)
+        return (proj_points.topRows(2).array().rowwise() / proj_points.row(2).array()).matrix();
+    }
+
+    inline bool inBounds(const Eigen::Vector2f& uv) const{
+        return uv.x() >= 0 && uv.y() >= 0 && uv.x() < intrinsics_.w && uv.y() < intrinsics_.h;
+    }
+
 private:
     CameraIntrinsics intrinsics_;
 

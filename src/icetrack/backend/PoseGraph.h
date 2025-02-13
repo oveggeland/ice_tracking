@@ -37,6 +37,9 @@ public:
 
     // Accessors
     bool isInit() const { return init_; }
+    bool inRange(double ts) const {
+        return ts > smoother_.timestamps().begin()->second && ts < smoother_.timestamps().rbegin()->second;
+    }
     bool exists(int idx) const { return smoother_.getLinearizationPoint().exists(X(idx)); }
 
     int getCurrentStateIdx() const { return state_idx_; }
@@ -45,7 +48,43 @@ public:
 
     double getTimeStamp(int idx) const { return smoother_.timestamps().at(X(idx)); }
     Pose3 getPose(int idx) const { return smoother_.calculateEstimate<Pose3>(X(idx)); }
+    
+    Pose3 getPose(double ts) const { // Interpolate to find pose at ts
+        Key key0 = 0;
+        Key key1 = 0;
 
+        // Iterate over timestamps
+        for (auto it = smoother_.timestamps().begin(); it != smoother_.timestamps().end(); ++it){
+            if (keyTypeCheck(it->first, 'x')){
+                if (it->second > ts){
+                    key1 = it->first;
+                    break;
+                }
+                key0 = it->first;
+            }
+        }
+
+        if (key0 == 0 || key1 == 0){
+            ROS_WARN("Pose interpolation key error");
+            return Pose3();
+        }
+
+        Pose3 pose0 = smoother_.calculateEstimate<Pose3>(key0);
+        Pose3 pose1 = smoother_.calculateEstimate<Pose3>(key1);
+
+        double t0 = smoother_.timestamps().at(key0);
+        double t1 = smoother_.timestamps().at(key1);
+
+        return pose0.interpolateRt(pose1, (ts-t0)/(t1-t0));
+    }
+
+
+    bool poseQuery(double ts, Pose3& pose) const {
+        if (!inRange(ts))
+            return false;
+        pose = getPose(ts);
+        return true;
+    }
 
     bool poseQuery(int idx, Pose3& pose) const {
         if (!exists(idx))

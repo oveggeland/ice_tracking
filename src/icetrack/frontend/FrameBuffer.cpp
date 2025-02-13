@@ -36,8 +36,6 @@ void FrameBuffer::pollUpdates(){
 
 // Add a frame associated with state "idx"
 void FrameBuffer::createFrame(int idx){
-    ROS_INFO_STREAM("Add frame: " << idx << " to buffer");
-
     double t0, t1;
     gtsam::Pose3 pose0, pose1;
     

@@ -40,4 +40,5 @@ private:
     void imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg);
     void gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
     void lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    void imageSafeCallback(const sensor_msgs::Image::ConstPtr& msg);
 };

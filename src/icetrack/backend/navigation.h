@@ -14,3 +14,7 @@ using symbol_shorthand::L;  // Point3 (Lever arm from body to ship buyonacy cent
 using symbol_shorthand::F;  // Double (Freeboard estimate, used as "bias" for lidar based altitude measurements)
 
 using symbol_shorthand::D; // Point2 - Ice drift  (north, east)
+
+inline bool keyTypeCheck(Key key, char c){
+    return Symbol(key).chr() == c;
+}

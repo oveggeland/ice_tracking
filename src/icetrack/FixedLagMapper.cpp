@@ -1,6 +1,6 @@
 #include "FixedLagMapper.h"
 
-FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh) : pose_graph_(nh), lidar_front_end_(nh, pose_graph_), image_generator_(nh, lidar_front_end_){
+FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh) : pose_graph_(nh), lidar_front_end_(nh, pose_graph_), image_generator_(nh, lidar_front_end_, pose_graph_){
     // Setup callback sequencer
     sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
 
@@ -32,9 +32,8 @@ void FixedLagMapper::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 void FixedLagMapper::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&FixedLagMapper::lidarSafeCallback, this, msg));
 }
-
 void FixedLagMapper::imageCallback(const sensor_msgs::Image::ConstPtr& msg){
-    image_generator_.imageCallback(msg);
+    sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&FixedLagMapper::imageSafeCallback, this, msg));
 }
 
 
@@ -47,4 +46,7 @@ void FixedLagMapper::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& ms
 }
 void FixedLagMapper::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     lidar_front_end_.lidarCallback(msg);
+}
+void FixedLagMapper::imageSafeCallback(const sensor_msgs::Image::ConstPtr& msg){
+    image_generator_.imageCallback(msg);
 }
