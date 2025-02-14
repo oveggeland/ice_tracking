@@ -9,7 +9,7 @@
 
 #include "frontend/LidarFrontEnd.h"
 #include "backend/PoseGraph.h"
-#include "utils/ImageGenerator.h"
+#include "visualization/ImageGenerator.h"
 
 #include "utils/CallbackSequencer.h"
 

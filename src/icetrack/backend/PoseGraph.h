@@ -80,7 +80,7 @@ public:
 
 
     bool poseQuery(double ts, Pose3& pose) const {
-        if (!inRange(ts))
+        if (!isInit() || !inRange(ts))
             return false;
         pose = getPose(ts);
         return true;

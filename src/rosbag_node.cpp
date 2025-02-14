@@ -20,8 +20,6 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "rosbag_icetrack_node");
     ros::NodeHandle nh;
 
-    double t0 = ros::Time::now().toSec();
-
     // Start profiler
     std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
     std::string profile_path = std::filesystem::path(outpath) / "rosbag_node.profile";
@@ -107,7 +105,5 @@ int main(int argc, char** argv) {
     }
 
     ProfilerStop();
-
-    ROS_INFO_STREAM("Finished in " << ros::Time::now().toSec() - t0 << " seconds");
     return 0;
 }

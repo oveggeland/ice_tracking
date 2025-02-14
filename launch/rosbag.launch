@@ -4,6 +4,9 @@
     <rosparam file="$(find icetrack)/config/navigation.yaml" command="load" ns="navigation"/>
     <rosparam file="$(find icetrack)/config/mapping.yaml" command="load" ns="mapping"/>
 
+    <!-- Rosbag node requres sim time -->
+    <param name="use_sim_time" value="true" />
+
     <!-- Launch node -->
     <node 
         name="rosbag_node" pkg="icetrack" type="rosbag_node" output="screen" required="true">

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #include <gtsam/geometry/Pose3.h>
 
@@ -19,7 +20,7 @@ using FrameBufferConstIterator = FrameBufferType::const_iterator;
 class FrameBuffer{
 public:
     // Constructor
-    FrameBuffer(const ros::NodeHandle& nh, const PoseGraph& pose_graph, const PointBuffer& point_buffer);
+    FrameBuffer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const PointBuffer& point_buffer);
     
     // Interface
     void pollUpdates();
@@ -49,10 +50,20 @@ private:
     void removeOldFrames();
     void refineFrames();
 
+    // 
+    size_t cloud_size_ = 0;
+    double window_size_ = 20;
+
     // Configuration
     bool undistort_frames_;
 
     // Required resources
     const PointBuffer& point_buffer_;   // Reference to buffer of incoming lidar points
     const PoseGraph& pose_graph_;       // Reference to PoseGraph for pose queries
+
+    // Publisher
+    void initializePublisher(ros::NodeHandle& nh);
+    void publishCloud();
+    ros::Publisher cloud_pub_;
+    sensor_msgs::PointCloud2 cloud_msg_;
 };

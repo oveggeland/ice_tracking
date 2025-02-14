@@ -106,7 +106,7 @@ void PoseGraph::initialize(){
 
 void PoseGraph::addState(double ts){
     state_idx_++;
-    ROS_INFO_STREAM("Add state " << state_idx_ << " at " << std::fixed << ts);
+    ROS_INFO_STREAM("Add state " << state_idx_);
 
     predictState(ts);
     updateTimeStamps(state_idx_, ts);
