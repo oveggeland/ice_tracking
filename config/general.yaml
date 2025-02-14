@@ -46,3 +46,14 @@ lidar_odometry/min_frame_size: 5000
 lidar_odometry/voxel_size: 1.0
 lidar_odometry/icp_threshold: 2.0
 lidar_odometry/icp_min_fitness: 0.8
+
+
+# Image stuff
+image_generator/generate_dataset: false
+image_generator/display: true
+image_generator/delay: 5.0
+image_generator/offset: 2.0
+
+
+cloud/pub_queue_size: 10
+cloud/pub_topic: "/map/raw"
