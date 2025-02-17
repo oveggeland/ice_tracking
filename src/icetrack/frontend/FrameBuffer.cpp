@@ -51,7 +51,7 @@ bool FrameBuffer::createFrame(int idx){
         frame.addPoint(position, it->intensity, ts_point);
     }
     
-    cloud_size_ += frame.size();
+    point_count_ += frame.size();
     return true;
 }
 
@@ -64,7 +64,7 @@ void FrameBuffer::removeOldFrames() {
     for (auto it = buffer_.begin(); it != buffer_.end(); ) {
         if (it->t1() > ts_threshold && pose_graph_.exists(it->idx()))
             break;
-        cloud_size_ -= it->size();
+        point_count_ -= it->size();
         it = buffer_.erase(it);
     }
 }

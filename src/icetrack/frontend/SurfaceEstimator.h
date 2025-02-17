@@ -3,26 +3,27 @@
 #include <open3d/geometry/PointCloud.h>
 
 #include "frontend/PointBuffer.h"
+#include "backend/PoseGraph.h"
 
 #include "utils/ros_params.h"
 
 class SurfaceEstimator{
 public: 
     // Initialize
-    SurfaceEstimator(const ros::NodeHandle& nh, const PointBuffer& point_buffer);
+    SurfaceEstimator(const ros::NodeHandle& nh, PoseGraph& pose_graph, const PointBuffer& point_buffer);
 
     // Interface
-    bool estimateSurface(double ts);
-    bool ready(double ts) const {
-        return ts - ts_update_ > update_interval_;
-    };
+    void surfaceEstimation();
 
     // Accesor
     double getTimeStamp() const { return plane_stamp_; }
     const Eigen::Vector4d& getPlaneCoeffs() const { return plane_coeffs_; }
 
 private: 
+    bool fitPlane(double ts);
+
     // Reference to necesary resources
+    PoseGraph& pose_graph_;
     const PointBuffer& point_buffer_;
 
     // Plane info

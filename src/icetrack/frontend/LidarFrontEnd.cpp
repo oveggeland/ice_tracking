@@ -4,8 +4,9 @@ LidarFrontEnd::LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph) :
     pose_graph_(pose_graph),
     point_buffer_(nh), 
     frame_buffer_(nh, pose_graph, point_buffer_),
-    surface_estimator_(nh, point_buffer_),
-    lidar_odometry_(nh, pose_graph, frame_buffer_){
+    surface_estimator_(nh, pose_graph, point_buffer_),
+    odometry_estimator_(nh, pose_graph, frame_buffer_),
+    cloud_publisher_(nh, frame_buffer_){
 
     // Setup subscribers
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
@@ -25,30 +26,10 @@ void LidarFrontEnd::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg
 
     // Create a new frame, if succesful, perform lidar odometry
     if (frame_buffer_.createFrame(state_idx))
-        lidar_odometry_.estimateOdometry(state_idx);
+        odometry_estimator_.estimateOdometry(state_idx);
 
-    state_idx_ = state_idx;
-}
-
-
-/*
-Control block to perform surface estimaton when required by the configuration parameters. 
-*/
-void LidarFrontEnd::surfaceEstimation(){
-    GraphNode state = pose_graph_.getCurrentState();
-
-    // First check if we have tried this before
-    if (surface_estimator_.getTimeStamp() == state.ts)
-        return;
-
-    // Second, check if we should wait a bit more based on config constraints.
-    if (pose_graph_.isInit() && !surface_estimator_.ready(state.ts))
-        return;
-
-    // Awesome, try to fit a pose and update pose graph.
-    if (surface_estimator_.estimateSurface(state.ts)){
-        pose_graph_.surfaceCallback(state.idx, surface_estimator_.getPlaneCoeffs());
-    }
+    // Publish most recent cloud
+    cloud_publisher_.publishCloud();
 }
 
 
@@ -59,5 +40,5 @@ When new points arrive, add to the point buffer. Then:
 void LidarFrontEnd::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     point_buffer_.addPoints(msg);
     
-    surfaceEstimation();
+    surface_estimator_.surfaceEstimation();
 }

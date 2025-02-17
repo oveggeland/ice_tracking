@@ -28,14 +28,13 @@ public:
     void refineFrames();
 
     // Interval queries
-    Eigen::Matrix3Xf getPoints() const { return getPointsWithin(getFirstTimeStamp(), getLastTimeStamp()); };
+    Eigen::Matrix3Xf getPoints() const { return getPointsWithin(t0(), t1()); };
     Eigen::Matrix3Xf getPointsWithin(double t0, double t1) const;
 
     // Accessors
-    double getFirstTimeStamp() const { return buffer_.empty()? 0.0: buffer_.front().t0(); }
-    double getLastTimeStamp() const { return buffer_.empty()? 0.0: buffer_.back().t1(); }
-    int getFirstFrameIdx() const { return buffer_.empty()? 0: buffer_.front().idx(); }
-    int getLastFrameIdx() const { return buffer_.empty()? 0: buffer_.back().idx(); }
+    double t0() const { return buffer_.empty()? 0.0: buffer_.front().t0(); }
+    double t1() const { return buffer_.empty()? 0.0: buffer_.back().t1(); }
+    size_t pointCount() const { return point_count_; }
 
     const FrameType* getFrame(int idx) const;
 
@@ -44,13 +43,11 @@ public:
     size_t size() const { return buffer_.size(); }
 
 private:
-    FrameBufferType buffer_;
-
-    // 
-    size_t cloud_size_ = 0;
-    double window_size_ = 20;
+    FrameBufferType buffer_;        // Frame buffer
+    size_t point_count_ = 0;        // Total number of points (in all frames)
 
     // Configuration
+    double window_size_ = 10;
     bool undistort_frames_;
 
     // Required resources

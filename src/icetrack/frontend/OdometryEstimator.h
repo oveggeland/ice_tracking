@@ -11,10 +11,10 @@
 #include "utils/pointcloud.h"
 #include "utils/ros_params.h"
 
-class LidarOdometry{
+class OdometryEstimator{
 public: 
     // Constructor
-    LidarOdometry(const ros::NodeHandle& nh, PoseGraph& pose_graph, const FrameBuffer& frame_buffer);
+    OdometryEstimator(const ros::NodeHandle& nh, PoseGraph& pose_graph, const FrameBuffer& frame_buffer);
 
     // Interface
     void estimateOdometry(int idx1);
@@ -24,6 +24,7 @@ private:
     const FrameBuffer& frame_buffer_;
 
     // Config
+    bool enabled_;
     int frame_interval_; // Align every second frame
     int min_frame_size_;
     double voxel_size_;

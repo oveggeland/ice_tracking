@@ -1,9 +1,10 @@
-#include "LidarOdometry.h"
+#include "OdometryEstimator.h"
 
 
-LidarOdometry::LidarOdometry(const ros::NodeHandle& nh, PoseGraph& pose_graph, const FrameBuffer& frame_buffer)
+OdometryEstimator::OdometryEstimator(const ros::NodeHandle& nh, PoseGraph& pose_graph, const FrameBuffer& frame_buffer)
                         : pose_graph_(pose_graph), frame_buffer_(frame_buffer) {
     // Import config
+    getParamOrThrow(nh, "/lidar_odometry/enabled", enabled_);
     getParamOrThrow(nh, "/lidar_odometry/frame_interval", frame_interval_);
     getParamOrThrow(nh, "/lidar_odometry/min_frame_size", min_frame_size_);
     getParamOrThrow(nh, "/lidar_odometry/voxel_size", voxel_size_);
@@ -11,7 +12,10 @@ LidarOdometry::LidarOdometry(const ros::NodeHandle& nh, PoseGraph& pose_graph, c
     getParamOrThrow(nh, "/lidar_odometry/icp_min_fitness", icp_min_fitness_);
 };
 
-void LidarOdometry::estimateOdometry(int idx1) {
+void OdometryEstimator::estimateOdometry(int idx1) {
+    if (!enabled_)
+        return;
+        
     int idx0 = idx1 - frame_interval_;
 
     // Get frames

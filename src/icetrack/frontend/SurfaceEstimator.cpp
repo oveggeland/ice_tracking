@@ -1,6 +1,6 @@
 #include "SurfaceEstimator.h"
 
-SurfaceEstimator::SurfaceEstimator(const ros::NodeHandle& nh, const PointBuffer& point_buffer) : point_buffer_(point_buffer) {
+SurfaceEstimator::SurfaceEstimator(const ros::NodeHandle& nh, PoseGraph& pose_graph, const PointBuffer& point_buffer) : pose_graph_(pose_graph), point_buffer_(point_buffer) {
 
     // Get config from ros params
     getParamOrThrow(nh, "/surface_estimator/update_interval", update_interval_);
@@ -13,8 +13,29 @@ SurfaceEstimator::SurfaceEstimator(const ros::NodeHandle& nh, const PointBuffer&
     getParamOrThrow(nh, "/surface_estimator/ransac_iterations", ransac_iterations_);
 }
 
+/*
+Control block to perform surface estimaton when required by the configuration parameters. 
+*/
+void SurfaceEstimator::surfaceEstimation(){
+    double ts = pose_graph_.getCurrentTimeStamp();
+    int idx = pose_graph_.getCurrentStateIdx();
 
-bool SurfaceEstimator::estimateSurface(double ts){
+    // First check if we have tried this before
+    if (plane_stamp_ == ts)
+        return;
+
+    // Second, check if we should wait a bit more based on config constraints.
+    if (pose_graph_.isInit() && ts - ts_update_ < update_interval_)
+        return;
+
+    // Awesome, try to fit a pose and update pose graph.
+    if (fitPlane(ts)){
+        pose_graph_.surfaceCallback(idx, plane_coeffs_);
+    }
+}
+
+
+bool SurfaceEstimator::fitPlane(double ts){
     // Establish time interval for plane fitting
     double t0 = ts - 0.5*window_size_;
     double t1 = ts + 0.5*window_size_;

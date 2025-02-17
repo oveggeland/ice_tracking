@@ -5,6 +5,10 @@
 
 #include "utils/pointcloud.h"
 
+using CloudPositionType = Eigen::Matrix3Xf;
+using CloudIntensityType = std::vector<uint8_t>;
+using CloudTimestampType = std::vector<double>;
+
 /*
 This is the main class of a CloudFrame, responsible to track lidar points, stamps, etc. in a given time frame (t0, t1).
 */
@@ -62,7 +66,7 @@ public:
     PointCloudPtr globalCloud() const{
         return EigenToPointCloudPtr(p_global_);
     }
-    
+
     size_t size() const { return timestamps_.size(); }
     size_t capacity() const { return p_local_.cols(); }
     bool empty() const { return size() == 0; }
@@ -72,10 +76,14 @@ public:
     double t0() const { return empty() ? 0.0:  timestamps_.front(); }
     double t1() const { return empty() ? 0.0:  timestamps_.back(); }
 
+    const CloudPositionType& local() const { return p_local_; }
+    const CloudPositionType& global() const { return p_global_; }
+    const CloudIntensityType& intensities() const { return intensities_; }
+    const CloudTimestampType& timestamps() const { return timestamps_; }
 private:
-    int idx_;                                   // Idx of local frame in posegraph
-    Eigen::Matrix3Xf p_local_;                  // Local frame vectors
-    Eigen::Matrix3Xf p_global_;                 // Nav frame vectors
-    std::vector<uint8_t> intensities_;          // Lidar intensity
-    std::vector<double> timestamps_;            // Timestamps
+    int idx_;                                       // Idx of local frame in posegraph
+    CloudPositionType p_local_;                     // Local frame vectors
+    CloudPositionType p_global_;                    // Nav frame vectors
+    CloudIntensityType intensities_;                // Lidar intensity
+    CloudTimestampType timestamps_;                 // Timestamps
 };
