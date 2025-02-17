@@ -11,20 +11,9 @@ LidarOdometry::LidarOdometry(const ros::NodeHandle& nh, PoseGraph& pose_graph, c
     getParamOrThrow(nh, "/lidar_odometry/icp_min_fitness", icp_min_fitness_);
 };
 
-void LidarOdometry::pollUpdates() {
-    if (!pose_graph_.isInit())
-        return;
+void LidarOdometry::estimateOdometry(int idx1) {
+    int idx0 = idx1 - frame_interval_;
 
-    int state_idx = pose_graph_.getCurrentStateIdx();
-    while (aligned_idx_ < state_idx){
-        aligned_idx_++;
-        if (aligned_idx_ % 10 == 0)
-            alignFrames(aligned_idx_-frame_interval_, aligned_idx_);
-    }
-};
-
-
-void LidarOdometry::alignFrames(int idx0, int idx1) {
     // Get frames
     auto frame0 = frame_buffer_.getFrame(idx0);
     auto frame1 = frame_buffer_.getFrame(idx1);
@@ -54,7 +43,7 @@ void LidarOdometry::alignFrames(int idx0, int idx1) {
     // Check if ICP converged
     if (result.fitness_ < icp_min_fitness_)  // Fitness threshold (tune based on environment)
         return;
-    // visualizeAlignment(cloud0_ds, cloud1_ds, T_initial, T_align);
 
+    // visualizeAlignment(cloud0_ds, cloud1_ds, T_initial, T_align);
     pose_graph_.odometryCallback(idx0, idx1, T_align);
 }

@@ -4,76 +4,17 @@ FrameBuffer::FrameBuffer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const
                                 pose_graph_(pose_graph), point_buffer_(point_buffer) {
     // Initialize 
     getParamOrThrow(nh, "frame_buffer/undistort_frames", undistort_frames_);
-    initializePublisher(nh);
 }
 
-void FrameBuffer::initializePublisher(ros::NodeHandle& nh) {
-    cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("pointcloud_topic", 10);
-
-    cloud_msg_.header.frame_id = "map";  // Publish in nav frame
-    cloud_msg_.height = 1;               // Unordered point cloud
-    cloud_msg_.is_dense = true;
-    cloud_msg_.is_bigendian = false;
-
-    // Define point fields: x, y, z (float32), intensity (uint8_t), timestamp (float64)
-    cloud_msg_.fields.resize(5);
-    int offset = 0;
-
-    cloud_msg_.fields[0].name = "x";
-    cloud_msg_.fields[0].offset = offset;
-    cloud_msg_.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
-    offset += 4;
-
-    cloud_msg_.fields[1].name = "y";
-    cloud_msg_.fields[1].offset = offset;
-    cloud_msg_.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
-    offset += 4;
-
-    cloud_msg_.fields[2].name = "z";
-    cloud_msg_.fields[2].offset = offset;
-    cloud_msg_.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
-    offset += 4;
-
-    cloud_msg_.fields[3].name = "i";
-    cloud_msg_.fields[3].offset = offset;
-    cloud_msg_.fields[3].datatype = sensor_msgs::PointField::UINT8;
-    offset += 1;
-
-    cloud_msg_.fields[4].name = "t";
-    cloud_msg_.fields[4].offset = offset;
-    cloud_msg_.fields[4].datatype = sensor_msgs::PointField::FLOAT64;
-    offset += 8;
-
-    cloud_msg_.point_step = offset; 
-}
-
-// Check for non-created frames
-void FrameBuffer::pollUpdates(){
-    int pose_idx = pose_graph_.getCurrentStateIdx();
-    int frame_idx = getLastFrameIdx();
-
-    if (pose_idx == frame_idx)
-        return;
-
-    // Add new frames
-    while (frame_idx < pose_idx)
-        createFrame(++frame_idx);
-
-    // Delete old ones
-    removeOldFrames();
-
-    // Update frames
-    refineFrames();
-}
 
 // Add a frame associated with state "idx"
-void FrameBuffer::createFrame(int idx){
+bool FrameBuffer::createFrame(int idx){
     double t0, t1;
     gtsam::Pose3 pose0, pose1;
     
     if (!pose_graph_.timePoseQuery(idx-1, t0, pose0) || !pose_graph_.timePoseQuery(idx, t1, pose1)){
         ROS_WARN_STREAM("Pose not available at idx: " << idx); // If everything goes according to plan, we never end up in this situation?
-        return;
+        return false;
     }
 
     // Precompute logmap vectors for interpolation
@@ -108,7 +49,9 @@ void FrameBuffer::createFrame(int idx){
 
         frame.addPoint(position, it->intensity, ts_point);
     }
+    
     cloud_size_ += frame.size();
+    return true;
 }
 
 
@@ -185,30 +128,4 @@ Eigen::Matrix3Xf FrameBuffer::getPointsWithin(double t0, double t1) const{
     }
     
     return points;
-}
-
-/*
-Publish pointcloud 2 with x,y,z (float), intensity (uint8_t) and timestamp (double)
-*/
-void FrameBuffer::publishCloud() {
-    if (cloud_pub_.getNumSubscribers() == 0 || cloud_size_ == 0) return;
-
-    // msg.header.stamp = ros::Time::now(); // Use latest timestamp
-    // msg.row_step = msg.point_step*cloud_size_;
-    // msg.width = cloud_size_;
-
-
-    // sensor_msgs::PointCloud2Iterator<float> it_pos(msg, "x");
-    // sensor_msgs::PointCloud2Iterator<uint8_t> it_i(msg, "i");
-    // sensor_msgs::PointCloud2Iterator<double> it_t(msg, "t");
-
-    // for (size_t i = 0; i < cloud_.size(); ++i, ++it_pos, ++it_i, ++it_t) {
-    //     *it_pos[0] = cloud_[i].x();
-    //     *iter_y = cloud_[i].y();
-    //     *iter_z = cloud_[i].z();
-    //     *iter_intensity = static_cast<uint8_t>(cloud_[i].intensity);
-    //     *iter_timestamp = cloud_[i].timestamp;
-    // }
-
-    // cloud_pub_.publish(msg); // Assuming you have a ROS publisher `cloud_pub_`
 }

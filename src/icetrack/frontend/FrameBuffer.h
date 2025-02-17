@@ -23,7 +23,11 @@ public:
     FrameBuffer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const PointBuffer& point_buffer);
     
     // Interface
-    void pollUpdates();
+    bool createFrame(int idx); // Create a frame for specified idx
+    void maintain(){
+        removeOldFrames();
+        refineFrames();
+    }
 
     // Interval queries
     Eigen::Matrix3Xf getPoints() const { return getPointsWithin(getFirstTimeStamp(), getLastTimeStamp()); };
@@ -45,7 +49,6 @@ private:
     FrameBufferType buffer_;
 
     // Buffer handling
-    void createFrame(int idx); // Create a frame for specified idx
     FrameType& addFrame(int idx, size_t capacity);
     void removeOldFrames();
     void refineFrames();
@@ -60,10 +63,4 @@ private:
     // Required resources
     const PointBuffer& point_buffer_;   // Reference to buffer of incoming lidar points
     const PoseGraph& pose_graph_;       // Reference to PoseGraph for pose queries
-
-    // Publisher
-    void initializePublisher(ros::NodeHandle& nh);
-    void publishCloud();
-    ros::Publisher cloud_pub_;
-    sensor_msgs::PointCloud2 cloud_msg_;
 };

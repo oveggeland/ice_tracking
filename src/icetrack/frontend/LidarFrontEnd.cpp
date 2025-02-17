@@ -14,21 +14,22 @@ LidarFrontEnd::LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph) :
 
 
 /*
-NB: To allow other ways of triggering this
-When new state is available:
-- Generate a new frame
-- Perform frame-to-frame odometry
+New state is available!
 */
 void LidarFrontEnd::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
     int state_idx = pose_graph_.getCurrentStateIdx();
 
-    frame_buffer_.pollUpdates(); // Should be polled before lidar_odometry_ (as the odometry might use the frames)
-    lidar_odometry_.pollUpdates();
+    // Create a new frame, if succesful, perform lidar odometry
+    if (frame_buffer_.createFrame(state_idx))
+        lidar_odometry_.estimateOdometry(state_idx);
 
     state_idx_ = state_idx;
 }
 
 
+/*
+Control block to perform surface estimaton when required by the configuration parameters. 
+*/
 void LidarFrontEnd::surfaceEstimation(){
     GraphNode state = pose_graph_.getCurrentState();
 
@@ -36,11 +37,11 @@ void LidarFrontEnd::surfaceEstimation(){
     if (surface_estimator_.getTimeStamp() == state.ts)
         return;
 
-    // Second, check if we should wait a bit more
+    // Second, check if we should wait a bit more based on config constraints.
     if (pose_graph_.isInit() && !surface_estimator_.ready(state.ts))
         return;
 
-    // Awesome, try to fit a pose and see
+    // Awesome, try to fit a pose and update pose graph.
     if (surface_estimator_.estimateSurface(state.ts)){
         pose_graph_.surfaceCallback(state.idx, surface_estimator_.getPlaneCoeffs());
     }
@@ -49,7 +50,7 @@ void LidarFrontEnd::surfaceEstimation(){
 
 /*
 When new points arrive, add to the point buffer. Then:
-- Signal surface_estimator about a new pcl event, potentially triggering a surface fit.
+1. Signal surface_estimator about a new pcl event, potentially triggering a surface fit.
 */
 void LidarFrontEnd::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     point_buffer_.addPoints(msg);

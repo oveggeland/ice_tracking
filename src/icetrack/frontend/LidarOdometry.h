@@ -17,16 +17,11 @@ public:
     LidarOdometry(const ros::NodeHandle& nh, PoseGraph& pose_graph, const FrameBuffer& frame_buffer);
 
     // Interface
-    void pollUpdates();
+    void estimateOdometry(int idx1);
 
 private:
     PoseGraph& pose_graph_;
     const FrameBuffer& frame_buffer_;
-
-    void alignFrames(int idx0, int idx1);
-
-    // Control
-    int aligned_idx_ = 0;
 
     // Config
     int frame_interval_; // Align every second frame
