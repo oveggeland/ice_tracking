@@ -161,7 +161,7 @@ private:
     bool estimate_lever_arm_ = true;
     Point3 lever_arm_ = Point3(0, 0, 0);
 
-    bool estimate_ice_drift_ = true;
+    bool estimate_ice_drift_ = false;
     Point2 ice_drift_ = Point2(0, 0);
 
 

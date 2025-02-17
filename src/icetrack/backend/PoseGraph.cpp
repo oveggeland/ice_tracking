@@ -108,6 +108,10 @@ void PoseGraph::addState(double ts){
     state_idx_++;
     ROS_INFO_STREAM("Add state " << state_idx_);
 
+    // Extrapolate IMU integration to 'ts'
+    imu_integration_.finishIntegration(ts);
+
+    // Predict-update cycle
     predictState(ts);
     updateTimeStamps(state_idx_, ts);
     updateValues(state_idx_);
@@ -115,7 +119,7 @@ void PoseGraph::addState(double ts){
     updateSmoother();
     updateState(state_idx_);
 
-    // Reset
+    // Reset integration
     imu_integration_.resetIntegration(ts, bias_);
     ts_ = ts;
     
@@ -164,7 +168,6 @@ void PoseGraph::initializeState(){
 }
 
 void PoseGraph::predictState(double ts){
-    imu_integration_.finishIntegration(ts);
     NavState pred_state = imu_integration_.predict(pose_, vel_, bias_);
     pose_ = pred_state.pose();
     vel_ = pred_state.velocity();
@@ -208,7 +211,6 @@ void PoseGraph::updateFactors(int idx, double ts){
     factors_.add(levered_factor);
 
     // Imu integration
-    imu_integration_.finishIntegration(ts);
     auto imu_factor = imu_integration_.getIntegrationFactor(idx);
     factors_.add(imu_factor);
 
