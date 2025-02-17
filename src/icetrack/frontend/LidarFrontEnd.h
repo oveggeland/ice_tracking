@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 
 #include "backend/PoseGraph.h"
@@ -21,8 +22,8 @@ public:
     LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph);
 
     // Interface for events
+    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-    void newStateEvent(int state_idx);
 
     // Const accessors to front end resources
     const PointBuffer& pointBuffer() const { return point_buffer_; }
@@ -47,7 +48,7 @@ private:
 
     // Polling for new states in PoseGraph.
     int state_idx_ = 0;
-    ros::Timer timer_;
 
-    void eventPoller(const ros::TimerEvent&);
+    // Subscriber
+    ros::Subscriber pose_sub_;
 };
