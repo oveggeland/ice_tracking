@@ -20,8 +20,9 @@ public:
     // Constructor
     LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph);
 
-    // Interface
+    // Interface for events
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    void newStateEvent(int state_idx);
 
     // Const accessors to front end resources
     const PointBuffer& pointBuffer() const { return point_buffer_; }
@@ -30,8 +31,7 @@ public:
     const LidarOdometry& lidarOdometry() const { return lidar_odometry_; }
 
 private:
-    // Polls all submodules for updates
-    void pollUpdates();
+    const PoseGraph& pose_graph_;
 
     // Buffer for incoming lidar points
     PointBuffer point_buffer_;
@@ -44,4 +44,10 @@ private:
 
     // Frame-to-frame odometry
     LidarOdometry lidar_odometry_;
+
+    // Polling for new states in PoseGraph.
+    int state_idx_ = 0;
+    ros::Timer timer_;
+
+    void eventPoller(const ros::TimerEvent&);
 };
