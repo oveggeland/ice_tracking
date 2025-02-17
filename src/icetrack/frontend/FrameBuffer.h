@@ -24,10 +24,8 @@ public:
     
     // Interface
     bool createFrame(int idx); // Create a frame for specified idx
-    void maintain(){
-        removeOldFrames();
-        refineFrames();
-    }
+    void removeOldFrames();
+    void refineFrames();
 
     // Interval queries
     Eigen::Matrix3Xf getPoints() const { return getPointsWithin(getFirstTimeStamp(), getLastTimeStamp()); };
@@ -47,11 +45,6 @@ public:
 
 private:
     FrameBufferType buffer_;
-
-    // Buffer handling
-    FrameType& addFrame(int idx, size_t capacity);
-    void removeOldFrames();
-    void refineFrames();
 
     // 
     size_t cloud_size_ = 0;

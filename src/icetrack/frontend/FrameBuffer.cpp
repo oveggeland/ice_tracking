@@ -28,7 +28,8 @@ bool FrameBuffer::createFrame(int idx){
     int num_points = start.distance_to(end);
 
     // Add new frame to the container
-    FrameType& frame = addFrame(idx, num_points);
+    buffer_.emplace_back(idx, num_points);
+    FrameType& frame = buffer_.back();
 
     // Iterate through points, optionally undistorting by interpolation between poses. 
     for (auto it = start; it != end; ++it) {
@@ -52,15 +53,6 @@ bool FrameBuffer::createFrame(int idx){
     
     cloud_size_ += frame.size();
     return true;
-}
-
-
-/*
-Add new frame to buffer and return a reference to it.
-*/
-FrameType& FrameBuffer::addFrame(int idx, size_t capacity){
-    buffer_.emplace_back(idx, capacity);
-    return buffer_.back();
 }
 
 

@@ -19,6 +19,10 @@ New state is available!
 void LidarFrontEnd::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
     int state_idx = pose_graph_.getCurrentStateIdx();
 
+    // Maintain frame buffer
+    frame_buffer_.removeOldFrames();
+    frame_buffer_.refineFrames();
+
     // Create a new frame, if succesful, perform lidar odometry
     if (frame_buffer_.createFrame(state_idx))
         lidar_odometry_.estimateOdometry(state_idx);
