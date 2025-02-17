@@ -22,6 +22,14 @@
 #include "utils/conversions.h"
 
 
+// Wrapper to information about a node in the graph.
+struct GraphNode{
+    int idx;
+    double ts;
+    Pose3 pose;
+};
+
+
 class PoseGraph{
 public:
     // Constructor
@@ -41,6 +49,14 @@ public:
         return ts > smoother_.timestamps().begin()->second && ts < smoother_.timestamps().rbegin()->second;
     }
     bool exists(int idx) const { return smoother_.getLinearizationPoint().exists(X(idx)); }
+
+    GraphNode getCurrentState() const {
+        return {
+            getCurrentStateIdx(),
+            getCurrentTimeStamp(),
+            getCurrentPose()
+        };
+    }
 
     int getCurrentStateIdx() const { return state_idx_; }
     double getCurrentTimeStamp() const { return ts_; }

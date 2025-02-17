@@ -14,7 +14,7 @@
 #include "utils/ros_params.h"
 
 /*
-Main class of the front end. Most functionality is distributed to submodules which are frequently polled for updates upon arrival of new messages. 
+Main class of the front end. Reactive logic based on pose and lidar callbacks. 
 */
 class LidarFrontEnd{
 public:
@@ -32,7 +32,7 @@ public:
     const LidarOdometry& lidarOdometry() const { return lidar_odometry_; }
 
 private:
-    const PoseGraph& pose_graph_;
+    PoseGraph& pose_graph_;
 
     // Buffer for incoming lidar points
     PointBuffer point_buffer_;
@@ -41,6 +41,7 @@ private:
     FrameBuffer frame_buffer_;
 
     // Estimate the ice sheet as under a plane assumption
+    void surfaceEstimation(); 
     SurfaceEstimator surface_estimator_;
 
     // Frame-to-frame odometry

@@ -4,7 +4,7 @@ LidarFrontEnd::LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph) :
     pose_graph_(pose_graph),
     point_buffer_(nh), 
     frame_buffer_(nh, pose_graph, point_buffer_),
-    surface_estimator_(nh, pose_graph, point_buffer_),
+    surface_estimator_(nh, point_buffer_),
     lidar_odometry_(nh, pose_graph, frame_buffer_){
 
     // Setup subscribers
@@ -21,13 +21,31 @@ When new state is available:
 */
 void LidarFrontEnd::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
     int state_idx = pose_graph_.getCurrentStateIdx();
-    ROS_INFO_STREAM("New state " << state_idx);
 
     frame_buffer_.pollUpdates(); // Should be polled before lidar_odometry_ (as the odometry might use the frames)
     lidar_odometry_.pollUpdates();
 
     state_idx_ = state_idx;
 }
+
+
+void LidarFrontEnd::surfaceEstimation(){
+    GraphNode state = pose_graph_.getCurrentState();
+
+    // First check if we have tried this before
+    if (surface_estimator_.getTimeStamp() == state.ts)
+        return;
+
+    // Second, check if we should wait a bit more
+    if (pose_graph_.isInit() && !surface_estimator_.ready(state.ts))
+        return;
+
+    // Awesome, try to fit a pose and see
+    if (surface_estimator_.estimateSurface(state.ts)){
+        pose_graph_.surfaceCallback(state.idx, surface_estimator_.getPlaneCoeffs());
+    }
+}
+
 
 /*
 When new points arrive, add to the point buffer. Then:
@@ -36,5 +54,5 @@ When new points arrive, add to the point buffer. Then:
 void LidarFrontEnd::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
     point_buffer_.addPoints(msg);
     
-    surface_estimator_.pollUpdates();
+    surfaceEstimation();
 }
