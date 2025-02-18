@@ -27,9 +27,9 @@ public:
     void removeOldFrames();
     void refineFrames();
 
-    // Interval queries
-    CloudFrame::Ptr getPoints(bool local, bool global, bool intensities, bool timestamps) const;
-    Eigen::Matrix3Xf getPointsWithin(double t0, double t1) const;
+    // Query frames with specified attributes. If timestamps are not specified, all points are returned.
+    CloudFrame::Ptr getPoints(bool local, bool global, bool intensities, bool timestamps) const; // Get all points
+    CloudFrame::Ptr getPoints(double t0, double t1, bool local, bool global, bool intensities, bool timestamps) const; // Get points within time window
 
     // Accessors
     double t0() const { return buffer_.empty()? 0.0: buffer_.front().t0(); }

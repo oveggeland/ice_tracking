@@ -1,9 +1,19 @@
 #include "frontend/CloudFrame.h"
 
+// Constructor for shallow copy slice
+CloudFrame::CloudFrame(const CloudFrame& other, size_t idx0, size_t idx1)
+    : idx_(other.idx_), size_(idx1 - idx0),
+    p_local_(other.p_local_.block(0, idx0, 3, size_)),
+    p_global_(other.p_global_.block(0, idx0, 3, size_)),
+    intensities_(other.intensities_.block(0, idx0, 1, size_)),
+    timestamps_(other.timestamps_.block(0, idx0, 1, size_)) {
+}
+
+
 CloudFrame::CloudFrame(int idx, size_t capacity)
-    : idx_(idx), size_(0), p_local_(3, capacity), p_global_(3, capacity) {
-    intensities_.reserve(capacity);
-    timestamps_.reserve(capacity);
+    : idx_(idx), size_(0), 
+    p_local_(3, capacity), p_global_(3, capacity),
+    intensities_(capacity), timestamps_(capacity) {
 }
 
 void CloudFrame::addPoint(const Eigen::Vector3f& pos, const uint8_t i, const double ts) {
@@ -13,8 +23,8 @@ void CloudFrame::addPoint(const Eigen::Vector3f& pos, const uint8_t i, const dou
     }
 
     p_local_.col(size()) = pos;
-    intensities_.push_back(i);
-    timestamps_.push_back(ts);
+    intensities_(size()) = i;
+    timestamps_(size()) = ts;
 
     ++size_;
 }
@@ -25,18 +35,14 @@ void CloudFrame::merge(const CloudFrame& other, bool copyLocal, bool copyGlobal,
         return;
     }
 
-    if (copyLocal) {
-        p_local_.block(0, size(), 3, other.size()) = other.local();
-    }
-    if (copyGlobal) {
-        p_global_.block(0, size(), 3, other.size()) = other.global();
-    }
-    if (copyIntensities) {
-        intensities_.insert(intensities_.end(), other.intensities().begin(), other.intensities().end());
-    }
-    if (copyTimestamps) {
-        timestamps_.insert(timestamps_.end(), other.timestamps().begin(), other.timestamps().end());
-    }
+    if (copyLocal) 
+        p_local_.block(0, size(), 3, other.size()) = other.p_local_;
+    if (copyGlobal)
+        p_global_.block(0, size(), 3, other.size()) = other.p_global_;
+    if (copyIntensities)
+        intensities_.block(0, size(), 1, other.size()) = other.intensities_;
+    if (copyTimestamps)
+        timestamps_.block(0, size(), 1, other.size()) = other.timestamps_;
 
     size_ += other.size();
 }
@@ -48,26 +54,24 @@ void CloudFrame::transformPoints(const Eigen::Matrix4f& T) {
     p_global_ = (R * p_local_).colwise() + t;
 }
 
+// Binary search for lower bound
 int CloudFrame::lowerBound(double ts) const {
     if (ts < t0())
         return 0;
     else if (ts > t1())
         return size();
 
-    auto it = std::lower_bound(timestamps_.begin(), timestamps_.end(), ts);
-    return std::distance(timestamps_.begin(), it);
-}
+    int left = 0;
+    int right = size() - 1;
 
-Eigen::Matrix3Xf CloudFrame::getPointsWithin(double t0, double t1) const {
-    int idx0 = lowerBound(t0);
-    int idx1 = lowerBound(t1);
-    return p_global_.block(0, idx0, 3, idx1 - idx0);
-}
+    while (left < right) {
+        int mid = left + (right - left) / 2;
+        if (timestamps_(mid) < ts) {
+            left = mid + 1;
+        } else {
+            right = mid;
+        }
+    }
 
-PointCloudPtr CloudFrame::localCloud() const {
-    return EigenToPointCloudPtr(p_local_);
-}
-
-PointCloudPtr CloudFrame::globalCloud() const {
-    return EigenToPointCloudPtr(p_global_);
+    return left;
 }

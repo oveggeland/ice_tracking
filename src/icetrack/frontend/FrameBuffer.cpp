@@ -51,6 +51,8 @@ bool FrameBuffer::createFrame(int idx){
         frame.addPoint(position, it->intensity, ts_point);
     }
     
+    frame.transformPoints(pose1.matrix().cast<float>());
+
     point_count_ += frame.size();
     return true;
 }
@@ -101,39 +103,34 @@ CloudFrame::Ptr FrameBuffer::getPoints(bool local, bool global, bool intensities
     CloudFrame::Ptr frame = std::make_shared<CloudFrame>(0, point_count_);
 
     // Iterate through all frames and merge points
-    for (const auto& it : buffer_) {
+    for (const auto& it : buffer_)
         frame->merge(it, local, global, intensities, timestamps);
-    }
-
     return frame;
 }
 
 
 /*
-Merge all points within the interval.
+Return shared ptr with a cloud frame containing all points. Attributes are decided by input parameters.
 */
-Eigen::Matrix3Xf FrameBuffer::getPointsWithin(double t0, double t1) const{
-    size_t num_points = 0;
-    std::vector<Eigen::Matrix3Xf> blocks;
+CloudFrame::Ptr FrameBuffer::getPoints(double t0, double t1, bool local, bool global, bool intensities, bool timestamps) const {
+    std::vector<CloudFrame> blocks;
     blocks.reserve(size());
 
-    // Iterate through buffer and get view to all valid point blocks
-    for (const auto& it: buffer_){
-        Eigen::Matrix3Xf block = it.getPointsWithin(t0, t1);
-
-        if (block.cols() > 0){
-            blocks.push_back(block);
-            num_points += block.cols();
+    // Iterate through and fetch blocks
+    int point_count = 0;
+    for (const auto& it : buffer_) {
+        if (it.t0() < t1 && it.t1() > t0) {
+            blocks.push_back(it.block(t0, t1));
+            point_count += blocks.back().size();
         }
     }
 
-    // Now merge all blocks
-    Eigen::Matrix3Xf points(3, num_points);
-    int p_cnt = 0;
-    for (const auto& block : blocks) {
-        points.block(0, p_cnt, 3, block.cols()) = block;
-        p_cnt += block.cols();
-    }
-    
-    return points;
+    // Allocate CloudFrame with sufficient capacity
+    CloudFrame::Ptr frame = std::make_shared<CloudFrame>(0, point_count);
+
+    // Merge all blocks
+    for (const auto& block : blocks) 
+        frame->merge(block, local, global, intensities, timestamps);
+
+    return frame;
 }
