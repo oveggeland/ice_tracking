@@ -1,18 +1,29 @@
 #include "visualization/ImageGenerator.h"
 
 ImageGenerator::ImageGenerator(ros::NodeHandle& nh, const LidarFrontEnd& lidar_front_end, const PoseGraph& pose_graph)
-    : frame_buffer_(lidar_front_end.frameBuffer()), pose_graph_(pose_graph),
+    : nh_(nh), frame_buffer_(lidar_front_end.frameBuffer()), pose_graph_(pose_graph),
       camera_(getParamOrThrow<std::string>(nh, "int_file")) {
+    // Load calibration
     bTc_ = bTc(getParamOrThrow<std::string>(nh, "ext_file"));
-    getParamOrThrow<bool>(nh, "/image_generator/generate_dataset", generate_dataset_);
+    
+    // Load parameters
+    getParamOrThrow<bool>(nh, "/image_generator/enabled", enabled_);
     getParamOrThrow<bool>(nh, "/image_generator/display", display_);
     getParamOrThrow<double>(nh, "/image_generator/delay", delay_);
     getParamOrThrow<double>(nh, "/image_generator/offset", offset_);
-    std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
-    image_path_ = joinPath(outpath, "dataset/images/");
-    bin_path_ = joinPath(outpath, "dataset/projections/");
-    makePath(image_path_, true);
-    makePath(bin_path_, true);
+
+    // Initialize publisher
+    std::string topic = getParamOrThrow<std::string>(nh, "/image_generator/topic");
+    image_pub_ = nh.advertise<sensor_msgs::Image>(topic, 10);
+
+    // Launch image view with image rempaped as topic
+    if (display_){
+        std::string cmd = "rosrun image_view image_view image:=" + topic + " &";
+        int ret = system(cmd.c_str());
+        if (ret != 0) {
+            ROS_WARN_STREAM("Failed to launch image_view with command: " << cmd);
+        }
+    }
 }
 
 void ImageGenerator::drawPoints(cv::Mat& img, const Eigen::Matrix2Xf& uv, const std::vector<bool> inliers) const{
@@ -47,7 +58,10 @@ std::vector<bool> ImageGenerator::getInliers(const Eigen::Matrix3Xf& r_cam, cons
     return inliers;
 }
 
-void ImageGenerator::processImage(double t_img, cv::Mat& img) const{
+void ImageGenerator::processImage(double t_img, cv::Mat& img){
+    // Pop timer
+    timer_buffer_.erase(t_img);
+
     // Query pose
     Eigen::Matrix4f cTw;
     if (!getInverseCameraPose(t_img, cTw))
@@ -66,34 +80,33 @@ void ImageGenerator::processImage(double t_img, cv::Mat& img) const{
     // Find inliers
     const std::vector<bool> inliers = getInliers(r_cam, uv);
 
-
-    // Draw and display
-    if (display_){
-        drawPoints(img, uv, inliers);
-        display("Projected", img);
-    }
+    // Draw points
+    drawPoints(img, uv, inliers);
+    publishImage(t_img, img);
 }
 
-void ImageGenerator::checkBuffer() {
-    for (auto it = image_buffer_.begin(); it != image_buffer_.end();) {
-        double t_img = it->first;
-        if (ros::Time::now().toSec() - t_img > delay_) {
-            processImage(t_img, it->second);
-            it = image_buffer_.erase(it);
-        }
-        break;
-    }
-}
-
+// Main entry point. Unpack the image and schedule processing. 
 void ImageGenerator::imageCallback(const sensor_msgs::Image::ConstPtr& msg) {
+    if (!enabled_)
+        return;
+
+    // Get timestamp and image
     double ts = msg->header.stamp.toSec();
     cv::Mat img = camera_.getDistortedImage(msg);
-    image_buffer_[ts] = img;
 
-    checkBuffer();
+    // Schedule processing
+    timer_buffer_[ts] = nh_.createTimer(
+        ros::Duration(delay_), // Duration
+        boost::bind(&ImageGenerator::processImage, this, ts, img), // Callback
+        true // One-shot
+    );
 }
 
-void ImageGenerator::display(const std::string& name, const cv::Mat& img) const{
-    cv::imshow(name, img);
-    cv::waitKey(1);
+void ImageGenerator::publishImage(double t_img, const cv::Mat& img) const{
+    if (!image_pub_.getNumSubscribers())
+        return;
+
+    sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
+    msg->header.stamp = ros::Time(t_img);
+    image_pub_.publish(msg);
 }

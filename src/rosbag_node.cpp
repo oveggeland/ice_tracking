@@ -64,11 +64,9 @@ int main(int argc, char** argv) {
 
         // Process each message in the bag
         for (rosbag::MessageInstance const m : view) {
-            ros::Time msg_time = m.getTime();
-
             // Publish clock time
             rosgraph_msgs::Clock clock_msg;
-            clock_msg.clock = msg_time;
+            clock_msg.clock = m.getTime();
             clock_pub.publish(clock_msg);
 
             // Publish the message to the appropriate topic
