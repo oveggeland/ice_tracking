@@ -94,6 +94,22 @@ const FrameType* FrameBuffer::getFrame(int idx) const {
 
 
 /*
+Return shared ptr with a cloud frame containing all points. Attributes are decided by input parameters.
+*/
+CloudFrame::Ptr FrameBuffer::getPoints(bool local, bool global, bool intensities, bool timestamps) const {
+    // Allocate CloudFrame with capacity
+    CloudFrame::Ptr frame = std::make_shared<CloudFrame>(0, point_count_);
+
+    // Iterate through all frames and merge points
+    for (const auto& it : buffer_) {
+        frame->merge(it, local, global, intensities, timestamps);
+    }
+
+    return frame;
+}
+
+
+/*
 Merge all points within the interval.
 */
 Eigen::Matrix3Xf FrameBuffer::getPointsWithin(double t0, double t1) const{

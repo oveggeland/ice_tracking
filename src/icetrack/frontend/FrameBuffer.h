@@ -28,7 +28,7 @@ public:
     void refineFrames();
 
     // Interval queries
-    Eigen::Matrix3Xf getPoints() const { return getPointsWithin(t0(), t1()); };
+    CloudFrame::Ptr getPoints(bool local, bool global, bool intensities, bool timestamps) const;
     Eigen::Matrix3Xf getPointsWithin(double t0, double t1) const;
 
     // Accessors

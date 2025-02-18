@@ -38,15 +38,19 @@ void CloudPublisher::fillMessage(){
     // Custom iterator for message
     sensor_msgs::PointCloud2Iterator<PackedPointXYZIT> msg_it(cloud_msg_, "x");
 
+    // Iterate over all frames
     for (auto frame = frame_buffer_.begin(); frame != frame_buffer_.end(); ++frame){
-        auto positions = frame->global();
-        auto intensities = frame->intensities();
-        auto timestamps = frame->timestamps();
+        const auto& positions = frame->global();
+        const auto& intensities = frame->intensities();
+        const auto& timestamps = frame->timestamps();
 
+        // Iterate over all points in the frame
         for (int i = 0; i < frame->size(); ++i, ++msg_it){
-            (*msg_it).pos = positions.col(i);
-            (*msg_it).i = intensities[i];
-            (*msg_it).t = timestamps[i];
+            *msg_it = PackedPointXYZIT{
+                .pos = positions.col(i),
+                .i = intensities[i],
+                .t = timestamps[i]
+            };
         }
     }
 }
