@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ros/ros.h"
-#include <geometry_msgs/PoseStamped.h>
 
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/slam/BetweenFactor.h>
@@ -11,23 +10,12 @@
 #include "ImuIntegration.h"
 #include "GnssCorrection.h"
 #include "SurfaceCorrection.h"
+#include "PoseGraphOutput.h"
 
 #include "factors/NormConstraintFactor.h"
 #include "factors/LeveredAltitudeFactor.h"
-#include "factors/ConstantVelocityFactor2D.h"
-#include "factors/IceOdometryFactor.h"
 
-#include "utils/file_system.h"
 #include "utils/ros_params.h"
-#include "utils/conversions.h"
-
-
-// Wrapper to information about a node in the graph.
-struct GraphNode{
-    int idx;
-    double ts;
-    Pose3 pose;
-};
 
 
 class PoseGraph{
@@ -52,13 +40,6 @@ public:
     }
     bool exists(int idx) const { return smoother_.getLinearizationPoint().exists(X(idx)); }
 
-    GraphNode getCurrentState() const {
-        return {
-            getCurrentStateIdx(),
-            getCurrentTimeStamp(),
-            getCurrentPose()
-        };
-    }
 
     int getCurrentStateIdx() const { return state_idx_; }
     double getCurrentTimeStamp() const { return ts_; }
@@ -121,10 +102,7 @@ public:
     }
 
 private:
-    // Setup
     void readParams(const ros::NodeHandle& nh);
-    void setupPublisher(ros::NodeHandle& nh);
-    void setupFileStream(const ros::NodeHandle& nh);
 
     // Initialization
     bool init_ = false;
@@ -160,6 +138,8 @@ private:
     SurfaceCorrection surface_correction_;
 
     // State definition
+    PoseGraphState state_;
+
     double ts_ = 0.0;
     Pose3 pose_;
     Point3 vel_ = Point3(0, 0, 0);
@@ -174,9 +154,5 @@ private:
     double lever_altitude_sigma_;
 
     // Output
-    ros::Publisher pose_pub_;
-    void publishPose();
-
-    std::ofstream f_out_;
-    void writeToFile();
+    PoseGraphOutput pose_graph_output_;
 };

@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosbag
   sensor_msgs
   geometry_msgs
+  tf2_ros
   std_msgs
   cv_bridge
 )

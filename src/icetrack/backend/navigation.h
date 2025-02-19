@@ -1,6 +1,8 @@
 #pragma once
 
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/navigation/ImuBias.h>
 
 using namespace gtsam;
 
@@ -18,3 +20,13 @@ using symbol_shorthand::D; // Point2 - Ice drift  (north, east)
 inline bool keyTypeCheck(Key key, char c){
     return Symbol(key).chr() == c;
 }
+
+/* Defines a state in the pose graph */
+struct PoseGraphState{
+    size_t idx; // Unique state id (used for lookup)
+    double ts;
+    Pose3 pose;
+    Vector3 velocity;
+    imuBias::ConstantBias bias;
+    Vector3 lever_arm;
+};

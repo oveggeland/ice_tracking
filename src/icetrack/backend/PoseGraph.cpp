@@ -1,15 +1,14 @@
 #include "PoseGraph.h"
 
 PoseGraph::PoseGraph(ros::NodeHandle& nh)
-    : imu_integration_(nh), gnss_correction_(nh), surface_correction_(nh){
+    : imu_integration_(nh), gnss_correction_(nh), 
+    surface_correction_(nh), pose_graph_output_(nh){
 
     // Initialize smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
     smoother_ = BatchFixedLagSmoother(lag); // TODO: Isam2?
 
     readParams(nh);
-    setupPublisher(nh);
-    setupFileStream(nh);
 }   
 
 void PoseGraph::readParams(const ros::NodeHandle& nh){
@@ -19,23 +18,6 @@ void PoseGraph::readParams(const ros::NodeHandle& nh){
     getParamOrThrow(nh, "/navigation/lever_norm_threshold", lever_norm_threshold_);
     getParamOrThrow(nh, "/navigation/lever_norm_sigma", lever_norm_sigma_);
     getParamOrThrow(nh, "/navigation/lever_altitude_sigma", lever_altitude_sigma_);
-}
-
-void PoseGraph::setupPublisher(ros::NodeHandle& nh){
-    std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
-    pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, 10);
-}
-
-
-void PoseGraph::setupFileStream(const ros::NodeHandle& nh){
-    std::string ws = getParamOrThrow<std::string>(nh, "/workspace");
-    std::string exp = getParamOrThrow<std::string>(nh, "/exp");
-    std::string fpath = joinPaths({ws, exp, "navigation", "state.csv"});
-    makePath(fpath);
-
-    f_out_ = std::ofstream(fpath);
-    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
-    f_out_ << std::endl << std::fixed; 
 }
 
 void PoseGraph::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
@@ -124,9 +106,8 @@ void PoseGraph::addState(double ts){
     imu_integration_.resetIntegration(ts, bias_);
     ts_ = ts;
     
-    // Distribute pose
-    writeToFile();
-    publishPose();
+    // Output pose
+    pose_graph_output_.outputState(state_);
 }
 
 void PoseGraph::addPriors(int idx){
@@ -207,28 +188,4 @@ void PoseGraph::updateSmoother(){
     stamps_.clear();
     values_.clear();
     factors_.resize(0);
-}
-
-
-void PoseGraph::publishPose(){
-    if (pose_pub_.getNumSubscribers() > 0){
-        geometry_msgs::PoseStamped msg;
-        msg.header.stamp = ros::Time(ts_);
-        msg.header.frame_id = "map";
-        msg.pose = poseGtsamToRos(pose_);
-
-        pose_pub_.publish(msg);
-    }
-}
-
-
-void PoseGraph::writeToFile(){
-    f_out_ << ts_ << ",";
-    f_out_ << pose_.translation()[0] << "," << pose_.translation()[1] << "," << pose_.translation()[2] << ",";
-    f_out_ << vel_[0] << "," << vel_[1] << "," << vel_[2] << ",";
-    f_out_ << pose_.rotation().ypr()[2] << "," << pose_.rotation().ypr()[1] << "," << pose_.rotation().ypr()[0] << ",";
-    f_out_ << bias_.accelerometer()[0] << "," << bias_.accelerometer()[1] << "," << bias_.accelerometer()[2] << ",";
-    f_out_ << bias_.gyroscope()[0] << "," << bias_.gyroscope()[1] << "," << bias_.gyroscope()[2];
-    f_out_ << "," << lever_arm_.x() << "," << lever_arm_.y() << "," << lever_arm_.z();
-    f_out_ << std::endl;
 }
