@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+
+import rospy
+import os
+
+if __name__ == "__main__":
+    rospy.init_node("profile_node")
+
+    ws = rospy.get_param("workspace")
+    exp = rospy.get_param("exp")
+    profile_path = os.path.join(ws, exp, "rosbag_node.profile")
+    
+    # Run terminal command
+    cmd = f"pprof --web devel/lib/icetrack/rosbag_node {profile_path}"
+    print(cmd)
+    os.system(cmd)

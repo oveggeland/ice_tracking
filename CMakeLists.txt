@@ -77,5 +77,6 @@ catkin_install_python(PROGRAMS
     scripts/diag_analysis
     scripts/stats_analysis
     scripts/nav_analysis
+    scripts/profile
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
