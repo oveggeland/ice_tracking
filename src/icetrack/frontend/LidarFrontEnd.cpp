@@ -6,6 +6,7 @@ LidarFrontEnd::LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph) :
     frame_buffer_(nh, pose_graph, point_buffer_),
     surface_estimator_(nh, pose_graph, point_buffer_),
     odometry_estimator_(nh, pose_graph, frame_buffer_),
+    cloud_processor_(nh),
     cloud_publisher_(nh, frame_buffer_){
 
     // Setup subscribers
@@ -25,11 +26,25 @@ void LidarFrontEnd::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg
     frame_buffer_.refineFrames();
 
     // Create a new frame, if succesful, perform lidar odometry
-    if (frame_buffer_.createFrame(state_idx))
+    if (frame_buffer_.createFrame(state_idx)){}
         odometry_estimator_.estimateOdometry(state_idx);
 
+    // Process cloud
+    auto raw_cloud = frame_buffer_.getTensorCloud();
+    auto processed_cloud = cloud_processor_.processCloud(raw_cloud);
+
+    ROS_INFO_STREAM("raw cloud isze is: " << getCloudSize(raw_cloud));
+    if (getCloudSize(raw_cloud) > 1.0e5){
+        visualizeCloud(raw_cloud);
+        visualizeCloud(processed_cloud);
+        // Save cloud
+        // cloud_processor_.saveCloud(processed_cloud);
+    }
+    // cloud_publisher_.publishProcessed();
+    // cloud_publisher_.publishRaw();
+    
     // Publish most recent cloud
-    cloud_publisher_.publishCloud();
+    // cloud_publisher_.publishCloud();
 }
 
 

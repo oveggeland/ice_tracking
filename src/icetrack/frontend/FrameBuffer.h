@@ -11,6 +11,7 @@
 #include "backend/PoseGraph.h"
 
 #include "utils/ros_params.h"
+#include "utils/pointcloud.h"
 
 
 using FrameType = CloudFrame;
@@ -28,6 +29,7 @@ public:
     void refineFrames();
 
     // Query frames with specified attributes. If timestamps are not specified, all points are returned.
+    TensorCloud getTensorCloud() const; // Return t::geometry::pointcloud object with global positions and intensities
     CloudFrame::Ptr getPoints(bool local, bool global, bool intensities, bool timestamps) const; // Get all points
     CloudFrame::Ptr getPoints(double t0, double t1, bool local, bool global, bool intensities, bool timestamps) const; // Get points within time window
 

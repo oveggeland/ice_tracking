@@ -10,6 +10,7 @@
 #include "frontend/FrameBuffer.h"
 #include "frontend/SurfaceEstimator.h"
 #include "frontend/OdometryEstimator.h"
+#include "frontend/CloudProcessor.h"
 #include "frontend/CloudPublisher.h"
 
 #include "utils/ros_params.h"
@@ -26,18 +27,24 @@ public:
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    // Const accessors to front end resources
+    // Const accessors to buffers
+    const PointBuffer& pointBuffer() const { return point_buffer_; }
     const FrameBuffer& frameBuffer() const { return frame_buffer_; }
 
 private:
+    // PoseGraph interface
+    PoseGraph& pose_graph_;
+
     // Buffers 
     PointBuffer point_buffer_; // Buffer for incoming lidar points
     FrameBuffer frame_buffer_; // Buffer for maintaining pointcloud "frames"
 
-    // PoseGraph interface
-    PoseGraph& pose_graph_;
+    // Factor-generating modules
     SurfaceEstimator surface_estimator_; // Estimate the ice sheet as under a plane assumption
     OdometryEstimator odometry_estimator_; // Frame-to-frame odometry
+
+    // Processing modules
+    CloudProcessor cloud_processor_; // Process raw pointclouds
 
     // Publisher(s)
     CloudPublisher cloud_publisher_;
