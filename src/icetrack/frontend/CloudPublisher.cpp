@@ -1,68 +1,136 @@
 #include "frontend/CloudPublisher.h"
 
-CloudPublisher::CloudPublisher(ros::NodeHandle& nh, const FrameBuffer& frame_buffer) : frame_buffer_(frame_buffer){
-    initializePublisher(nh);
-    initializeMessage(nh);
+CloudPublisher::CloudPublisher(ros::NodeHandle& nh){
+    setupRawCloudPublisher(nh);
+    setupProcessedCloudPublisher(nh);
 }
 
-void CloudPublisher::initializePublisher(ros::NodeHandle& nh) {
-    int pub_queue_size = getParamOrThrow<int>(nh, "/cloud/pub_queue_size");
-    std::string pub_topic = getParamOrThrow<std::string>(nh, "/cloud/pub_topic");
-    cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(pub_topic, pub_queue_size);
-}
+void CloudPublisher::setupRawCloudPublisher(ros::NodeHandle& nh) {
+    // Publisher
+    std::string pub_topic = getParamOrThrow<std::string>(nh, "/raw_cloud_topic");
+    int pub_queue_size = getParamOrThrow<int>(nh, "/raw_cloud_queue_size_");
+    raw_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(pub_topic, pub_queue_size);
 
-void CloudPublisher::initializeMessage(ros::NodeHandle& nh) {
-    cloud_msg_.header.frame_id = "map";  // Publish in nav frame
-    cloud_msg_.height = 1;               // Unordered point cloud
-    cloud_msg_.is_dense = true;
-    cloud_msg_.is_bigendian = false;
+    // Message
+    raw_cloud_msg_.header.frame_id = "map";  // Publish in nav frame
+    raw_cloud_msg_.height = 1;               // Unordered point cloud
+    raw_cloud_msg_.is_dense = true;
+    raw_cloud_msg_.is_bigendian = false;
 
     // Define the fields
-    sensor_msgs::PointCloud2Modifier modifier(cloud_msg_);
+    sensor_msgs::PointCloud2Modifier modifier(raw_cloud_msg_);
+    modifier.setPointCloud2Fields(4, 
+        "x", 1, sensor_msgs::PointField::FLOAT32,
+        "y", 1, sensor_msgs::PointField::FLOAT32,
+        "z", 1, sensor_msgs::PointField::FLOAT32,
+        "i", 1, sensor_msgs::PointField::UINT8
+    );
+}
+
+void CloudPublisher::setupProcessedCloudPublisher(ros::NodeHandle& nh) {
+    // Publisher
+    std::string pub_topic = getParamOrThrow<std::string>(nh, "/processed_cloud_topic");
+    int pub_queue_size = getParamOrThrow<int>(nh, "/processed_cloud_queue_size_");
+    processed_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(pub_topic, pub_queue_size);
+
+    // Message
+    processed_cloud_msg_.header.frame_id = "map";  // Publish in nav frame
+    processed_cloud_msg_.height = 1;               // Unordered point cloud
+    processed_cloud_msg_.is_dense = true;
+    processed_cloud_msg_.is_bigendian = false;
+
+    // Define the fields
+    sensor_msgs::PointCloud2Modifier modifier(processed_cloud_msg_);
     modifier.setPointCloud2Fields(5, 
         "x", 1, sensor_msgs::PointField::FLOAT32,
         "y", 1, sensor_msgs::PointField::FLOAT32,
         "z", 1, sensor_msgs::PointField::FLOAT32,
-        "i", 1, sensor_msgs::PointField::UINT8,
-        "t", 1, sensor_msgs::PointField::FLOAT64
+        "d", 1, sensor_msgs::PointField::FLOAT32,
+        "i", 1, sensor_msgs::PointField::UINT8
     );
 }
 
-void CloudPublisher::fillMessage(){
+void CloudPublisher::publishRawCloud(const open3d::t::geometry::PointCloud& cloud){
+    if (raw_cloud_pub_.getNumSubscribers() == 0)
+        return; // No point
+
+    fillRawCloudMessage(cloud);
+    if (raw_cloud_msg_.width == 0.0)
+        return; // No points
+
+    raw_cloud_pub_.publish(raw_cloud_msg_);
+}
+
+void CloudPublisher::publishProcessedCloud(const open3d::t::geometry::PointCloud& cloud){
+    if (processed_cloud_pub_.getNumSubscribers() == 0)
+        return; // No point
+
+    fillProcessedCloudMessage(cloud);
+    if (processed_cloud_msg_.width == 0.0)
+        return; // No points
+
+    processed_cloud_pub_.publish(processed_cloud_msg_);
+}
+
+
+void CloudPublisher::fillRawCloudMessage(const open3d::t::geometry::PointCloud& cloud){
     // Metadata
-    cloud_msg_.header.stamp = ros::Time::now(); // Use latest timestamp
-    cloud_msg_.width = frame_buffer_.pointCount();
-    cloud_msg_.row_step = cloud_msg_.width*cloud_msg_.point_step;
-    cloud_msg_.data.resize(cloud_msg_.row_step);
+    raw_cloud_msg_.header.stamp = ros::Time::now(); // Use latest timestamp
+    raw_cloud_msg_.width = cloud.GetPointPositions().GetShape(0);
+    raw_cloud_msg_.row_step = raw_cloud_msg_.width*raw_cloud_msg_.point_step;
+    raw_cloud_msg_.data.resize(raw_cloud_msg_.row_step);
 
-    // Custom iterator for message
-    sensor_msgs::PointCloud2Iterator<PackedPointXYZIT> msg_it(cloud_msg_, "x");
-
-    // Iterate over all frames
-    for (auto frame = frame_buffer_.begin(); frame != frame_buffer_.end(); ++frame){
-        const auto& positions = frame->global();
-        const auto& intensities = frame->intensities();
-        const auto& timestamps = frame->timestamps();
-
-        // Iterate over all points in the frame
-        for (int i = 0; i < frame->size(); ++i, ++msg_it){
-            *msg_it = PackedPointXYZIT{
-                .pos = positions.col(i),
-                .i = intensities[i],
-                .t = timestamps[i]
-            };
-        }
+    // Get data pointers
+    const float* pos_ptr = cloud.GetPointPositions().Contiguous().GetDataPtr<float>();
+    const uint8_t* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<uint8_t>();
+    
+    // Iterate over the cloud and fill message
+    sensor_msgs::PointCloud2Iterator<PackedPointXYZI> msg_it(raw_cloud_msg_, "x");
+    for (size_t i = 0; i < raw_cloud_msg_.width; ++i) {
+        *msg_it = PackedPointXYZI{
+            pos_ptr[0],
+            pos_ptr[1],
+            pos_ptr[2],
+            intensity_ptr[0]
+        };
+        
+        // Increment
+        pos_ptr += 3;
+        ++intensity_ptr;
+        ++msg_it;
     }
 }
 
 
-void CloudPublisher::publishCloud(){
-    if (cloud_pub_.getNumSubscribers() == 0)
-        return; // No point
 
-    fillMessage();
-    if (cloud_msg_.width == 0.0)
-        return; // No points
 
-    cloud_pub_.publish(cloud_msg_);
+void CloudPublisher::fillProcessedCloudMessage(const open3d::t::geometry::PointCloud& cloud){
+    // Metadata
+    processed_cloud_msg_.header.stamp = ros::Time::now(); // Use latest timestamp
+    processed_cloud_msg_.width = cloud.GetPointPositions().GetShape(0);
+    processed_cloud_msg_.row_step = processed_cloud_msg_.width*processed_cloud_msg_.point_step;
+    processed_cloud_msg_.data.resize(processed_cloud_msg_.row_step);
+
+    // Get data pointers
+    const float* pos_ptr = cloud.GetPointPositions().Contiguous().GetDataPtr<float>();
+    const float* deformation_ptr = cloud.GetPointAttr("deformation").Contiguous().GetDataPtr<float>();
+    const uint8_t* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<uint8_t>();
+    
+    // Iterate over the cloud and fill message
+    sensor_msgs::PointCloud2Iterator<PackedPointXYZDI> msg_it(processed_cloud_msg_, "x");
+    for (size_t i = 0; i < processed_cloud_msg_.width; ++i) {
+        *msg_it = PackedPointXYZDI{
+            pos_ptr[0],
+            pos_ptr[1],
+            pos_ptr[2],
+            deformation_ptr[0],
+            intensity_ptr[0]
+        };
+        
+        // Increment
+        pos_ptr += 3;
+        ++deformation_ptr;
+        ++intensity_ptr;
+        ++msg_it;
+    }
 }

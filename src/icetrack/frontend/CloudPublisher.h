@@ -4,38 +4,52 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 
-#include "frontend/FrameBuffer.h"
+#include <open3d/t/geometry/PointCloud.h>
+
+#include "utils/ros_params.h"
 
 /*
-Abstraction to publish cloud messages based on the content of FrameBuffer
+Abstraction to publish cloud messages.
 */
 class CloudPublisher{
 public:
     // Constructor
-    CloudPublisher(ros::NodeHandle& nh, const FrameBuffer& frame_buffer);
+    CloudPublisher(ros::NodeHandle& nh);
 
     // Interface to publish cloud
-    void publishCloud();
+    void publishRawCloud(const open3d::t::geometry::PointCloud& cloud);
+    void publishProcessedCloud(const open3d::t::geometry::PointCloud& cloud);
 
 private:
-    // Frame buffer holds cloud frames, which are assembled to construct pointclouds
-    const FrameBuffer& frame_buffer_;
+    // Raw cloud
+    ros::Publisher raw_cloud_pub_;
+    sensor_msgs::PointCloud2 raw_cloud_msg_;  
 
-    // Publishing
-    ros::Publisher cloud_pub_;                              // Publishing object
-    sensor_msgs::PointCloud2 cloud_msg_;                    // Message to publish   
+    void setupRawCloudPublisher(ros::NodeHandle& nh);
+    void fillRawCloudMessage(const open3d::t::geometry::PointCloud& cloud); 
 
-    void initializePublisher(ros::NodeHandle& nh);          // Initialize cloud_pub_
-    void initializeMessage(ros::NodeHandle& nh);            // Initialize cloud_msg_
+    // Processed cloud
+    ros::Publisher processed_cloud_pub_;                
+    sensor_msgs::PointCloud2 processed_cloud_msg_; 
 
-    void fillMessage();                                     // Fill cloud_msg_
+    void setupProcessedCloudPublisher(ros::NodeHandle& nh);
+    void fillProcessedCloudMessage(const open3d::t::geometry::PointCloud& cloud);
 };
 
 // Defines the memory map of a point in the cloud message
 #pragma pack(push, 1)
-struct PackedPointXYZIT {
-    Eigen::Vector3f pos;
-    uint8_t i;
-    double t;
+struct PackedPointXYZI {
+    float x;
+    float y;
+    float z;
+    uint8_t intensity;
+};
+
+struct PackedPointXYZDI {
+    float x;
+    float y;
+    float z;
+    float deformation;
+    uint8_t intensity;
 };
 #pragma pack(pop)

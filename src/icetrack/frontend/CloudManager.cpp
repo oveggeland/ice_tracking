@@ -7,7 +7,7 @@ CloudManager::CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph) :
     surface_estimator_(nh, pose_graph, point_buffer_),
     odometry_estimator_(nh, pose_graph, frame_buffer_),
     cloud_processor_(nh),
-    cloud_publisher_(nh, frame_buffer_) {
+    cloud_publisher_(nh) {
 
     // Setup subscribers
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
@@ -39,22 +39,19 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
         odometry_estimator_.estimateOdometry(state_idx);
     }
 
-    // Process cloud
-    auto raw_cloud = frame_buffer_.getTensorCloud();
-    auto processed_cloud = cloud_processor_.processCloud(raw_cloud);
-
-    ROS_INFO_STREAM("raw cloud size is: " << getCloudSize(raw_cloud));
-    if (getCloudSize(raw_cloud) > 1.0e5) {
-        visualizeCloud(raw_cloud);
-        visualizeCloud(processed_cloud);
-        // Save cloud
-        // cloud_processor_.saveCloud(processed_cloud);
+    // If empty map, don't bother
+    if (frame_buffer_.size() == 0){
+        return;
     }
-    // cloud_publisher_.publishProcessed();
-    // cloud_publisher_.publishRaw();
-    
-    // Publish most recent cloud
-    // cloud_publisher_.publishCloud();
+
+    // Process cloud
+    if (state_idx % 10){
+        auto raw_cloud = frame_buffer_.getTensorCloud();
+        //cloud_publisher_.publishRawCloud(raw_cloud);
+        
+        auto processed_cloud = cloud_processor_.processCloud(raw_cloud);
+        cloud_publisher_.publishProcessedCloud(processed_cloud);
+    }
 }
 
 /*
