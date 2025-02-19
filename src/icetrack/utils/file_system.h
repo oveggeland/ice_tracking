@@ -27,7 +27,11 @@ inline void makePath(const std::string& path, bool clean = false) {
     }
 }
 
-// Joins two strings to form a valid path.
-inline std::string joinPath(const std::string& base, const std::string& sub) {
-    return (fs::path(base) / fs::path(sub)).string();
+// Joins multiple strings to form a valid path.
+inline std::string joinPaths(std::initializer_list<std::string> paths) {
+    fs::path result;
+    for (const auto& path : paths) {
+        result /= path;
+    }
+    return result.string();
 }

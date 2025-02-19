@@ -121,6 +121,11 @@ public:
     }
 
 private:
+    // Setup
+    void readParams(const ros::NodeHandle& nh);
+    void setupPublisher(ros::NodeHandle& nh);
+    void setupFileStream(const ros::NodeHandle& nh);
+
     // Initialization
     bool init_ = false;
 
@@ -159,13 +164,7 @@ private:
     Pose3 pose_;
     Point3 vel_ = Point3(0, 0, 0);
     imuBias::ConstantBias bias_;
-
-    bool estimate_lever_arm_ = true;
     Point3 lever_arm_ = Point3(0, 0, 0);
-
-    bool estimate_ice_drift_ = false;
-    Point2 ice_drift_ = Point2(0, 0);
-
 
     // General configuration parameters
     double initial_acc_bias_sigma_;

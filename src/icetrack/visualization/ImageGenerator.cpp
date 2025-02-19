@@ -1,7 +1,7 @@
 #include "visualization/ImageGenerator.h"
 
-ImageGenerator::ImageGenerator(ros::NodeHandle& nh, const LidarFrontEnd& lidar_front_end, const PoseGraph& pose_graph)
-    : nh_(nh), frame_buffer_(lidar_front_end.frameBuffer()), pose_graph_(pose_graph),
+ImageGenerator::ImageGenerator(ros::NodeHandle& nh, const CloudManager& cloud_manager, const PoseGraph& pose_graph)
+    : nh_(nh), frame_buffer_(cloud_manager.frameBuffer()), pose_graph_(pose_graph),
       camera_(getParamOrThrow<std::string>(nh, "int_file")) {
     // Load calibration
     bTc_ = bTc(getParamOrThrow<std::string>(nh, "ext_file"));

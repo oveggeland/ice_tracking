@@ -5,30 +5,38 @@ PoseGraph::PoseGraph(ros::NodeHandle& nh)
 
     // Initialize smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
-    smoother_ = BatchFixedLagSmoother(lag); // TODO: Isam?
+    smoother_ = BatchFixedLagSmoother(lag); // TODO: Isam2?
 
-    // General config
+    readParams(nh);
+    setupPublisher(nh);
+    setupFileStream(nh);
+}   
+
+void PoseGraph::readParams(const ros::NodeHandle& nh){
     getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);
     getParamOrThrow(nh, "/navigation/initial_gyro_bias_sigma", initial_gyro_bias_sigma_);
     
     getParamOrThrow(nh, "/navigation/lever_norm_threshold", lever_norm_threshold_);
     getParamOrThrow(nh, "/navigation/lever_norm_sigma", lever_norm_sigma_);
     getParamOrThrow(nh, "/navigation/lever_altitude_sigma", lever_altitude_sigma_);
-
-    // Output
-    std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
-    pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, 10);
-
-    // Outstream TODO: Switch to publisher logic?
-    fs::path outpath = getParamOrThrow<std::string>(nh, "/outpath");
-    std::string nav_path = outpath / "navigation" / "ins.csv";
-    makePath(nav_path);
-
-    f_out_ = std::ofstream(nav_path);
-    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz,Dx,Dy";
-    f_out_ << std::endl << std::fixed; 
 }
 
+void PoseGraph::setupPublisher(ros::NodeHandle& nh){
+    std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
+    pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, 10);
+}
+
+
+void PoseGraph::setupFileStream(const ros::NodeHandle& nh){
+    std::string ws = getParamOrThrow<std::string>(nh, "/workspace");
+    std::string exp = getParamOrThrow<std::string>(nh, "/exp");
+    std::string fpath = joinPaths({ws, exp, "navigation", "state.csv"});
+    makePath(fpath);
+
+    f_out_ = std::ofstream(fpath);
+    f_out_ << "ts,x,y,z,vx,vy,vz,roll,pitch,yaw,bax,bay,baz,bgx,bgy,bgz,Lx,Ly,Lz";
+    f_out_ << std::endl << std::fixed; 
+}
 
 void PoseGraph::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     // Integrate new measurement
@@ -69,15 +77,8 @@ void PoseGraph::odometryCallback(int idx0, int idx1, Eigen::Matrix4d T_align){
         (Vector6() << Vector3::Constant(0.1), Vector3::Constant(2.0)).finished()
     );
 
-    if (estimate_ice_drift_){
-        double dt = getTimeStamp(idx1) - getTimeStamp(idx0);
-        auto odom_factor = IceOdometryFactor(X(idx0), X(idx1), D(idx0), Pose3(T_align), dt, noise_model);
-        factors_.add(odom_factor);
-    }
-    else{
-        auto odom_factor = BetweenFactor<Pose3>(X(idx0), X(idx1), Pose3(T_align), noise_model);
-        factors_.add(odom_factor);
-    }
+    auto odom_factor = BetweenFactor<Pose3>(X(idx0), X(idx1), Pose3(T_align), noise_model);
+    factors_.add(odom_factor);
 }
 
 void PoseGraph::surfaceCallback(int state_idx, const Eigen::Vector4d& plane_coeffs){
@@ -149,11 +150,6 @@ void PoseGraph::addPriors(int idx){
 
     auto lever_norm_factor = NormConstraintFactor(L(0), lever_norm_threshold_, noiseModel::Isotropic::Sigma(1, lever_norm_sigma_));
     factors_.add(lever_norm_factor);
-
-    // Drift prior
-    if (estimate_ice_drift_){
-        factors_.addPrior(D(idx), ice_drift_, noiseModel::Isotropic::Sigma(2, 2));
-    }
 }
 
 void PoseGraph::initializeState(){
@@ -178,9 +174,6 @@ void PoseGraph::updateState(int idx){
     vel_ = smoother_.calculateEstimate<Point3>(V(idx));
     bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(idx));
     lever_arm_ = smoother_.calculateEstimate<Point3>(L(0));
-
-    if (estimate_ice_drift_)
-        ice_drift_ = smoother_.calculateEstimate<Point2>(D(idx));
 }
 
 void PoseGraph::updateValues(int idx){
@@ -191,18 +184,12 @@ void PoseGraph::updateValues(int idx){
 
     if (!init_)
         values_.insert(L(0), lever_arm_);
-
-    if (estimate_ice_drift_)
-        values_.insert(D(idx), ice_drift_);
 }
 
 void PoseGraph::updateTimeStamps(int idx, double ts){
     stamps_[X(idx)] = ts;
     stamps_[V(idx)] = ts;
     stamps_[B(idx)] = ts;
-
-    if (estimate_ice_drift_)
-        stamps_[D(idx)] = ts;
 }
 
 void PoseGraph::updateFactors(int idx, double ts){
@@ -213,15 +200,6 @@ void PoseGraph::updateFactors(int idx, double ts){
     // Imu integration
     auto imu_factor = imu_integration_.getIntegrationFactor(idx);
     factors_.add(imu_factor);
-
-    // Drift estimation
-    if (estimate_ice_drift_){
-        double dt = ts - ts_;
-        auto noise = noiseModel::Isotropic::Sigma(2, 0.05*dt);
-
-        auto cv_factor = BetweenFactor<Point2>(D(idx-1), D(idx), Point2(0, 0), noise);
-        factors_.add(cv_factor);
-    }
 }
 
 void PoseGraph::updateSmoother(){
@@ -252,6 +230,5 @@ void PoseGraph::writeToFile(){
     f_out_ << bias_.accelerometer()[0] << "," << bias_.accelerometer()[1] << "," << bias_.accelerometer()[2] << ",";
     f_out_ << bias_.gyroscope()[0] << "," << bias_.gyroscope()[1] << "," << bias_.gyroscope()[2];
     f_out_ << "," << lever_arm_.x() << "," << lever_arm_.y() << "," << lever_arm_.z();
-    f_out_ << "," << ice_drift_.x() << "," << ice_drift_.y();
     f_out_ << std::endl;
 }

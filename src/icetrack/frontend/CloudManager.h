@@ -18,10 +18,10 @@
 /*
 Main class of the front end. Reactive logic based on pose and lidar callbacks. 
 */
-class LidarFrontEnd{
+class CloudManager {
 public:
     // Constructor
-    LidarFrontEnd(ros::NodeHandle& nh, PoseGraph& pose_graph);
+    CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph);
 
     // Interface for events
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
@@ -50,5 +50,6 @@ private:
     CloudPublisher cloud_publisher_;
 
     // Subscriber(s)
+    ros::Subscriber lidar_sub_;
     ros::Subscriber pose_sub_;
 };

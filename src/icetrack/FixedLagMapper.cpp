@@ -1,10 +1,16 @@
 #include "FixedLagMapper.h"
 
-FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh) : pose_graph_(nh), lidar_front_end_(nh, pose_graph_), image_generator_(nh, lidar_front_end_, pose_graph_){
+FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh) 
+    : pose_graph_(nh), 
+    cloud_manager_(nh, pose_graph_), 
+    image_generator_(nh, cloud_manager_, pose_graph_) {
     // Setup callback sequencer
     sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
+    setupSubscribers(nh);
+}
 
-    // Setup subscribers
+
+void FixedLagMapper::setupSubscribers(ros::NodeHandle& nh){
     std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
     std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");
@@ -23,30 +29,35 @@ FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh) : pose_graph_(nh), lidar_fro
 
 
 // Subscriber callbacks. All we do is add the callbacks to the sequencer to assert chronological order of messages
-void FixedLagMapper::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
+void FixedLagMapper::imuCallback(const sensor_msgs::Imu::ConstPtr& msg) {
     sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&FixedLagMapper::imuSafeCallback, this, msg));
 }
-void FixedLagMapper::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+
+void FixedLagMapper::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
     sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&FixedLagMapper::gnssSafeCallback, this, msg));
 }
-void FixedLagMapper::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+
+void FixedLagMapper::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {
     sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&FixedLagMapper::lidarSafeCallback, this, msg));
 }
-void FixedLagMapper::imageCallback(const sensor_msgs::Image::ConstPtr& msg){
+
+void FixedLagMapper::imageCallback(const sensor_msgs::Image::ConstPtr& msg) {
     sequencer_.addCallback(msg->header.stamp.toSec(), std::bind(&FixedLagMapper::imageSafeCallback, this, msg));
 }
 
-
 // Sequenced "safe" callbacks. These will always be called in chronological order according to message timestamps. 
-void FixedLagMapper::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg){
+void FixedLagMapper::imuSafeCallback(const sensor_msgs::Imu::ConstPtr& msg) {
     pose_graph_.imuCallback(msg);
 }
-void FixedLagMapper::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
+
+void FixedLagMapper::gnssSafeCallback(const sensor_msgs::NavSatFix::ConstPtr& msg) {
     pose_graph_.gnssCallback(msg);
 }
-void FixedLagMapper::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
-    lidar_front_end_.lidarCallback(msg);
+
+void FixedLagMapper::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {
+    cloud_manager_.lidarCallback(msg);
 }
-void FixedLagMapper::imageSafeCallback(const sensor_msgs::Image::ConstPtr& msg){
+
+void FixedLagMapper::imageSafeCallback(const sensor_msgs::Image::ConstPtr& msg) {
     image_generator_.imageCallback(msg);
 }

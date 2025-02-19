@@ -9,8 +9,9 @@ CloudProcessor::CloudProcessor(const ros::NodeHandle& nh){
     // Save clouds
     getParamOrThrow(nh, "/mapping/save_clouds", save_clouds_);
     if (save_clouds_){
-        std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
-        cloud_path_ = joinPath(outpath, "clouds/");
+        std::string ws = getParamOrThrow<std::string>(nh, "/workspace");
+        std::string exp = getParamOrThrow<std::string>(nh, "/exp");
+        cloud_path_ = joinPaths({ws, exp, "clouds/"});
         makePath(cloud_path_, true);
     }
 }
@@ -154,7 +155,7 @@ void CloudProcessor::estimatePlaneDeviations(open3d::t::geometry::PointCloud& pc
 void CloudProcessor::saveCloud(const open3d::t::geometry::PointCloud& pcd) const{
     std::stringstream fname;
     fname << std::fixed << static_cast<int>(ros::Time::now().toSec()) << ".ply";
-    std::string fpath = joinPath(cloud_path_, fname.str());
+    std::string fpath = joinPaths({cloud_path_, fname.str()});
 
     // Save the point cloud as a .ply file
     if (open3d::t::io::WritePointCloud(fpath, pcd))

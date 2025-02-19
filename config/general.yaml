@@ -1,18 +1,20 @@
-# Files
-bagpath: "/home/oskar/icetrack/data/long3/"
-outpath: "/home/oskar/icetrack/output/test/"
+# Data and experiment folders
+workspace: "/home/oskar/icetrack/workspace/long3"
+exp: "test"
 
+# Calibration files
 int_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/int_right.yaml"
 ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
 
-# Topics
+# Topic definitions
 imu_topic: "/arduino_node/imu"
 gnss_topic: "/arduino_node/gnss"
 lidar_topic: "/livox_lidar_node/pointcloud2"
 image_topic: "/blackfly_node/image"
 
 pose_topic: "/fixed_lag_mapper/pose"
-cloud_topic: "/fixed_lag_mapper/cloud"
+raw_cloud_topic: "/fixed_lag_mapper/raw_cloud"
+processed_cloud_topic: "/fixed_lag_mapper/processed_cloud"
 
 imu_queue_size: 2000
 gnss_queue_size: 10
@@ -20,7 +22,8 @@ lidar_queue_size: 100
 image_queue_size: 10
 
 pose_queue_size: 10
-cloud_queue_size: 10
+raw_cloud_queue_size_: 10
+processed_cloud_queue_size_: 10
 
 max_publish_rate: 20 # For fixed rate node
 
@@ -50,11 +53,11 @@ lidar_odometry/icp_min_fitness: 0.8
 
 
 # Image stuff
-image_generator/enabled: true
+image_generator/enabled: false
 image_generator/display: true
 image_generator/topic: "/viz/image"
 image_generator/delay: 5.0
-image_generator/offset: 0.5
+image_generator/offset: 1.0
 
 
 cloud/pub_queue_size: 10

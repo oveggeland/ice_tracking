@@ -9,7 +9,7 @@
 
 #include "backend/PoseGraph.h"
 
-#include "frontend/LidarFrontEnd.h"
+#include "frontend/CloudManager.h"
 #include "frontend/FrameBuffer.h"
 
 #include "visualization/Camera.h"
@@ -21,7 +21,7 @@
 
 class ImageGenerator {
 public:
-    ImageGenerator(ros::NodeHandle& nh, const LidarFrontEnd& lidar_front_end, const PoseGraph& pose_graph);
+    ImageGenerator(ros::NodeHandle& nh, const CloudManager& cloud_manager, const PoseGraph& pose_graph);
 
     // Interface
     void imageCallback(const sensor_msgs::Image::ConstPtr& msg);

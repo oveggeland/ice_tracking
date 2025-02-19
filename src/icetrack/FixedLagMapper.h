@@ -7,23 +7,26 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Image.h>
 
-#include "frontend/LidarFrontEnd.h"
+#include "frontend/CloudManager.h"
 #include "backend/PoseGraph.h"
 #include "visualization/ImageGenerator.h"
 
 #include "utils/CallbackSequencer.h"
 
-class FixedLagMapper{
+class FixedLagMapper {
 public:
     FixedLagMapper(ros::NodeHandle& nh);
 
 private:
+    // Setup   
+    void setupSubscribers(ros::NodeHandle& nh);
+    
     // Main modules
     PoseGraph pose_graph_;
-    LidarFrontEnd lidar_front_end_;
+    CloudManager cloud_manager_;
     ImageGenerator image_generator_;
 
-    // Subscribers and subscriber callbacks
+    // Subscribers and callbacks
     ros::Subscriber imu_sub_;
     ros::Subscriber gnss_sub_;
     ros::Subscriber lidar_sub_;

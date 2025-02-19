@@ -21,12 +21,14 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
 
     // Start profiler
-    std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
-    std::string profile_path = std::filesystem::path(outpath) / "rosbag_node.profile";
+    std::string ws = getParamOrThrow<std::string>(nh, "/workspace");
+    std::string exp = getParamOrThrow<std::string>(nh, "/exp");
+    std::string profile_path = joinPaths({ws, exp, "rosbag_node.profile"});
+    makePath(profile_path);
     ProfilerStart(profile_path.c_str());
 
     // Get parameters for the bag path and topic names
-    std::string bagpath = getParamOrThrow<std::string>(nh, "/bagpath");
+    std::string bagpath = joinPaths({ws, "bags"});
     std::string imu_topic = getParamOrThrow<std::string>(nh, "/imu_topic");
     std::string gnss_topic = getParamOrThrow<std::string>(nh, "/gnss_topic");
     std::string lidar_topic = getParamOrThrow<std::string>(nh, "/lidar_topic");

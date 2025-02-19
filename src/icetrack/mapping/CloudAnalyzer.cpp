@@ -4,7 +4,7 @@ CloudAnalyzer::CloudAnalyzer(const ros::NodeHandle& nh){
     getParamOrThrow(nh, "/mapping/save_stats", save_stats_);
     if (save_stats_){
         std::string outpath = getParamOrThrow<std::string>(nh, "/outpath");
-        std::string stats_path = joinPath(outpath, "cloud_stats/stats.csv");
+        std::string stats_path = joinPaths({outpath, "cloud_stats/stats.csv"});
         makePath(stats_path, true);
 
         f_out_ = std::ofstream(stats_path);
