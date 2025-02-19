@@ -58,6 +58,47 @@ std::vector<bool> ImageGenerator::getInliers(const Eigen::Matrix3Xf& r_cam, cons
     return inliers;
 }
 
+// Crop to [0, 255] and apply colormap. Clip values to min and max if provided.
+cv::Mat getColorMap(const Eigen::VectorXf& values, int color_map, float min = NAN, float max = NAN) {
+    // Use provided min/max if valid, otherwise compute from values
+    float min_val = std::isnan(min) ? values.minCoeff() : min;
+    float max_val = std::isnan(max) ? values.maxCoeff() : max;
+
+    // Prevent division by zero (if all values are the same)
+    if (max_val == min_val) {
+        max_val += 1.0f;
+    }
+
+    // Normalize values to [0, 1] within the given range
+    Eigen::VectorXf normalized = ((values.array() - min_val) / (max_val - min_val)).cwiseMax(0.0f).cwiseMin(1.0f);
+
+    // Convert to OpenCV grayscale format [0, 255]
+    cv::Mat grayscale(1, values.size(), CV_8UC1);
+    for (int i = 0; i < values.size(); ++i) {
+        grayscale.at<uint8_t>(0, i) = static_cast<uint8_t>(normalized(i) * 255.0f);
+    }
+
+    // Apply colormap
+    cv::Mat colored;
+    cv::applyColorMap(grayscale, colored, color_map);
+    
+    return colored;
+}
+
+cv::Mat drawProjection(const Eigen::Matrix2Xf uv, const std::vector<bool> inliers, const cv::Mat& colors, int w, int h){
+    cv::Mat img = cv::Mat::zeros(h, w, CV_8UC3);
+    for (int i = 0; i < uv.cols(); ++i) {
+        if (inliers[i]) {
+            cv::Vec3b color = colors.at<cv::Vec3b>(0, i); // Extract color from colormap
+            cv::Scalar c(color[0], color[1], color[2]);
+
+            // Draw circle using the extracted color
+            cv::circle(img, cv::Point2f(uv(0, i), uv(1, i)), 5, c, -1);
+        }
+    }
+    return img;
+}
+
 void ImageGenerator::processImage(double t_img, cv::Mat& img){
     // Pop timer
     timer_buffer_.erase(t_img);
@@ -72,6 +113,9 @@ void ImageGenerator::processImage(double t_img, cv::Mat& img){
     double t1 = t_img + offset_;
     CloudFrame::Ptr frame = frame_buffer_.getPoints(t0, t1, false, true, true, true);
 
+    if (frame->empty())
+        return;
+        
     // Project points
     const Eigen::Matrix3Xf r_world = frame->global();
     const Eigen::Matrix3Xf r_cam = (cTw.topLeftCorner<3, 3>() * r_world).colwise() + cTw.topRightCorner<3, 1>();
@@ -79,10 +123,33 @@ void ImageGenerator::processImage(double t_img, cv::Mat& img){
 
     // Find inliers
     const std::vector<bool> inliers = getInliers(r_cam, uv);
+    
+    // Make elevation image
+    Eigen::VectorXf elevation = -r_world.row(2);
+    auto elev_colors = getColorMap(elevation, cv::COLORMAP_JET, -1.0, 3.0);
+    auto img_elev = drawProjection(uv, inliers, elev_colors, img.cols, img.rows);
 
-    // Draw points
-    drawPoints(img, uv, inliers);
-    publishImage(t_img, img);
+    cv::Mat elev_blend;
+    cv::addWeighted(img, 1, img_elev, 0.5, 0, elev_blend);
+
+    // Make intensity image
+    Eigen::VectorXf intensities = frame->intensities().cast<float>();
+    auto intensity_colors = getColorMap(intensities, cv::COLORMAP_COOL, 0, 50);
+    auto img_intensity = drawProjection(uv, inliers, intensity_colors, img.cols, img.rows);
+
+    cv::Mat intensity_blend;
+    cv::addWeighted(img, 1, img_intensity, 0.5, 0, intensity_blend);
+
+    // Stack images (img, img_elev, img_intensity)
+    cv::Mat stacked_img;
+    cv::hconcat(img, elev_blend, stacked_img);
+    cv::hconcat(stacked_img, intensity_blend, stacked_img);
+
+    // Resize image
+    cv::resize(stacked_img, stacked_img, cv::Size(), 0.5, 0.5);
+
+    // Publish images
+    publishImage(t_img, stacked_img);
 }
 
 // Main entry point. Unpack the image and schedule processing. 

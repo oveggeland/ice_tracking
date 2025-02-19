@@ -46,6 +46,8 @@ public:
     // Accessors
     bool isInit() const { return init_; }
     bool inRange(double ts) const {
+        if (smoother_.timestamps().empty())
+            return false;
         return ts > smoother_.timestamps().begin()->second && ts < smoother_.timestamps().rbegin()->second;
     }
     bool exists(int idx) const { return smoother_.getLinearizationPoint().exists(X(idx)); }
