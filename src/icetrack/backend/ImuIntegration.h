@@ -20,7 +20,8 @@ class ImuIntegration{
         void finishIntegration(double ts);
         void resetIntegration(double ts, imuBias::ConstantBias bias);
 
-        NavState predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias) const;
+        void predictState(PoseGraphState& state) const;
+
         bool timeOut() const { return (ts_head_ - ts_tail_) > timeout_interval_; };
 
         CombinedImuFactor getIntegrationFactor(int state_idx);

@@ -41,9 +41,9 @@ public:
     bool exists(int idx) const { return smoother_.getLinearizationPoint().exists(X(idx)); }
 
 
-    int getCurrentStateIdx() const { return state_idx_; }
-    double getCurrentTimeStamp() const { return ts_; }
-    const Pose3& getCurrentPose() const { return pose_; }
+    int getCurrentStateIdx() const { return state_.idx; }
+    double getCurrentTimeStamp() const { return state_.ts; }
+    const Pose3& getCurrentPose() const { return state_.pose; }
 
     double getTimeStamp(int idx) const { return smoother_.timestamps().at(X(idx)); }
     Pose3 getPose(int idx) const { return smoother_.calculateEstimate<Pose3>(X(idx)); }
@@ -108,13 +108,9 @@ private:
     bool init_ = false;
 
     void initialize();
-
-    // State 
-    int state_idx_ = 0;
-
     void initializeState();
+    
     void addState(double ts);
-    void predictState(double ts);
     void updateState(int idx);
 
     // Graph 
@@ -137,14 +133,8 @@ private:
     GnssCorrection gnss_correction_;
     SurfaceCorrection surface_correction_;
 
-    // State definition
+    // Defines "current state"
     PoseGraphState state_;
-
-    double ts_ = 0.0;
-    Pose3 pose_;
-    Point3 vel_ = Point3(0, 0, 0);
-    imuBias::ConstantBias bias_;
-    Point3 lever_arm_ = Point3(0, 0, 0);
 
     // General configuration parameters
     double initial_acc_bias_sigma_;

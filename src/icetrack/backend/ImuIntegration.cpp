@@ -84,8 +84,10 @@ CombinedImuFactor ImuIntegration::getIntegrationFactor(int state_idx){
         preint_imu);
 }
 
-NavState ImuIntegration::predict(Pose3 pose, Point3 vel, imuBias::ConstantBias bias) const{
-    return preintegration_->predict(NavState(pose, vel), bias);
+void ImuIntegration::predictState(PoseGraphState& state) const{
+    NavState pred = preintegration_->predict(NavState(state.pose, state.velocity), state.bias);
+    state.pose = pred.pose();
+    state.velocity = pred.velocity();
 }
 
 // Estimate attitude from last acceleration measurement

@@ -42,15 +42,15 @@ void PoseGraph::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
 
     if (init_){
         // Woho! add factor and update
-        auto gnss_factor = gnss_correction_.getCorrectionFactor(X(state_idx_+1));
+        auto gnss_factor = gnss_correction_.getCorrectionFactor(X(state_.idx+1));
         factors_.add(gnss_factor);
 
         addState(ts);
     }
     else{
         // Reset IMU and wait for planeFitCallback to finish initialization
-        imu_integration_.resetIntegration(ts, bias_);
-        ts_ = ts;
+        imu_integration_.resetIntegration(ts, state_.bias);
+        state_.ts = ts;
     }
 }
 
@@ -75,36 +75,38 @@ void PoseGraph::surfaceCallback(int state_idx, const Eigen::Vector4d& plane_coef
 }
 
 void PoseGraph::initialize(){
-    ROS_INFO_STREAM("Initialize pose graph at " << std::fixed << ts_);
+    ROS_INFO_STREAM("Initialize pose graph at " << std::fixed << state_.ts);
     initializeState();
 
     updateValues(0);
-    updateTimeStamps(0, ts_);
+    updateTimeStamps(0, state_.ts);
     addPriors(0);
 
-    state_idx_ = 0;
+    state_.idx = 0;
     init_ = true;
 }
 
 
 void PoseGraph::addState(double ts){
-    state_idx_++;
-    ROS_INFO_STREAM("Add state " << state_idx_);
+    state_.idx++;
+    ROS_INFO_STREAM("Add state " << state_.idx);
 
-    // Extrapolate IMU integration to 'ts'
+    // Finish integration and predict state
     imu_integration_.finishIntegration(ts);
+    imu_integration_.predictState(state_);
 
-    // Predict-update cycle
-    predictState(ts);
-    updateTimeStamps(state_idx_, ts);
-    updateValues(state_idx_);
-    updateFactors(state_idx_, ts);
+    // Update a whole bunch of shit
+    updateTimeStamps(state_.idx, ts);
+    updateValues(state_.idx);
+    updateFactors(state_.idx, ts);
+
+    // Update pose graph and current state
     updateSmoother();
-    updateState(state_idx_);
+    updateState(state_.idx);
 
     // Reset integration
-    imu_integration_.resetIntegration(ts, bias_);
-    ts_ = ts;
+    imu_integration_.resetIntegration(ts, state_.bias);
+    state_.ts = ts;
     
     // Output pose
     pose_graph_output_.outputState(state_);
@@ -123,7 +125,7 @@ void PoseGraph::addPriors(int idx){
     auto initial_bias_noise = noiseModel::Diagonal::Sigmas(
         (Vector6() << Vector::Constant(3, initial_acc_bias_sigma_), Vector::Constant(3, initial_gyro_bias_sigma_)).finished()
     );
-    factors_.addPrior(B(idx), bias_, initial_bias_noise);
+    factors_.addPrior(B(idx), state_.bias, initial_bias_noise);
 
     // Lever arm priors
     auto levered_factor = LeveredAltitudeFactor(X(idx), L(0), noiseModel::Isotropic::Sigma(1, lever_altitude_sigma_));
@@ -133,38 +135,36 @@ void PoseGraph::addPriors(int idx){
     factors_.add(lever_norm_factor);
 }
 
+
 void PoseGraph::initializeState(){
     Point2 xy = gnss_correction_.getPosition();
     double z = -surface_correction_.getSurfaceDistance();
-    pose_ = Pose3(
+    state_.pose = Pose3(
         imu_integration_.estimateAttitude(), 
         Point3(xy.x(), xy.y(), z)
     );
+    
+    state_.velocity = Vector3::Zero();
+    state_.bias = imuBias::ConstantBias();
 
-    lever_arm_ = pose_.rotation().inverse().rotate(Point3(0, 0, -z));
-}
-
-void PoseGraph::predictState(double ts){
-    NavState pred_state = imu_integration_.predict(pose_, vel_, bias_);
-    pose_ = pred_state.pose();
-    vel_ = pred_state.velocity();
+    state_.lever_arm = state_.pose.rotation().inverse().rotate(Point3(0, 0, -z));
 }
 
 void PoseGraph::updateState(int idx){
-    pose_ = smoother_.calculateEstimate<Pose3>(X(idx));
-    vel_ = smoother_.calculateEstimate<Point3>(V(idx));
-    bias_ = smoother_.calculateEstimate<imuBias::ConstantBias>(B(idx));
-    lever_arm_ = smoother_.calculateEstimate<Point3>(L(0));
+    state_.pose = smoother_.calculateEstimate<Pose3>(X(idx));
+    state_.velocity = smoother_.calculateEstimate<Point3>(V(idx));
+    state_.bias = smoother_.calculateEstimate<imuBias::ConstantBias>(B(idx));
+    state_.lever_arm = smoother_.calculateEstimate<Point3>(L(0));
 }
 
 void PoseGraph::updateValues(int idx){
     // Add to predictions to values_
-    values_.insert(X(idx), pose_);
-    values_.insert(V(idx), vel_);
-    values_.insert(B(idx), bias_);
+    values_.insert(X(idx), state_.pose);
+    values_.insert(V(idx), state_.velocity);
+    values_.insert(B(idx), state_.bias);
 
     if (!init_)
-        values_.insert(L(0), lever_arm_);
+        values_.insert(L(0), state_.lever_arm);
 }
 
 void PoseGraph::updateTimeStamps(int idx, double ts){
