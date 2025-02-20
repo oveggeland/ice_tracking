@@ -9,7 +9,6 @@ FrameBuffer::FrameBuffer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const
 
 // Add a frame associated with state "idx"
 bool FrameBuffer::createFrame(int idx){
-    ROS_INFO_STREAM("Create frame " << idx);
     double t0, t1;
     gtsam::Pose3 pose0, pose1;
     
@@ -53,9 +52,6 @@ bool FrameBuffer::createFrame(int idx){
     }
 
     frame.downSample(1.0);
-    if (num_points > 10000)
-        frame.show();
-
     frame.setTransform(pose1.matrix());
 
     point_count_ += frame.size();

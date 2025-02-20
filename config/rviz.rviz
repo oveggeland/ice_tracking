@@ -7,9 +7,9 @@ Panels:
         - /Global Options1
         - /Status1
         - /PointCloud21
-        - /PointCloud21/Status1
-        - /Pose1
-        - /TF1
+        - /TF1/Tree1
+        - /PointCloud22
+        - /PointCloud22/Autocompute Value Bounds1
       Splitter Ratio: 0.5
     Tree Height: 1079
   - Class: rviz/Selection
@@ -47,7 +47,7 @@ Visualization Manager:
       Channel Name: d
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: Intensity
+      Color Transformer: ""
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -56,33 +56,17 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: PointCloud2
-      Position Transformer: XYZ
+      Position Transformer: ""
       Queue Size: 10
-      Selectable: true
+      Selectable: false
       Size (Pixels): 3
       Size (m): 0.20000000298023224
-      Style: Flat Squares
+      Style: Points
       Topic: /fixed_lag_mapper/processed_cloud
-      Unreliable: false
+      Unreliable: true
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
-      Class: rviz/Pose
-      Color: 255; 25; 0
-      Enabled: false
-      Head Length: 0.30000001192092896
-      Head Radius: 0.10000000149011612
-      Name: Pose
-      Queue Size: 10
-      Shaft Length: 1
-      Shaft Radius: 3
-      Shape: Axes
-      Topic: /fixed_lag_mapper/pose
-      Unreliable: false
-      Value: false
     - Class: rviz/TF
       Enabled: true
       Filter (blacklist): ""
@@ -90,9 +74,9 @@ Visualization Manager:
       Frame Timeout: 1
       Frames:
         All Enabled: true
-        map:
+        body:
           Value: true
-        vehicle_pose:
+        map:
           Value: true
       Marker Alpha: 1
       Marker Scale: 10
@@ -102,9 +86,39 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
-          vehicle_pose:
+          body:
             {}
       Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: false
+      Autocompute Value Bounds:
+        Max Value: 1
+        Min Value: -3
+        Value: false
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: AxisColor
+      Decay Time: 10
+      Enabled: true
+      Invert Rainbow: true
+      Max Color: 255; 255; 255
+      Max Intensity: 50
+      Min Color: 0; 0; 0
+      Min Intensity: 5
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.20000000298023224
+      Style: Flat Squares
+      Topic: /fixed_lag_mapper/raw_cloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
   Enabled: true
   Global Options:
@@ -134,7 +148,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 77.14120483398438
+      Distance: 63.225990295410156
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -142,17 +156,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -10.585038185119629
-        Y: 22.217628479003906
-        Z: -8.591766345489305e-06
+        X: -8.236745834350586
+        Y: 0.6309206485748291
+        Z: -3.814697265625e-06
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: true
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.37539857625961304
-      Target Frame: vehicle_pose
-      Yaw: 3.5535807609558105
+      Pitch: 0.47039949893951416
+      Target Frame: body
+      Yaw: 3.060396671295166
     Saved: ~
 Window Geometry:
   Displays:

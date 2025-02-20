@@ -23,7 +23,7 @@ void CloudPublisher::setupRawCloudPublisher(ros::NodeHandle& nh) {
         "x", 1, sensor_msgs::PointField::FLOAT32,
         "y", 1, sensor_msgs::PointField::FLOAT32,
         "z", 1, sensor_msgs::PointField::FLOAT32,
-        "i", 1, sensor_msgs::PointField::FLOAT32
+        "intensity", 1, sensor_msgs::PointField::FLOAT32
     );
 }
 
@@ -45,16 +45,16 @@ void CloudPublisher::setupProcessedCloudPublisher(ros::NodeHandle& nh) {
         "x", 1, sensor_msgs::PointField::FLOAT32,
         "y", 1, sensor_msgs::PointField::FLOAT32,
         "z", 1, sensor_msgs::PointField::FLOAT32,
-        "d", 1, sensor_msgs::PointField::FLOAT32,
-        "i", 1, sensor_msgs::PointField::FLOAT32
+        "deformation", 1, sensor_msgs::PointField::FLOAT32,
+        "intensity", 1, sensor_msgs::PointField::FLOAT32
     );
 }
 
-void CloudPublisher::publishRawCloud(const open3d::t::geometry::PointCloud& cloud){
+void CloudPublisher::publishRawCloud(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities){
     if (raw_cloud_pub_.getNumSubscribers() == 0)
         return; // No point
 
-    fillRawCloudMessage(cloud);
+    fillRawCloudMessage(positions, intensities);
     if (raw_cloud_msg_.width == 0.0)
         return; // No points
 
@@ -73,31 +73,20 @@ void CloudPublisher::publishProcessedCloud(const open3d::t::geometry::PointCloud
 }
 
 
-void CloudPublisher::fillRawCloudMessage(const open3d::t::geometry::PointCloud& cloud){
+void CloudPublisher::fillRawCloudMessage(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities){
     // Metadata
     raw_cloud_msg_.header.stamp = ros::Time::now(); // Use latest timestamp
-    raw_cloud_msg_.width = cloud.GetPointPositions().GetShape(0);
+    raw_cloud_msg_.width = positions.size();
     raw_cloud_msg_.row_step = raw_cloud_msg_.width*raw_cloud_msg_.point_step;
     raw_cloud_msg_.data.resize(raw_cloud_msg_.row_step);
 
-    // Get data pointers
-    const float* pos_ptr = cloud.GetPointPositions().Contiguous().GetDataPtr<float>();
-    const float* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<float>();
-    
     // Iterate over the cloud and fill message
     sensor_msgs::PointCloud2Iterator<PackedPointXYZI> msg_it(raw_cloud_msg_, "x");
-    for (size_t i = 0; i < raw_cloud_msg_.width; ++i) {
+    for (size_t i = 0; i < raw_cloud_msg_.width; ++i, ++msg_it) {
         *msg_it = PackedPointXYZI{
-            pos_ptr[0],
-            pos_ptr[1],
-            pos_ptr[2],
-            intensity_ptr[0]
+            positions[i].cast<float>(),
+            intensities[i]
         };
-        
-        // Increment
-        pos_ptr += 3;
-        ++intensity_ptr;
-        ++msg_it;
     }
 }
 

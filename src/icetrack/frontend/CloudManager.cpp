@@ -34,10 +34,22 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     frame_buffer_.removeOldFrames();
     frame_buffer_.refineFrames();
 
-    // Create a new frame, if successful, perform lidar odometry
-    if (frame_buffer_.createFrame(state_idx)) {
-        // odometry_estimator_.estimateOdometry(state_idx);
+    // Create a new frame, return true on success
+    if (frame_buffer_.createFrame(state_idx)){
+        // Do odometry once in a while
+        int odometry_interval_ = 5;
+        if (state_idx % odometry_interval_ == 0)
+            odometry_estimator_.estimateOdometry(state_idx);
+        
+        // Potentially publish the new frame
+        bool publish_raw_ = true;
+        if (publish_raw_){
+            auto frame = frame_buffer_.back();
+            cloud_publisher_.publishRawCloud(frame.global()->points_, frame.intensities());
+        }
+    }
 
+    // 
         // Get frame cloud and process    
         // auto cloud = frame_buffer_.back().toCloud().ToLegacy();
         // if (getCloudSize(cloud) > 100){
@@ -52,7 +64,7 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
         //     ROS_INFO_STREAM(cloud_ptr->points_.at(0));
             //cloud_publisher_.publishRawCloud(processed_cloud);
         //}
-    }
+
 
     // Process cloud
     // if (state_idx % 1 == 0){

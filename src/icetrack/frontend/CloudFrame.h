@@ -34,6 +34,8 @@ public:
     inline const open3d::geometry::PointCloud& local() const { return cloud_; }
     inline const std::vector<float>& intensities() const { return intensities_; }
     inline const std::vector<double>& timestamps() const { return timestamps_; }
+    std::shared_ptr<open3d::geometry::PointCloud> global() const;
+
 private:
     int idx_;
     Eigen::Matrix4d transform_;

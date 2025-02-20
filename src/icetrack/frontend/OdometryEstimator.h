@@ -27,8 +27,8 @@ private:
     bool enabled_;
     int frame_interval_; // Align every second frame
     int min_frame_size_;
-    double voxel_size_;
     double icp_threshold_;
     double icp_min_fitness_;
+    int icp_max_iter_;
 
 };

@@ -53,6 +53,12 @@ void CloudFrame::show() const{
     visualizeCloud(cloud_);
 }
 
+std::shared_ptr<open3d::geometry::PointCloud> CloudFrame::global() const {
+    auto cloud_ptr = std::make_shared<open3d::geometry::PointCloud>(cloud_.points_);
+    cloud_ptr->Transform(transform_);
+    return cloud_ptr;
+}
+
 
 /*
 Return a tensor cloud with global position and intensities

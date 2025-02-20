@@ -44,10 +44,10 @@ surface_estimator/ransac_sample_size: 10
 surface_estimator/ransac_iterations: 5
 
 # Odometry
-lidar_odometry/enabled: false
+lidar_odometry/enabled: true
 lidar_odometry/frame_interval: 1
-lidar_odometry/min_frame_size: 5000
-lidar_odometry/voxel_size: 1.0
+lidar_odometry/min_frame_size: 500
+lidar_odometry/icp_max_iter: 20
 lidar_odometry/icp_threshold: 2.0
 lidar_odometry/icp_min_fitness: 0.8
 
@@ -62,3 +62,11 @@ image_generator/offset: 1.0
 
 cloud/pub_queue_size: 10
 cloud/pub_topic: "/map/raw"
+
+
+# Point buffer
+point_buffer/buffer_size: 10.0
+lidar/point_interval: 5.0e-6
+lidar/min_intensity: 5.0
+lidar/min_dist: 20
+lidar/max_dist: 100
