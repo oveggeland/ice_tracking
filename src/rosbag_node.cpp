@@ -51,6 +51,10 @@ int main(int argc, char** argv) {
 
     // Process each bag file
     for (const auto& filepath : files) {
+        // Check if ROS is still running
+        if (!ros::ok())
+            break;
+
         std::string filename = filepath.string();
         ROS_INFO_STREAM("Reading bag: " << filename);
 
@@ -66,6 +70,10 @@ int main(int argc, char** argv) {
 
         // Process each message in the bag
         for (rosbag::MessageInstance const m : view) {
+            // Check if ROS is still running
+            if (!ros::ok())
+                break;
+
             // Publish clock time
             rosgraph_msgs::Clock clock_msg;
             clock_msg.clock = m.getTime();
@@ -91,17 +99,9 @@ int main(int argc, char** argv) {
 
             // Allow nodes to process messages
             ros::spinOnce();
-
-            // Check if ROS is still running
-            if (!ros::ok())
-                break;
         }
 
         bag.close();
-
-        // Check if ROS is still running
-        if (!ros::ok())
-            break;
     }
 
     ProfilerStop();

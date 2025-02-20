@@ -43,7 +43,7 @@ void CloudProcessor::gridDownSample(open3d::t::geometry::PointCloud& pcd) const{
     pcd = pcd.VoxelDownSample(grid_size_);
 
     // Move z-value back to positions and remove attribute copy
-    pcd.GetPointPositions().Slice(1, 2, 3).SetItem(pcd.GetPointAttr("z_value"));
+    pcd.GetPointPositions().Slice(1, 2, 3) = pcd.GetPointAttr("z_value");
     pcd.RemovePointAttr("z_value");
 };
 

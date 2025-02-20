@@ -75,7 +75,7 @@ cv::Mat getColorMap(const Eigen::VectorXf& values, int color_map, float min = NA
     // Convert to OpenCV grayscale format [0, 255]
     cv::Mat grayscale(1, values.size(), CV_8UC1);
     for (int i = 0; i < values.size(); ++i) {
-        grayscale.at<uint8_t>(0, i) = static_cast<uint8_t>(normalized(i) * 255.0f);
+        grayscale.at<float>(0, i) = static_cast<float>(normalized(i) * 255.0f);
     }
 
     // Apply colormap

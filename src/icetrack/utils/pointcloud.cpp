@@ -60,6 +60,15 @@ PointCloudPtr EigenToPointCloudPtr(const Eigen::Matrix3Xf& positions) {
 }
 
 
+
+const open3d::core::Tensor EigenToTensorFloat(const Eigen::MatrixXf& mat){
+    return open3d::core::Tensor(mat.derived().data(),  // Pointer to data
+                                {mat.cols(), mat.rows()},  // Shape
+                                open3d::core::Dtype::Float32,  // Target dtype
+                                open3d::core::Device("CPU:0"));  // Assuming CPU device
+}
+
+
 // Shared memory
 TensorCloud EigenToTensorCloud(Eigen::Matrix3Xf& positions) {
     // Create Open3D tensor from the Eigen matrix. Since we are using `Eigen::Map`, there is no memory copy.

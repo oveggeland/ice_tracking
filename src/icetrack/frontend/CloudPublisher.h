@@ -42,7 +42,7 @@ struct PackedPointXYZI {
     float x;
     float y;
     float z;
-    uint8_t intensity;
+    float intensity;
 };
 
 struct PackedPointXYZDI {
@@ -50,6 +50,6 @@ struct PackedPointXYZDI {
     float y;
     float z;
     float deformation;
-    uint8_t intensity;
+    float intensity;
 };
 #pragma pack(pop)

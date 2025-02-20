@@ -40,6 +40,8 @@ public:
 
     const FrameType* getFrame(int idx) const;
 
+    const FrameType& front() const { return buffer_.front(); }
+    const FrameType& back() const { return buffer_.back(); }
     FrameBufferConstIterator begin() const { return buffer_.begin(); }
     FrameBufferConstIterator end() const { return buffer_.end(); }
     size_t size() const { return buffer_.size(); }

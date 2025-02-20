@@ -112,7 +112,7 @@ CloudFrame::Ptr FrameBuffer::getPoints(bool local, bool global, bool intensities
 // Return t::geometry::pointcloud object with global positions and intensities
 TensorCloud FrameBuffer::getTensorCloud() const {
     std::vector<float> all_positions;
-    std::vector<uint8_t> all_intensities;
+    std::vector<float> all_intensities;
     all_positions.reserve(3*point_count_);
     all_intensities.reserve(point_count_);
 
@@ -130,7 +130,7 @@ TensorCloud FrameBuffer::getTensorCloud() const {
     // Generate pointcloud and set attributes
     auto pcd = open3d::t::geometry::PointCloud();
     pcd.SetPointPositions(open3d::core::Tensor(std::move(all_positions), {static_cast<int>(point_count_), 3}, open3d::core::Dtype::Float32));
-    pcd.SetPointAttr("intensities", open3d::core::Tensor(std::move(all_intensities), {static_cast<int>(point_count_), 1}, open3d::core::Dtype::UInt8));
+    pcd.SetPointAttr("intensities", open3d::core::Tensor(std::move(all_intensities), {static_cast<int>(point_count_), 1}, open3d::core::Dtype::Float32));
     
     return pcd;
 }

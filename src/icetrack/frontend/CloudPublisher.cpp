@@ -23,7 +23,7 @@ void CloudPublisher::setupRawCloudPublisher(ros::NodeHandle& nh) {
         "x", 1, sensor_msgs::PointField::FLOAT32,
         "y", 1, sensor_msgs::PointField::FLOAT32,
         "z", 1, sensor_msgs::PointField::FLOAT32,
-        "i", 1, sensor_msgs::PointField::UINT8
+        "i", 1, sensor_msgs::PointField::FLOAT32
     );
 }
 
@@ -46,7 +46,7 @@ void CloudPublisher::setupProcessedCloudPublisher(ros::NodeHandle& nh) {
         "y", 1, sensor_msgs::PointField::FLOAT32,
         "z", 1, sensor_msgs::PointField::FLOAT32,
         "d", 1, sensor_msgs::PointField::FLOAT32,
-        "i", 1, sensor_msgs::PointField::UINT8
+        "i", 1, sensor_msgs::PointField::FLOAT32
     );
 }
 
@@ -82,7 +82,7 @@ void CloudPublisher::fillRawCloudMessage(const open3d::t::geometry::PointCloud& 
 
     // Get data pointers
     const float* pos_ptr = cloud.GetPointPositions().Contiguous().GetDataPtr<float>();
-    const uint8_t* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<uint8_t>();
+    const float* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<float>();
     
     // Iterate over the cloud and fill message
     sensor_msgs::PointCloud2Iterator<PackedPointXYZI> msg_it(raw_cloud_msg_, "x");
@@ -114,7 +114,7 @@ void CloudPublisher::fillProcessedCloudMessage(const open3d::t::geometry::PointC
     // Get data pointers
     const float* pos_ptr = cloud.GetPointPositions().Contiguous().GetDataPtr<float>();
     const float* deformation_ptr = cloud.GetPointAttr("deformation").Contiguous().GetDataPtr<float>();
-    const uint8_t* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<uint8_t>();
+    const float* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<float>();
     
     // Iterate over the cloud and fill message
     sensor_msgs::PointCloud2Iterator<PackedPointXYZDI> msg_it(processed_cloud_msg_, "x");

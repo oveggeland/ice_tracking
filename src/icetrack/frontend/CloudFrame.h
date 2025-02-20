@@ -8,8 +8,8 @@
 #include "utils/pointcloud.h"
 
 using CloudPositionType = Eigen::Matrix3Xf;
-using CloudIntensityType = Eigen::Matrix<uint8_t, 1, Eigen::Dynamic>;
-using CloudTimestampType = Eigen::Matrix<double, 1, Eigen::Dynamic>;
+using CloudIntensityType = Eigen::VectorXf;
+using CloudTimestampType = Eigen::VectorXd;
 
 class CloudFrame {
 public:
@@ -18,7 +18,7 @@ public:
     CloudFrame(int idx, size_t capacity);   // Constructor
     CloudFrame(const CloudFrame& other, size_t idx0, size_t idx1); // Block copy constructor
 
-    void addPoint(const Eigen::Vector3f& pos, const uint8_t i, const double ts);
+    void addPoint(const Eigen::Vector3f& pos, const float i, const double ts);
     
     void merge(const CloudFrame& other, 
         bool copyLocal = true, bool copyGlobal = true, 
@@ -28,7 +28,8 @@ public:
     
     int lowerBound(double ts) const;
     Eigen::Matrix3Xf getPointsWithin(double t0, double t1) const;
-
+    
+    TensorCloud toCloud() const;
     inline PointCloudPtr localCloud() const { return EigenToPointCloudPtr(p_global_); }
     inline PointCloudPtr globalCloud() const { return EigenToPointCloudPtr(p_global_); }
 

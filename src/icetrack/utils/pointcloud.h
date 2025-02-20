@@ -26,5 +26,8 @@ int getCloudSize(const TensorCloudPtr cloud);
 // To legacy cloud, deep copy
 PointCloudPtr EigenToPointCloudPtr(const Eigen::Matrix3Xf& positions);
 
+
+const open3d::core::Tensor EigenToTensorFloat(const Eigen::MatrixXf& mat);
+
 // To tensor cloud, shallow copy
 TensorCloud EigenToTensorCloud(Eigen::Matrix3Xf& positions);

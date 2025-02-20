@@ -16,7 +16,7 @@ CloudFrame::CloudFrame(int idx, size_t capacity)
     intensities_(capacity), timestamps_(capacity) {
 }
 
-void CloudFrame::addPoint(const Eigen::Vector3f& pos, const uint8_t i, const double ts) {
+void CloudFrame::addPoint(const Eigen::Vector3f& pos, const float i, const double ts) {
     if (full()) {
         ROS_ERROR("addPoint() - CloudFrame is full"); // This should never happen
         return;
@@ -74,4 +74,19 @@ int CloudFrame::lowerBound(double ts) const {
     }
 
     return left;
+}
+
+
+/*
+Return a tensor cloud with global position and intensities
+*/
+TensorCloud CloudFrame::toCloud() const {
+    const open3d::core::Tensor positions = EigenToTensorFloat(p_global_);
+    const open3d::core::Tensor intensities = EigenToTensorFloat(intensities_);
+
+    open3d::t::geometry::PointCloud cloud(positions);
+    cloud.SetPointAttr("intensities", intensities);
+
+
+    return cloud;
 }
