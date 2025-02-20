@@ -1,92 +1,78 @@
 #include "frontend/CloudFrame.h"
 
-// Constructor for shallow copy slice
-CloudFrame::CloudFrame(const CloudFrame& other, size_t idx0, size_t idx1)
-    : idx_(other.idx_), size_(idx1 - idx0),
-    p_local_(other.p_local_.block(0, idx0, 3, size_)),
-    p_global_(other.p_global_.block(0, idx0, 3, size_)),
-    intensities_(other.intensities_.block(0, idx0, 1, size_)),
-    timestamps_(other.timestamps_.block(0, idx0, 1, size_)) {
+
+CloudFrame::CloudFrame(int idx, size_t capacity) : idx_(idx){
+    cloud_.points_.reserve(capacity);
+    intensities_.reserve(capacity);
+    timestamps_.reserve(capacity);
 }
 
-
-CloudFrame::CloudFrame(int idx, size_t capacity)
-    : idx_(idx), size_(0), 
-    p_local_(3, capacity), p_global_(3, capacity),
-    intensities_(capacity), timestamps_(capacity) {
-}
-
-void CloudFrame::addPoint(const Eigen::Vector3f& pos, const float i, const double ts) {
+void CloudFrame::addPoint(const Eigen::Vector3d& pos, const float i, const double ts) {
     if (full()) {
         ROS_ERROR("addPoint() - CloudFrame is full"); // This should never happen
         return;
     }
 
-    p_local_.col(size()) = pos;
-    intensities_(size()) = i;
-    timestamps_(size()) = ts;
-
-    ++size_;
+    cloud_.points_.push_back(pos);
+    intensities_.push_back(i);
+    timestamps_.push_back(ts);
 }
 
-void CloudFrame::merge(const CloudFrame& other, bool copyLocal, bool copyGlobal, bool copyIntensities, bool copyTimestamps) {
-    if (size() + other.size() > capacity()) {
-        ROS_ERROR("merge() - CloudFrame is full"); // This should never happen
-        return;
-    }
 
-    if (copyLocal) 
-        p_local_.block(0, size(), 3, other.size()) = other.p_local_;
-    if (copyGlobal)
-        p_global_.block(0, size(), 3, other.size()) = other.p_global_;
-    if (copyIntensities)
-        intensities_.block(0, size(), 1, other.size()) = other.intensities_;
-    if (copyTimestamps)
-        timestamps_.block(0, size(), 1, other.size()) = other.timestamps_;
 
-    size_ += other.size();
-}
+void CloudFrame::downSample(double voxel_size) {
+    auto [cloud_ptr, traces, inliers] = cloud_.VoxelDownSampleAndTrace(voxel_size, cloud_.GetMinBound(), cloud_.GetMaxBound(), false); // TODO: Use approximate class?
 
-void CloudFrame::transformPoints(const Eigen::Matrix4f& T) {
-    const Eigen::Matrix3f& R = T.block<3, 3>(0, 0);
-    const Eigen::Vector3f& t = T.block<3, 1>(0, 3);
+    // Allocate downsampled vectors
+    std::vector<float> intensities_ds;
+    std::vector<double> timestamps_ds;
+    intensities_ds.reserve(inliers.size());
+    timestamps_ds.reserve(inliers.size());
 
-    p_global_ = (R * p_local_).colwise() + t;
-}
-
-// Binary search for lower bound
-int CloudFrame::lowerBound(double ts) const {
-    if (ts < t0())
-        return 0;
-    else if (ts > t1())
-        return size();
-
-    int left = 0;
-    int right = size() - 1;
-
-    while (left < right) {
-        int mid = left + (right - left) / 2;
-        if (timestamps_(mid) < ts) {
-            left = mid + 1;
-        } else {
-            right = mid;
+    for (int i = 0; i < inliers.size(); ++i){
+        float i_sum = 0;
+        double t_sum = 0;
+        int cnt = 0;
+        for (const auto& idx: inliers[i]){
+            i_sum += intensities_[idx];
+            t_sum += timestamps_[idx];
+            ++cnt;
         }
+        intensities_ds.push_back(i_sum / cnt);
+        timestamps_ds.push_back(t_sum / cnt);
     }
 
-    return left;
+    // Update vectors
+    cloud_ = *cloud_ptr;
+    intensities_ = intensities_ds;
+    timestamps_ = timestamps_ds;
+}
+
+
+void CloudFrame::show() const{
+    visualizeCloud(cloud_);
 }
 
 
 /*
 Return a tensor cloud with global position and intensities
 */
-TensorCloud CloudFrame::toCloud() const {
-    const open3d::core::Tensor positions = EigenToTensorFloat(p_global_);
-    const open3d::core::Tensor intensities = EigenToTensorFloat(intensities_);
+// const TensorCloud CloudFrame::toTensorCloud() const {
+//     std::vector<float> flat_positions;
+//     std::vector<float> flat_intensitites;
+//     flat_positions.reserve(3*size());
+//     flat_intensities.reserve(size());
 
-    open3d::t::geometry::PointCloud cloud(positions);
-    cloud.SetPointAttr("intensities", intensities);
+//     for (int i = 0; i < size(); i++){
+//         Eigen::Vector3d pos = 
+//         flat_positions.push_back()
+//     }
 
+//     const open3d::core::Tensor positions = open3d::core::Tensor(static_cast<void*>(cloud_.points_.data()), open3d::core::Dtype::Float32, {size(), 3});
+//     const open3d::core::Tensor intensities = open3d::core::Tensor(static_cast<void*>(cloud_.points_.data()), open3d::core::Dtype::Float32, {size(), 3});
 
-    return cloud;
-}
+//     open3d::t::geometry::PointCloud cloud(positions);
+//     cloud.SetPointAttr("intensities", intensities);
+
+//     return cloud;
+// }

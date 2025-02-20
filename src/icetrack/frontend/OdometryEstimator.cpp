@@ -32,13 +32,9 @@ void OdometryEstimator::estimateOdometry(int idx1) {
         return; // Pose query failed...
     Eigen::Matrix4d T_initial = pose0.between(pose1).matrix();
 
-    // Get clouds and downsample
-    PointCloudPtr cloud0_ds = frame0->localCloud()->VoxelDownSample(voxel_size_);
-    PointCloudPtr cloud1_ds = frame1->localCloud()->VoxelDownSample(voxel_size_);
-
     // Perform ICP alignment
     auto result = open3d::pipelines::registration::RegistrationICP(
-        *cloud1_ds, *cloud0_ds, icp_threshold_, T_initial.matrix(),
+        frame1->local(), frame0->local(), icp_threshold_, T_initial.matrix(),
         open3d::pipelines::registration::TransformationEstimationPointToPoint(),
         open3d::pipelines::registration::ICPConvergenceCriteria(1.0e-6, 1.0e-6, 30)
     );

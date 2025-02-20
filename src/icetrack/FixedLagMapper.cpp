@@ -2,8 +2,8 @@
 
 FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh) 
     : pose_graph_(nh), 
-    cloud_manager_(nh, pose_graph_), 
-    image_generator_(nh, cloud_manager_, pose_graph_) {
+    cloud_manager_(nh, pose_graph_){
+        //image_generator_(nh, cloud_manager_, pose_graph_) {
     // Setup callback sequencer
     sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
     setupSubscribers(nh);
@@ -59,5 +59,5 @@ void FixedLagMapper::lidarSafeCallback(const sensor_msgs::PointCloud2::ConstPtr&
 }
 
 void FixedLagMapper::imageSafeCallback(const sensor_msgs::Image::ConstPtr& msg) {
-    image_generator_.imageCallback(msg);
+    // image_generator_.imageCallback(msg);
 }

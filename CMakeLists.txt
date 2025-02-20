@@ -41,7 +41,7 @@ file(GLOB ICETRACK_SOURCES
   "src/icetrack/*.cpp"
   "src/icetrack/frontend/*.cpp"
   "src/icetrack/backend/*.cpp"
-  "src/icetrack/visualization/*.cpp"
+  #"src/icetrack/visualization/*.cpp"
   "src/icetrack/utils/*.cpp"
 )
 add_library(licetrack 

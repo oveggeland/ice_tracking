@@ -36,23 +36,32 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     // Create a new frame, if successful, perform lidar odometry
     if (frame_buffer_.createFrame(state_idx)) {
-        odometry_estimator_.estimateOdometry(state_idx);
+        // odometry_estimator_.estimateOdometry(state_idx);
 
-        bool publish_frame_ = true;
-        if (publish_frame_){
-            auto cloud = frame_buffer_.back().toCloud();
-            cloud_publisher_.publishRawCloud(cloud);
-        }
+        // Get frame cloud and process    
+        // auto cloud = frame_buffer_.back().toCloud().ToLegacy();
+        // if (getCloudSize(cloud) > 100){
+        //     // cloud = cloud.RandomDownSample(0.1);
+        //     auto [cloud_ptr, inliers, indices] = cloud.VoxelDownSampleAndTrace(1.0, cloud.GetMinBound(), cloud.GetMaxBound(), true);
+        //     ROS_INFO_STREAM(cloud.points_.size());
+        //     ROS_INFO_STREAM(cloud_ptr->points_.size());
+        //     ROS_INFO_STREAM(inliers.cols() << ", " << inliers.rows());
+        //     ROS_INFO_STREAM(indices.size());
+
+        //     ROS_INFO_STREAM(inliers.row(0));
+        //     ROS_INFO_STREAM(cloud_ptr->points_.at(0));
+            //cloud_publisher_.publishRawCloud(processed_cloud);
+        //}
     }
 
     // Process cloud
-    if (state_idx % 1 == 0){
-        auto raw_cloud = frame_buffer_.getTensorCloud();
-        // cloud_publisher_.publishRawCloud(raw_cloud);
+    // if (state_idx % 1 == 0){
+    //     auto raw_cloud = frame_buffer_.getTensorCloud();
+    //     // // cloud_publisher_.publishRawCloud(raw_cloud);
         
-        auto processed_cloud = cloud_processor_.processCloud(raw_cloud);
-        cloud_publisher_.publishProcessedCloud(processed_cloud);
-    }
+    //     auto processed_cloud = raw_cloud.VoxelDownSample(1.0); // cloud_processor_.processCloud(raw_cloud);
+    //     cloud_publisher_.publishProcessedCloud(processed_cloud);
+    // }
 }
 
 /*

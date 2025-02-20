@@ -7,59 +7,37 @@
 
 #include "utils/pointcloud.h"
 
-using CloudPositionType = Eigen::Matrix3Xf;
-using CloudIntensityType = Eigen::VectorXf;
-using CloudTimestampType = Eigen::VectorXd;
-
 class CloudFrame {
 public:
     using Ptr = std::shared_ptr<CloudFrame>;
 
     CloudFrame(int idx, size_t capacity);   // Constructor
-    CloudFrame(const CloudFrame& other, size_t idx0, size_t idx1); // Block copy constructor
 
-    void addPoint(const Eigen::Vector3f& pos, const float i, const double ts);
-    
-    void merge(const CloudFrame& other, 
-        bool copyLocal = true, bool copyGlobal = true, 
-        bool copyIntensities = true, bool copyTimestamps = true);
+    void addPoint(const Eigen::Vector3d& pos, const float i, const double ts);
+    void setTransform(const Eigen::Matrix4d& T) { transform_ = T; }
 
-    void transformPoints(const Eigen::Matrix4f& T);
-    
-    int lowerBound(double ts) const;
-    Eigen::Matrix3Xf getPointsWithin(double t0, double t1) const;
-    
-    TensorCloud toCloud() const;
-    inline PointCloudPtr localCloud() const { return EigenToPointCloudPtr(p_global_); }
-    inline PointCloudPtr globalCloud() const { return EigenToPointCloudPtr(p_global_); }
+    void downSample(double voxel_size);
 
-    inline size_t size() const { return size_; }
-    inline size_t capacity() const { return p_local_.cols(); }
+    //const TensorCloud toTensorCloud() const;
+    void show() const;
+
+    // Accessors
+    inline int size() const { return cloud_.points_.size(); }
+    inline size_t capacity() const { return cloud_.points_.capacity(); }
     inline bool empty() const { return size() == 0; }
     inline bool full() const { return size() == capacity(); }
 
     inline int idx() const { return idx_; }
-    inline double t0() const { return empty() ? 0.0 : timestamps_(0); }
-    inline double t1() const { return empty() ? 0.0 : timestamps_(size()-1); }
+    inline double t0() const { return empty() ? -1 : timestamps_.front(); }
+    inline double t1() const { return empty() ? -1 : timestamps_.back(); }
 
-    inline const CloudPositionType& local() const { return p_local_; }
-    inline const CloudPositionType& global() const { return p_global_; }
-    inline const CloudIntensityType& intensities() const { return intensities_; }
-    inline const CloudTimestampType& timestamps() const { return timestamps_; }
-    
-    // Slice the cloud frame
-    inline CloudFrame block(size_t idx0, size_t idx1) const {
-        return CloudFrame(*this, idx0, idx1);
-    };
-    inline CloudFrame block(double t0, double t1) const {
-        return CloudFrame(*this, lowerBound(t0), lowerBound(t1));
-    }
-
+    inline const open3d::geometry::PointCloud& local() const { return cloud_; }
+    inline const std::vector<float>& intensities() const { return intensities_; }
+    inline const std::vector<double>& timestamps() const { return timestamps_; }
 private:
-    size_t size_;
     int idx_;
-    CloudPositionType p_local_;
-    CloudPositionType p_global_;
-    CloudIntensityType intensities_;
-    CloudTimestampType timestamps_;
+    Eigen::Matrix4d transform_;
+    open3d::geometry::PointCloud cloud_;
+    std::vector<float> intensities_;
+    std::vector<double> timestamps_;
 };
