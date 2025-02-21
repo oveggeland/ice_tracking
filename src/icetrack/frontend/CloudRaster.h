@@ -27,7 +27,7 @@ public:
     open3d::t::geometry::PointCloud toPointCloud() const;
 
     // Processing methods
-    void smoothUniform(double size) {} // Uniform convolution of attributes
+    void smoothUniform(size_t window_size); // Uniform convolution of attributes
     void smoothGaussian(double size) {} // Gaussian convolution of attributes
     
     void estimateDeformation(double size) {} // Estimate deformation (local elevation variance) 
@@ -56,4 +56,7 @@ private:
 
     // Keep track of occupied cells
     std::vector<IdxType> occupied_;
+
+    // Helpers
+    void smoothPoint(IdxType idx, size_t window_size);
 };

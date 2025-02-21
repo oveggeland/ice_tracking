@@ -88,6 +88,48 @@ CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, double grid
     }
 }
 
+void CloudRaster::smoothPoint(IdxType idx, size_t window_size){
+    size_t offset = window_size / 2;
+
+    // Clamp indices to stay within bounds
+    int row0 = std::clamp(idx.y - static_cast<int>(offset), 0, height_ - 1);
+    int row1 = std::clamp(idx.y + static_cast<int>(offset), 0, height_ - 1);
+    int col0 = std::clamp(idx.x - static_cast<int>(offset), 0, width_ - 1);
+    int col1 = std::clamp(idx.x + static_cast<int>(offset), 0, width_ - 1);
+
+    // Compute block sizes correctly (inclusive range)
+    int block_rows = row1 - row0 + 1;
+    int block_cols = col1 - col0 + 1;
+
+    // Extract submatrix safely
+    const auto& count_block = count_.block(row0, col0, block_rows, block_cols);
+    const auto& z_block = elevation_.block(row0, col0, block_rows, block_cols);
+    const auto& i_block = intensity_.block(row0, col0, block_rows, block_cols);
+
+    double z_sum = 0;
+    double i_sum = 0;
+    int cnt_sum = 0;
+    for (int r = 0; r < block_rows; ++r){
+        for (int c = 0; c < block_cols; ++c){
+            const int cnt = count_block(r, c);
+            if (count_block(r, c) > 0){
+                z_sum += cnt*z_block(r, c);
+                i_sum += cnt*i_block(r, c);
+                cnt_sum += cnt;
+            }
+        }
+    }
+    
+    elevation_(idx.y, idx.x) = z_sum / cnt_sum;
+    intensity_(idx.y, idx.x) = i_sum / cnt_sum;
+}
+
+
+void CloudRaster::smoothUniform(size_t window_size){
+    for (const auto& idx: occupied_){
+        smoothPoint(idx, window_size);
+    }
+}
 
 open3d::t::geometry::PointCloud CloudRaster::toPointCloud() const {
     int num_points = pointCount();
