@@ -9,6 +9,10 @@ CloudManager::CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph) :
     cloud_processor_(nh),
     cloud_publisher_(nh) {
 
+    // Config
+    getParamOrThrow<bool>(nh, "/cloud_manager/publish_frames", publish_frames_);
+    getParamOrThrow<bool>(nh, "/cloud_manager/publish_processed", publish_processed_);
+
     // Setup subscribers
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
     pose_sub_ = nh.subscribe(pose_topic, 1, &CloudManager::poseCallback, this);
@@ -17,18 +21,14 @@ CloudManager::CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph) :
 
 /*
 On new state events, we do the following steps:
-1. Poll surface estimator
-2. Maintain frame buffer (discard old frames, refine frames)
-3. Create a new frame
-4. Estimate odometry (frame-to-frame)
-5. Process refined cloud
-6. Publish refined cloud
+1. Maintain frame buffer (discard old frames, refine frames)
+2. Create a new frame
+3. Estimate odometry (frame-to-frame)
+4. Process refined cloud
+5. Publish refined cloud
 */
 void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
     int state_idx = pose_graph_.getCurrentStateIdx();
-
-    // Poll surface estimator
-    surface_estimator_.surfaceEstimation();
 
     // Maintain frame buffer
     frame_buffer_.removeOldFrames();
@@ -36,44 +36,27 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     // Create a new frame, return true on success
     if (frame_buffer_.createFrame(state_idx)){
-        // Do odometry once in a while
-        int odometry_interval_ = 5;
-        if (state_idx % odometry_interval_ == 0)
-            odometry_estimator_.estimateOdometry(state_idx);
+        // Odometry with new frame
+        // odometry_estimator_.estimateOdometry(state_idx); // TODO: Optimize odometry
         
-        // Potentially publish the new frame
-        bool publish_raw_ = true;
-        if (publish_raw_){
+        // Publish raw frame?
+        if (publish_frames_){
             auto frame = frame_buffer_.back();
             cloud_publisher_.publishRawCloud(frame.global()->points_, frame.intensities());
         }
     }
 
-    // 
-        // Get frame cloud and process    
-        // auto cloud = frame_buffer_.back().toCloud().ToLegacy();
-        // if (getCloudSize(cloud) > 100){
-        //     // cloud = cloud.RandomDownSample(0.1);
-        //     auto [cloud_ptr, inliers, indices] = cloud.VoxelDownSampleAndTrace(1.0, cloud.GetMinBound(), cloud.GetMaxBound(), true);
-        //     ROS_INFO_STREAM(cloud.points_.size());
-        //     ROS_INFO_STREAM(cloud_ptr->points_.size());
-        //     ROS_INFO_STREAM(inliers.cols() << ", " << inliers.rows());
-        //     ROS_INFO_STREAM(indices.size());
+    // Update map
+    raw_cloud_ = frame_buffer_.buildMap();
+    processed_ = false;
 
-        //     ROS_INFO_STREAM(inliers.row(0));
-        //     ROS_INFO_STREAM(cloud_ptr->points_.at(0));
-            //cloud_publisher_.publishRawCloud(processed_cloud);
-        //}
+    // Publish
+    if (publish_processed_){
+        processed_cloud_ = cloud_processor_.processCloud(raw_cloud_);
+        processed_ = true;
 
-
-    // Process cloud
-    // if (state_idx % 1 == 0){
-    //     auto raw_cloud = frame_buffer_.getTensorCloud();
-    //     // // cloud_publisher_.publishRawCloud(raw_cloud);
-        
-    //     auto processed_cloud = raw_cloud.VoxelDownSample(1.0); // cloud_processor_.processCloud(raw_cloud);
-    //     cloud_publisher_.publishProcessedCloud(processed_cloud);
-    // }
+        cloud_publisher_.publishProcessedCloud(processed_cloud_);
+    }
 }
 
 /*

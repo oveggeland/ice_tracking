@@ -25,13 +25,12 @@ pose_queue_size: 10
 raw_cloud_queue_size_: 10
 processed_cloud_queue_size_: 10
 
-max_publish_rate: 20 # For fixed rate node
-
-
 ### Clean up this later ###
 
 # Frame buffer
 frame_buffer/undistort_frames: true
+frame_buffer/voxel_size: 1 # Negative voxel size mean no down sample
+frame_buffer/window_size: 10
 
 # Surface estimator
 surface_estimator/update_interval: 10
@@ -70,3 +69,14 @@ lidar/point_interval: 5.0e-6
 lidar/min_intensity: 5.0
 lidar/min_dist: 20
 lidar/max_dist: 100
+
+
+# Cloud processor
+cloud_processor/save_clouds: true
+cloud_processor/grid_size: 1.0
+cloud_processor/smoothing_window_size: 5
+cloud_processor/deformation_window_size: 9
+
+# Cloud manager
+cloud_manager/publish_frames: false
+cloud_manager/publish_processed: true

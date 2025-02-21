@@ -49,6 +49,15 @@ private:
     // Publisher(s)
     CloudPublisher cloud_publisher_;
 
+    // Keep track of raw and processed clouds
+    open3d::t::geometry::PointCloud raw_cloud_;
+    open3d::t::geometry::PointCloud processed_cloud_;
+    bool processed_ = false; // Indicates if the current raw cloud has been processed
+
+    // Config
+    bool publish_frames_;
+    bool publish_processed_;
+
     // Subscriber(s)
     ros::Subscriber lidar_sub_;
     ros::Subscriber pose_sub_;

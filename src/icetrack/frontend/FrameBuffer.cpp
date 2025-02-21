@@ -4,6 +4,8 @@ FrameBuffer::FrameBuffer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const
                                 pose_graph_(pose_graph), point_buffer_(point_buffer) {
     // Initialize 
     getParamOrThrow(nh, "frame_buffer/undistort_frames", undistort_frames_);
+    getParamOrThrow(nh, "frame_buffer/voxel_size", voxel_size_);
+    getParamOrThrow(nh, "frame_buffer/window_size", window_size_);
 }
 
 
@@ -51,7 +53,11 @@ bool FrameBuffer::createFrame(int idx){
         frame.addPoint(position, it->intensity, ts_point);
     }
 
-    frame.downSample(1.0);
+    // Optional downsample
+    if (voxel_size_ > 0)
+        frame.downSample(voxel_size_);
+    
+    // Set initial transform
     frame.setTransform(pose1.matrix());
 
     point_count_ += frame.size();
@@ -96,67 +102,36 @@ const FrameType* FrameBuffer::getFrame(int idx) const {
 }
 
 
-// /*
-// Return shared ptr with a cloud frame containing all points. Attributes are decided by input parameters.
-// */
-// CloudFrame::Ptr FrameBuffer::getPoints(bool local, bool global, bool intensities, bool timestamps) const {
-//     // Allocate CloudFrame with capacity
-//     CloudFrame::Ptr frame = std::make_shared<CloudFrame>(0, point_count_);
 
-//     // Iterate through all frames and merge points
-//     for (const auto& it : buffer_)
-//         frame->merge(it, local, global, intensities, timestamps);
-//     return frame;
-// }
+open3d::t::geometry::PointCloud FrameBuffer::buildMap() const {
+    // Allocate memory    
+    std::vector<double> positions;
+    std::vector<float> intensities;
+    positions.reserve(point_count_);
+    intensities.reserve(point_count_);
 
+    // Iterate through frames and copy data
+    for (const auto& frame : buffer_) {
+        const auto& frame_transform = frame.transform();
+        const auto& R = frame_transform.topLeftCorner<3, 3>();
+        const auto& t = frame_transform.topRightCorner<3, 1>();
 
-// // Return t::geometry::pointcloud object with global positions and intensities
-// TensorCloud FrameBuffer::getTensorCloud() const {
-//     std::vector<float> all_positions;
-//     std::vector<float> all_intensities;
-//     all_positions.reserve(3*point_count_);
-//     all_intensities.reserve(point_count_);
+        const auto& frame_positions = frame.positions();
+        const auto& frame_intensities = frame.intensities();
 
-//     for (const auto& it : buffer_) {
-//         const auto& positions = it.global();
-//         const auto& intensities = it.intensities();
-//         for (size_t i = 0; i < positions.cols(); ++i) {
-//             all_positions.push_back(positions(0, i));
-//             all_positions.push_back(positions(1, i));
-//             all_positions.push_back(positions(2, i));
-//             all_intensities.push_back(intensities(i));
-//         }
-//     }
+        for (int i = 0; i < frame.size(); ++i) {
+            Eigen::Vector3d p = R * frame_positions[i] + t;
+            
+            positions.push_back(p.x());
+            positions.push_back(p.y());
+            positions.push_back(p.z());
+            intensities.push_back(frame_intensities[i]);
+        }
+    }
 
-//     // Generate pointcloud and set attributes
-//     auto pcd = open3d::t::geometry::PointCloud();
-//     pcd.SetPointPositions(open3d::core::Tensor(std::move(all_positions), {static_cast<int>(point_count_), 3}, open3d::core::Dtype::Float32));
-//     pcd.SetPointAttr("intensities", open3d::core::Tensor(std::move(all_intensities), {static_cast<int>(point_count_), 1}, open3d::core::Dtype::Float32));
-    
-//     return pcd;
-// }
-// /*
-// Return shared ptr with a cloud frame containing all points. Attributes are decided by input parameters.
-// */
-// CloudFrame::Ptr FrameBuffer::getPoints(double t0, double t1, bool local, bool global, bool intensities, bool timestamps) const {
-//     std::vector<CloudFrame> blocks;
-//     blocks.reserve(size());
+    open3d::t::geometry::PointCloud cloud;
+    cloud.SetPointPositions(open3d::core::Tensor(std::move(positions), {(int)intensities.size(), 3}, open3d::core::Dtype::Float64));
+    cloud.SetPointAttr("intensities", open3d::core::Tensor(std::move(intensities), {(int)intensities.size(), 1}, open3d::core::Dtype::Float32));
 
-//     // Iterate through and fetch blocks
-//     int point_count = 0;
-//     for (const auto& it : buffer_) {
-//         if (it.t0() < t1 && it.t1() > t0) {
-//             blocks.push_back(it.block(t0, t1));
-//             point_count += blocks.back().size();
-//         }
-//     }
-
-//     // Allocate CloudFrame with sufficient capacity
-//     CloudFrame::Ptr frame = std::make_shared<CloudFrame>(0, point_count);
-
-//     // Merge all blocks
-//     for (const auto& block : blocks) 
-//         frame->merge(block, local, global, intensities, timestamps);
-
-//     return frame;
-// }
+    return cloud;
+}

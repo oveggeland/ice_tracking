@@ -28,6 +28,8 @@ public:
     void removeOldFrames();
     void refineFrames();
 
+    open3d::t::geometry::PointCloud buildMap() const;
+
     // Query frames with specified attributes. If timestamps are not specified, all points are returned.
     // TensorCloud getTensorCloud() const; // Return t::geometry::pointcloud object with global positions and intensities
     // CloudFrame::Ptr getPoints(bool local, bool global, bool intensities, bool timestamps) const; // Get all points
@@ -51,7 +53,8 @@ private:
     size_t point_count_ = 0;        // Total number of points (in all frames)
 
     // Configuration
-    double window_size_ = 10;
+    double voxel_size_;
+    double window_size_;
     bool undistort_frames_;
 
     // Required resources

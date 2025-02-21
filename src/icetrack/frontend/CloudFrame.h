@@ -31,9 +31,12 @@ public:
     inline double t0() const { return empty() ? -1 : timestamps_.front(); }
     inline double t1() const { return empty() ? -1 : timestamps_.back(); }
 
-    inline const open3d::geometry::PointCloud& local() const { return cloud_; }
+    inline const Eigen::Matrix4d& transform() const { return transform_; }
+    inline const std::vector<Eigen::Vector3d>& positions() const { return cloud_.points_; }
     inline const std::vector<float>& intensities() const { return intensities_; }
     inline const std::vector<double>& timestamps() const { return timestamps_; }
+
+    inline const open3d::geometry::PointCloud& local() const { return cloud_; }
     std::shared_ptr<open3d::geometry::PointCloud> global() const;
 
 private:
