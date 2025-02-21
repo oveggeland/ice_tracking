@@ -24,7 +24,7 @@ public:
     CloudRaster(const open3d::t::geometry::PointCloud& pcd, double grid_size);
 
     // De-rasterize
-    open3d::geometry::PointCloud toPointCloud() const;
+    open3d::t::geometry::PointCloud toPointCloud() const;
 
     // Processing methods
     void smoothUniform(double size) {} // Uniform convolution of attributes
@@ -33,8 +33,9 @@ public:
     void estimateDeformation(double size) {} // Estimate deformation (local elevation variance) 
 
     // Nice functionality
-    inline int width() const { return count_.cols(); }
-    inline int height() const { return count_.rows(); }
+    inline int width() const { return width_; }
+    inline int height() const { return height_; }
+    inline int pointCount() const { return occupied_.size(); }
 
     inline bool hasIntensity() const { return intensity_.size() > 0; }
     inline bool hasDeformation() const { return deformation_.size() > 0; }
@@ -45,7 +46,7 @@ private:
     int width_, height_;            // Number of cells on each axis
     double grid_size_;              // Metric distance between grid cells
 
-    void setGridDefinition(const Eigen::Matrix3Xd& xy);
+    void defineGrid(const Eigen::Matrix2Xd& xy);
 
     // Data grid
     Eigen::MatrixXi count_;             // Number of points, falling within a cell during initialization
