@@ -88,18 +88,18 @@ CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, double grid
     }
 }
 
-void CloudRaster::smoothPoint(IdxType idx, size_t window_size){
-    size_t offset = window_size / 2;
+void CloudRaster::smoothPoint(const IdxType& idx, const size_t window_size){
+    const size_t offset = window_size / 2;
 
     // Clamp indices to stay within bounds
-    int row0 = std::clamp(idx.y - static_cast<int>(offset), 0, height_ - 1);
-    int row1 = std::clamp(idx.y + static_cast<int>(offset), 0, height_ - 1);
-    int col0 = std::clamp(idx.x - static_cast<int>(offset), 0, width_ - 1);
-    int col1 = std::clamp(idx.x + static_cast<int>(offset), 0, width_ - 1);
+    const int row0 = std::clamp(idx.y - static_cast<int>(offset), 0, height_ - 1);
+    const int row1 = std::clamp(idx.y + static_cast<int>(offset), 0, height_ - 1);
+    const int col0 = std::clamp(idx.x - static_cast<int>(offset), 0, width_ - 1);
+    const int col1 = std::clamp(idx.x + static_cast<int>(offset), 0, width_ - 1);
 
     // Compute block sizes correctly (inclusive range)
-    int block_rows = row1 - row0 + 1;
-    int block_cols = col1 - col0 + 1;
+    const int block_rows = row1 - row0 + 1;
+    const int block_cols = col1 - col0 + 1;
 
     // Extract submatrix safely
     const auto& count_block = count_.block(row0, col0, block_rows, block_cols);
@@ -131,6 +131,53 @@ void CloudRaster::smoothUniform(size_t window_size){
     }
 }
 
+void CloudRaster::estimatePointDeformation(const IdxType& idx, const size_t window_size){
+    const size_t offset = window_size / 2;
+
+    // Clamp indices to stay within bounds
+    const int row0 = std::clamp(idx.y - static_cast<int>(offset), 0, height_ - 1);
+    const int row1 = std::clamp(idx.y + static_cast<int>(offset), 0, height_ - 1);
+    const int col0 = std::clamp(idx.x - static_cast<int>(offset), 0, width_ - 1);
+    const int col1 = std::clamp(idx.x + static_cast<int>(offset), 0, width_ - 1);
+
+    // Compute block sizes correctly (inclusive range)
+    const int block_rows = row1 - row0 + 1;
+    const int block_cols = col1 - col0 + 1;
+
+    // Extract submatrix safely
+    const auto& count_block = count_.block(row0, col0, block_rows, block_cols);
+    const auto& z_block = elevation_.block(row0, col0, block_rows, block_cols);
+
+    double z_sum = 0;
+    double z2_sum = 0;
+    int cnt = 0;
+    for (int r = 0; r < block_rows; ++r){
+        for (int c = 0; c < block_cols; ++c){
+            if (count_block(r, c) > 0){
+                const double& z = z_block(r, c);
+                z_sum += z;
+                z2_sum += z*z;
+                ++cnt;
+            }
+        }
+    }
+    
+    const double mean = z_sum / cnt;
+    deformation_(idx.y, idx.x) = z2_sum / cnt  - mean*mean;
+}
+
+
+void CloudRaster::estimateDeformation(size_t window_size){
+    // Initialize matrix
+    deformation_ = Eigen::MatrixXf(height_, width_);
+
+    // Iterate over points and do individual estimation of deformation
+    for (const auto& idx: occupied_){
+        estimatePointDeformation(idx, window_size);
+    }
+}
+
+
 open3d::t::geometry::PointCloud CloudRaster::toPointCloud() const {
     int num_points = pointCount();
 
@@ -155,7 +202,7 @@ open3d::t::geometry::PointCloud CloudRaster::toPointCloud() const {
 
         // Add attributes
         intensities.push_back(intensity_(idx.y, idx.x));
-        deformation.push_back(0.0);
+        deformation.push_back(deformation_(idx.y, idx.x));
     }
 
     // Move ownership to tensor cloud

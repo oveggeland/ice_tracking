@@ -30,7 +30,7 @@ public:
     void smoothUniform(size_t window_size); // Uniform convolution of attributes
     void smoothGaussian(double size) {} // Gaussian convolution of attributes
     
-    void estimateDeformation(double size) {} // Estimate deformation (local elevation variance) 
+    void estimateDeformation(size_t window_size); // Estimate deformation (local elevation variance) 
 
     // Nice functionality
     inline int width() const { return width_; }
@@ -58,5 +58,6 @@ private:
     std::vector<IdxType> occupied_;
 
     // Helpers
-    void smoothPoint(IdxType idx, size_t window_size);
+    void smoothPoint(const IdxType& idx, const size_t window_size);
+    void estimatePointDeformation(const IdxType& idx, const size_t window_size);
 };
