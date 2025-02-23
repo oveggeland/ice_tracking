@@ -10,7 +10,7 @@ max_elevation: 4
 min_intensity: 0
 
 grid_size: 1.0            # Down sample point cloud to grid_size*grid_size tiles (in xy-plane)
-smoothing_radius: 2.0     # Elevation is smoothed withing smoothing radius
+smoothing_radius: 2.5     # Elevation is smoothed withing smoothing radius
 deformation_radius: 5.0   # Deformation is calculated for each point by searchin in deformation_radius
 
 point_buffer_size: 10.0

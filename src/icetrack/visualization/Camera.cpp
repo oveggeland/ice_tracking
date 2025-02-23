@@ -1,6 +1,11 @@
 #include "visualization/Camera.h"
 
-Camera::Camera(const std::string& intrinsics_file) {
+Camera::Camera(const ros::NodeHandle& nh){
+    // Load calibration
+    std::string extrinsics_file = getParamOrThrow<std::string>(nh, "/ext_file");
+    cTb_ = cTb(extrinsics_file);
+
+    std::string intrinsics_file = getParamOrThrow<std::string>(nh, "/int_file");
     loadIntrinsicsFromFile(intrinsics_file);
 }
 
@@ -20,23 +25,41 @@ cv::Mat Camera::getDistortedImage(const sensor_msgs::Image::ConstPtr& msg) const
     return cv_bridge::toCvCopy(msg, "bgr8")->image;
 }
 
-Eigen::Matrix2Xf Camera::projectPoints(const Eigen::Matrix3Xf& points, const Eigen::Matrix4f& cTw, bool distort) const {
-    Eigen::Matrix3f K = intrinsics_.getProjectionMatrix();
-    Eigen::Matrix<float, 3, 4> image_transform = K * cTw.topRows(3);
-    Eigen::Matrix3Xf proj_points = (image_transform.leftCols(3) * points).colwise() + image_transform.col(3);
 
-    Eigen::Matrix2Xf uv = (proj_points.topRows(2).array().rowwise() / proj_points.row(2).array()).matrix();
-    if (distort)
+Eigen::Matrix2Xf Camera::projectFromWorld(const Eigen::Matrix3Xf& r_world, bool undistort) const {
+    Eigen::Matrix<float, 3, 4> image_transform = intrinsics_.getProjectionMatrix() * cTw_.topRows<3>(); // Find world -> image transformation
+
+    Eigen::Matrix3Xf uv_h = (image_transform.leftCols(3) * r_world).colwise() + image_transform.col(3); // Get homogenous image coordinates
+    Eigen::Matrix2Xf uv = (uv_h.topRows(2).array().rowwise() / uv_h.row(2).array()).matrix();           // Normalize to get pixel coordinates
+
+    if (undistort)
         undistortPoints(uv);
+
     return uv;
 }
 
-Eigen::Matrix2Xf Camera::projectPoints(const Eigen::Matrix3Xf& points, bool distort) const {
-    Eigen::Matrix3Xf proj_points = intrinsics_.getProjectionMatrix() * points;
-    Eigen::Matrix2Xf uv = (proj_points.topRows(2).array().rowwise() / proj_points.row(2).array()).matrix();
-    if (distort)
+
+Eigen::Matrix2Xf Camera::projectFromCam(const Eigen::Matrix3Xf& r_cam, bool undistort) const {
+    Eigen::Matrix3Xf uv_h = intrinsics_.getProjectionMatrix() * r_cam;                          // Get homogenous image coordinates
+    Eigen::Matrix2Xf uv = (uv_h.topRows(2).array().rowwise() / uv_h.row(2).array()).matrix();   // Normalize to get pixel coordinates
+
+    if (undistort)
         undistortPoints(uv);
+
     return uv;
+}
+
+
+std::vector<bool> Camera::getInlierMask(const Eigen::Matrix2Xf& uv) const{
+    const int num_points = uv.cols();
+
+    std::vector<bool> mask;
+    mask.reserve(num_points);
+
+    for (int i = 0; i < num_points; ++i){
+        mask.push_back(inBounds(uv.col(i)));
+    }
+    return mask;
 }
 
 void Camera::undistortPoints(Eigen::Matrix2Xf& uv) const {

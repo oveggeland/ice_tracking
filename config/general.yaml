@@ -52,10 +52,10 @@ lidar_odometry/icp_min_fitness: 0.8
 
 
 # Image stuff
-image_generator/enabled: false
+image_generator/enabled: true
 image_generator/display: true
 image_generator/topic: "/viz/image"
-image_generator/delay: 5.0
+image_generator/delay: 3.0
 image_generator/offset: 1.0
 
 
@@ -72,7 +72,7 @@ lidar/max_dist: 100
 
 
 # Cloud processor
-cloud_processor/save_clouds: true
+cloud_processor/save_clouds: false
 cloud_processor/grid_size: 1.0
 cloud_processor/smoothing_window_size: 5
 cloud_processor/deformation_window_size: 9
