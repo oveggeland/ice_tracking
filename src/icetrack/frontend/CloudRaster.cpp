@@ -1,15 +1,15 @@
 #include "CloudRaster.h"
 
 
-std::tuple<double, double, double, double> getBounds(const Eigen::Matrix2Xd& xy) {
-    double x_min = std::numeric_limits<double>::infinity();
-    double x_max = -std::numeric_limits<double>::infinity();
-    double y_min = std::numeric_limits<double>::infinity();
-    double y_max = -std::numeric_limits<double>::infinity();
+std::tuple<float, float, float, float> getBounds(const Eigen::Matrix2Xf& xy) {
+    float x_min = std::numeric_limits<float>::infinity();
+    float x_max = -std::numeric_limits<float>::infinity();
+    float y_min = std::numeric_limits<float>::infinity();
+    float y_max = -std::numeric_limits<float>::infinity();
 
     for (int i = 0; i < xy.cols(); ++i) {
-        const double& x = xy(0, i);
-        const double& y = xy(1, i);
+        const float& x = xy(0, i);
+        const float& y = xy(1, i);
 
         if (x < x_min) x_min = x;
         if (x > x_max) x_max = x;
@@ -21,7 +21,7 @@ std::tuple<double, double, double, double> getBounds(const Eigen::Matrix2Xd& xy)
 }
 
 
-void CloudRaster::defineGrid(const Eigen::Matrix2Xd& xy){
+void CloudRaster::defineGrid(const Eigen::Matrix2Xf& xy){
     // Get bounds of dataset
     auto [x_min, x_max, y_min, y_max] = getBounds(xy);
 
@@ -46,15 +46,15 @@ void CloudRaster::defineGrid(const Eigen::Matrix2Xd& xy){
 }
 
 
-CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, double grid_size) : grid_size_(grid_size){
+CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, float grid_size) : grid_size_(grid_size){
     int num_points = pcd.GetPointPositions().GetShape(0);
 
     // Map positions
-    double* position_ptr = pcd.GetPointPositions().Contiguous().GetDataPtr<double>();
+    float* position_ptr = pcd.GetPointPositions().Contiguous().GetDataPtr<float>();
 
-    Eigen::Map<Eigen::Matrix<double, 3, Eigen::Dynamic>> xyz(position_ptr, 3, num_points);
-    Eigen::Matrix2Xd xy = xyz.topRows<2>();
-    Eigen::VectorXd z = xyz.row(2);
+    Eigen::Map<Eigen::Matrix3Xf> xyz(position_ptr, 3, num_points);
+    Eigen::Matrix2Xf xy = xyz.topRows<2>();
+    Eigen::VectorXf z = xyz.row(2);
 
     // Map intensities
     float* intensity_ptr = pcd.GetPointAttr("intensities").Contiguous().GetDataPtr<float>();
@@ -66,7 +66,7 @@ CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, double grid
 
     // Initialize data matrices
     count_ = Eigen::MatrixXi::Constant(height_, width_, 0);
-    elevation_ = Eigen::MatrixXd(height_, width_);
+    elevation_ = Eigen::MatrixXf(height_, width_);
     intensity_ = Eigen::MatrixXf(height_, width_);
 
     // Reserve space in index vector
@@ -117,8 +117,8 @@ void CloudRaster::smoothPoint(const IdxType& idx, const size_t window_size){
     const auto& z_block = elevation_.block(row0, col0, block_rows, block_cols);
     const auto& i_block = intensity_.block(row0, col0, block_rows, block_cols);
 
-    double z_sum = 0;
-    double i_sum = 0;
+    float z_sum = 0;
+    float i_sum = 0;
     int cnt_sum = 0;
     for (int r = 0; r < block_rows; ++r){
         for (int c = 0; c < block_cols; ++c){
@@ -159,13 +159,13 @@ void CloudRaster::estimatePointDeformation(const IdxType& idx, const size_t wind
     const auto& count_block = count_.block(row0, col0, block_rows, block_cols);
     const auto& z_block = elevation_.block(row0, col0, block_rows, block_cols);
 
-    double z_sum = 0;
-    double z2_sum = 0;
+    float z_sum = 0;
+    float z2_sum = 0;
     int cnt = 0;
     for (int r = 0; r < block_rows; ++r){
         for (int c = 0; c < block_cols; ++c){
             if (count_block(r, c) > 0){
-                const double& z = z_block(r, c);
+                const float& z = z_block(r, c);
                 z_sum += z;
                 z2_sum += z*z;
                 ++cnt;
@@ -173,7 +173,7 @@ void CloudRaster::estimatePointDeformation(const IdxType& idx, const size_t wind
         }
     }
     
-    const double mean = z_sum / cnt;
+    const float mean = z_sum / cnt;
     deformation_(idx.y, idx.x) = z2_sum / cnt  - mean*mean;
 }
 
@@ -201,8 +201,8 @@ open3d::t::geometry::PointCloud CloudRaster::toPointCloud() const {
     deformation.reserve(num_points);
 
     // Define center of origin cell
-    double x0 = x_min_ + 0.5*grid_size_;
-    double y0 = y_min_ + 0.5*grid_size_;
+    float x0 = x_min_ + 0.5*grid_size_;
+    float y0 = y_min_ + 0.5*grid_size_;
 
     // Iterate through all occupied cells and add coordinates to cloud
     for (const auto& idx: occupied_){

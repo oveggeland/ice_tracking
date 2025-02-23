@@ -105,7 +105,7 @@ const FrameType* FrameBuffer::getFrame(int idx) const {
 
 open3d::t::geometry::PointCloud FrameBuffer::buildMap() const {
     // Allocate memory    
-    std::vector<double> positions;
+    std::vector<float> positions;
     std::vector<float> intensities;
     std::vector<double> timestamps;
     positions.reserve(point_count_);
@@ -134,7 +134,7 @@ open3d::t::geometry::PointCloud FrameBuffer::buildMap() const {
     }
 
     open3d::t::geometry::PointCloud cloud;
-    cloud.SetPointPositions(open3d::core::Tensor(std::move(positions), {(int)intensities.size(), 3}, open3d::core::Dtype::Float64));
+    cloud.SetPointPositions(open3d::core::Tensor(std::move(positions), {(int)intensities.size(), 3}, open3d::core::Dtype::Float32));
     cloud.SetPointAttr("intensities", open3d::core::Tensor(std::move(intensities), {(int)intensities.size(), 1}, open3d::core::Dtype::Float32));
     cloud.SetPointAttr("timestamps", open3d::core::Tensor(std::move(timestamps), {(int)timestamps.size(), 1}, open3d::core::Dtype::Float64));
 
