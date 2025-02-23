@@ -40,6 +40,7 @@ public:
     
     void undistortPoints(Eigen::Matrix2Xf& uv) const;
 
+    std::vector<int> getInliers(const Eigen::Matrix2Xf& uv) const;
     std::vector<bool> getInlierMask(const Eigen::Matrix2Xf& uv) const;
     inline bool inBounds(const Eigen::Vector2f& uv) const {
         return uv.x() >= 0 && uv.y() >= 0 && uv.x() < intrinsics_.w && uv.y() < intrinsics_.h;

@@ -36,7 +36,7 @@ private:
     std::deque<ros::Timer> timer_buffer_;
 
     // Main entry point for images
-    void processImage(double t_img, cv::Mat& img);
+    void processImage(double t_img, const cv::Mat& img);
     void display(const std::string& window_name, const cv::Mat& img) const;
     
     // Configuration
@@ -44,4 +44,8 @@ private:
     bool display_;              // Display image
     double delay_;       // Delay before image is processed (should be at least max_offset_)
     double offset_;             // Maximum offset between image and lidar points to be considered
+
+    // Publishing
+    ros::Publisher image_pub_;
+    void publishImage(const cv::Mat& img) const;
 };

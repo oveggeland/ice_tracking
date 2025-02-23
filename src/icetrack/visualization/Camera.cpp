@@ -50,6 +50,19 @@ Eigen::Matrix2Xf Camera::projectFromCam(const Eigen::Matrix3Xf& r_cam, bool undi
 }
 
 
+std::vector<int> Camera::getInliers(const Eigen::Matrix2Xf& uv) const{
+    const int num_points = uv.cols();
+
+    std::vector<int> inliers;
+    inliers.reserve(num_points);
+
+    for (int i = 0; i < num_points; ++i){
+        if (inBounds(uv.col(i)))
+            inliers.push_back(i);
+    }
+    return inliers;
+}
+
 std::vector<bool> Camera::getInlierMask(const Eigen::Matrix2Xf& uv) const{
     const int num_points = uv.cols();
 

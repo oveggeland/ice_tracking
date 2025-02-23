@@ -11,6 +11,6 @@ if __name__ == "__main__":
     profile_path = os.path.join(ws, exp, "rosbag_node.profile")
     
     # Run terminal command
-    cmd = f"pprof --web devel/lib/icetrack/rosbag_node {profile_path}"
+    cmd = f"pprof --web /home/oskar/icetrack/devel/lib/icetrack/rosbag_node {profile_path}"
     print(cmd)
     os.system(cmd)
