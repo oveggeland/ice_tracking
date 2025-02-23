@@ -48,13 +48,10 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     // Update map
     raw_cloud_ = frame_buffer_.buildMap();
-    processed_ = false;
+    processed_cloud_ = cloud_processor_.processCloud(raw_cloud_);
 
     // Publish
     if (publish_processed_){
-        processed_cloud_ = cloud_processor_.processCloud(raw_cloud_);
-        processed_ = true;
-
         cloud_publisher_.publishProcessedCloud(processed_cloud_);
     }
 }
@@ -67,4 +64,46 @@ On new lidar measurements, we do the following steps:
 void CloudManager::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {
     point_buffer_.addPoints(msg);
     surface_estimator_.surfaceEstimation();
+}
+
+
+
+open3d::t::geometry::PointCloud CloudManager::cloudQuery(bool process, std::optional<double> t0, std::optional<double> t1) const{
+    // First edge case: If no slice arguments are provided, return the full cloud
+    if (!t0 && !t1)
+        return process ? processed_cloud_ : raw_cloud_;
+
+    // Check if timestamps exist
+    if (!raw_cloud_.HasPointAttr("timestamps")) {
+        ROS_WARN("Cloud has no timestamp attribute, returning empty cloud.");
+        return open3d::t::geometry::PointCloud(); // Return empty cloud
+    }
+
+    // Fetch timestamps
+    const std::vector<double> timestamps = raw_cloud_.GetPointAttr("timestamps").ToFlatVector<double>();
+
+    // Determine indices
+    const int idx0 = t0 ? std::distance(timestamps.begin(), std::lower_bound(timestamps.begin(), timestamps.end(), *t0)) : 0;
+    const int idx1 = t1 ? std::distance(timestamps.begin(), std::lower_bound(timestamps.begin(), timestamps.end(), *t1)) : timestamps.size();
+    const int n_points = idx1 - idx0;
+
+    if (n_points < 1) {
+        ROS_WARN("No points found in the specified time range.");
+        return open3d::t::geometry::PointCloud(); // Return empty cloud
+    }
+
+    // Get index tensor
+    std::vector<int64_t> indices(n_points);
+    std::iota(indices.begin(), indices.end(), idx0);  // Fill indices from idx0 to idx1-1
+    open3d::core::Tensor idx_tensor(indices, {n_points}, open3d::core::Int64);
+
+    // Slice the point cloud
+    open3d::t::geometry::PointCloud cloud = raw_cloud_.SelectByIndex(idx_tensor);
+
+    // Apply processing if requested
+    if (process) {
+        cloud = cloud_processor_.processCloud(cloud);
+    }
+
+    return cloud;
 }

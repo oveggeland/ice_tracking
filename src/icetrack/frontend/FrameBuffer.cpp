@@ -107,8 +107,10 @@ open3d::t::geometry::PointCloud FrameBuffer::buildMap() const {
     // Allocate memory    
     std::vector<double> positions;
     std::vector<float> intensities;
+    std::vector<double> timestamps;
     positions.reserve(point_count_);
     intensities.reserve(point_count_);
+    timestamps.reserve(point_count_);
 
     // Iterate through frames and copy data
     for (const auto& frame : buffer_) {
@@ -118,6 +120,7 @@ open3d::t::geometry::PointCloud FrameBuffer::buildMap() const {
 
         const auto& frame_positions = frame.positions();
         const auto& frame_intensities = frame.intensities();
+        const auto& frame_timestamps = frame.timestamps();
 
         for (int i = 0; i < frame.size(); ++i) {
             Eigen::Vector3d p = R * frame_positions[i] + t;
@@ -126,12 +129,14 @@ open3d::t::geometry::PointCloud FrameBuffer::buildMap() const {
             positions.push_back(p.y());
             positions.push_back(p.z());
             intensities.push_back(frame_intensities[i]);
+            timestamps.push_back(frame_timestamps[i]);
         }
     }
 
     open3d::t::geometry::PointCloud cloud;
     cloud.SetPointPositions(open3d::core::Tensor(std::move(positions), {(int)intensities.size(), 3}, open3d::core::Dtype::Float64));
     cloud.SetPointAttr("intensities", open3d::core::Tensor(std::move(intensities), {(int)intensities.size(), 1}, open3d::core::Dtype::Float32));
+    cloud.SetPointAttr("timestamps", open3d::core::Tensor(std::move(timestamps), {(int)timestamps.size(), 1}, open3d::core::Dtype::Float64));
 
     return cloud;
 }

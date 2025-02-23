@@ -27,9 +27,10 @@ public:
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    // Const accessors to buffers
-    const PointBuffer& pointBuffer() const { return point_buffer_; }
-    const FrameBuffer& frameBuffer() const { return frame_buffer_; }
+    // Accessors
+    open3d::t::geometry::PointCloud cloudQuery(bool process, 
+        std::optional<double> t0 = std::nullopt, std::optional<double> t1 = std::nullopt) const;
+
 
 private:
     // PoseGraph interface

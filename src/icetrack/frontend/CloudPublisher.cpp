@@ -65,10 +65,10 @@ void CloudPublisher::publishProcessedCloud(const open3d::t::geometry::PointCloud
     if (processed_cloud_pub_.getNumSubscribers() == 0)
         return; // No point
 
-    fillProcessedCloudMessage(cloud);
-    if (processed_cloud_msg_.width == 0.0)
+    if (cloud.IsEmpty() || cloud.GetPointPositions().GetShape(0) == 0)
         return; // No points
 
+    fillProcessedCloudMessage(cloud);
     processed_cloud_pub_.publish(processed_cloud_msg_);
 }
 
@@ -102,7 +102,17 @@ void CloudPublisher::fillProcessedCloudMessage(const open3d::t::geometry::PointC
 
     // Get data pointers
     const float* pos_ptr = cloud.GetPointPositions().Contiguous().GetDataPtr<float>();
+    
+    if (!cloud.HasPointAttr("deformation")){
+        ROS_WARN("Cloud has no deformation attribute");
+        return;
+    }
     const float* deformation_ptr = cloud.GetPointAttr("deformation").Contiguous().GetDataPtr<float>();
+    
+    if (!cloud.HasPointAttr("intensities")){
+        ROS_WARN("Cloud has no intensities attribute");
+        return;
+    }
     const float* intensity_ptr = cloud.GetPointAttr("intensities").Contiguous().GetDataPtr<float>();
     
     // Iterate over the cloud and fill message

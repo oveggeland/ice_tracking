@@ -17,7 +17,10 @@ CloudProcessor::CloudProcessor(const ros::NodeHandle& nh){
 }
 
 
-open3d::t::geometry::PointCloud CloudProcessor::processCloud(const open3d::t::geometry::PointCloud& pcd){
+open3d::t::geometry::PointCloud CloudProcessor::processCloud(const open3d::t::geometry::PointCloud& pcd) const{
+    if (pcd.IsEmpty() || pcd.GetPointPositions().GetShape(0) == 0)
+        return pcd; 
+    
     CloudRaster raster(pcd, grid_size_);
     raster.smoothUniform(smoothing_window_size_);
     raster.estimateDeformation(deformation_window_size_);

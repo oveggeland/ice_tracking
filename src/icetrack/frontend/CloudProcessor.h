@@ -14,7 +14,7 @@ class CloudProcessor{
 public:
     CloudProcessor(const ros::NodeHandle& nh);
 
-    open3d::t::geometry::PointCloud processCloud(const open3d::t::geometry::PointCloud& pcd);
+    open3d::t::geometry::PointCloud processCloud(const open3d::t::geometry::PointCloud& pcd) const;
 private:
     // Processing parameters
     double grid_size_;

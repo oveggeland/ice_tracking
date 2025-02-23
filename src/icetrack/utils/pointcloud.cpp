@@ -34,7 +34,7 @@ void visualizeAlignment(const TensorCloud& pcd0, const TensorCloud& pcd1, Eigen:
 
 
 int getCloudSize(const TensorCloud& cloud){
-    return cloud.GetPointPositions().GetShape(0);
+    return cloud.IsEmpty()? 0: cloud.GetPointPositions().GetShape(0);
 }
 int getCloudSize(const TensorCloudPtr cloud){
     return getCloudSize(*cloud);
