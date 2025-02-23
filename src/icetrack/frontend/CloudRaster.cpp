@@ -25,13 +25,24 @@ void CloudRaster::defineGrid(const Eigen::Matrix2Xd& xy){
     // Get bounds of dataset
     auto [x_min, x_max, y_min, y_max] = getBounds(xy);
 
-    // Set minimum values
-    x_min_ = x_min;
-    y_min_ = y_min;
+    // Set x-axis params
+    if (x_min == x_max){
+        x_min_ = x_min - 0.5*grid_size_; 
+        width_ = 1;
+    }
+    else {
+        x_min_ = x_min;
+        width_ = ceil((x_max-x_min) / grid_size_);
+    }
 
-    // Set size of raster
-    width_ = ceil((x_max-x_min) / grid_size_);
-    height_ = ceil((y_max-y_min) / grid_size_);
+    if (y_min == y_max){
+        y_min_ = y_min - 0.5*grid_size_;
+        height_ = 1;
+    }
+    else {
+        y_min_ = y_min;
+        height_ = ceil((y_max-y_min) / grid_size_);
+    }
 }
 
 
