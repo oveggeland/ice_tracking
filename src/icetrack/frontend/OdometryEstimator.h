@@ -31,5 +31,7 @@ private:
     double icp_threshold_;
     double icp_min_fitness_;
     int icp_max_iter_;
+    double icp_relative_rmse_;
+    double icp_relative_fitness_;
 
 };

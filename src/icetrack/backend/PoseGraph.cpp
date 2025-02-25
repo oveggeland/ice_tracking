@@ -139,13 +139,17 @@ void PoseGraph::addPriors(int idx){
 void PoseGraph::initializeState(){
     Point2 xy = gnss_correction_.getPosition();
     double z = -surface_correction_.getSurfaceDistance();
+
     state_.pose = Pose3(
-        imu_integration_.estimateAttitude(), 
+        imu_integration_.estimateAttitude(),
         Point3(xy.x(), xy.y(), z)
     );
     
     state_.velocity = Vector3::Zero();
-    state_.bias = imuBias::ConstantBias();
+    state_.bias = imuBias::ConstantBias(
+        Vector3(-0.035210,0.085232,-0.138853),
+        Vector3(-0.002100,0.002172,-0.002661)
+    );
 
     state_.lever_arm = state_.pose.rotation().inverse().rotate(Point3(0, 0, -z));
 }

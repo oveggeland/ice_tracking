@@ -9,6 +9,8 @@ OdometryEstimator::OdometryEstimator(const ros::NodeHandle& nh, PoseGraph& pose_
     getParamOrThrow(nh, "/lidar_odometry/min_frame_size", min_frame_size_);
     getParamOrThrow(nh, "/lidar_odometry/voxel_size", voxel_size_);
     getParamOrThrow(nh, "/lidar_odometry/icp_max_iter", icp_max_iter_);
+    getParamOrThrow(nh, "/lidar_odometry/icp_relative_rmse", icp_relative_rmse_);
+    getParamOrThrow(nh, "/lidar_odometry/icp_relative_fitness", icp_relative_fitness_);
     getParamOrThrow(nh, "/lidar_odometry/icp_threshold", icp_threshold_);
     getParamOrThrow(nh, "/lidar_odometry/icp_min_fitness", icp_min_fitness_);
 };
@@ -33,15 +35,18 @@ void OdometryEstimator::estimateOdometry(int idx1) {
         return; // Pose query failed...
     Eigen::Matrix4d T_initial = pose0.between(pose1).matrix();
 
-    // Perform ICP alignment
+    // Downsample clouds
     auto cloud0 = *frame0->local().VoxelDownSample(voxel_size_);
     auto cloud1 = *frame1->local().VoxelDownSample(voxel_size_);
+
+    // ICP
     auto result = open3d::pipelines::registration::RegistrationICP(
-        cloud1, cloud0, icp_threshold_, T_initial.matrix(),
+        cloud1, cloud0, icp_threshold_, T_initial,
         open3d::pipelines::registration::TransformationEstimationPointToPoint(),
-        open3d::pipelines::registration::ICPConvergenceCriteria(1.0e-6, 1.0e-6, icp_max_iter_)
-    );
+        open3d::pipelines::registration::ICPConvergenceCriteria(icp_relative_fitness_, icp_relative_rmse_, icp_max_iter_)
+    ); 
     Eigen::Matrix4d T_align = result.transformation_;
+
 
     // Check if ICP converged
     if (result.fitness_ < icp_min_fitness_)  // Fitness threshold (tune based on environment)
