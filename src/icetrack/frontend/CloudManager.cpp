@@ -79,26 +79,30 @@ open3d::t::geometry::PointCloud CloudManager::cloudQuery(bool process, std::opti
         return open3d::t::geometry::PointCloud(); // Return empty cloud
     }
 
-    // Fetch timestamps
-    const std::vector<double> timestamps = raw_cloud_.GetPointAttr("timestamps").ToFlatVector<double>();
+    // Fetch attributes
+    std::vector<float> positions = raw_cloud_.GetPointPositions().ToFlatVector<float>();
+    std::vector<float> intensities = raw_cloud_.GetPointAttr("intensities").ToFlatVector<float>();
+    std::vector<double> timestamps = raw_cloud_.GetPointAttr("timestamps").ToFlatVector<double>();
 
     // Determine indices
     const int idx0 = t0 ? std::distance(timestamps.begin(), std::lower_bound(timestamps.begin(), timestamps.end(), *t0)) : 0;
     const int idx1 = t1 ? std::distance(timestamps.begin(), std::lower_bound(timestamps.begin(), timestamps.end(), *t1)) : timestamps.size();
     const int n_points = idx1 - idx0;
 
+    // Slice vectors
+    positions = std::vector<float>(positions.begin() + idx0 * 3, positions.begin() + idx1 * 3);
+    intensities = std::vector<float>(intensities.begin() + idx0, intensities.begin() + idx1);
+    timestamps = std::vector<double>(timestamps.begin() + idx0, timestamps.begin() + idx1);
+
+    // Build a map
     if (n_points < 1) {
         ROS_WARN("No points found in the specified time range.");
         return open3d::t::geometry::PointCloud(); // Return empty cloud
     }
 
-    // Get index tensor
-    std::vector<int64_t> indices(n_points);
-    std::iota(indices.begin(), indices.end(), idx0);  // Fill indices from idx0 to idx1-1
-    open3d::core::Tensor idx_tensor(indices, {n_points}, open3d::core::Int64);
-
-    // Slice the point cloud
-    open3d::t::geometry::PointCloud cloud = raw_cloud_.SelectByIndex(idx_tensor);
+    open3d::t::geometry::PointCloud cloud(open3d::core::Tensor(std::move(positions), {n_points, 3}, open3d::core::Dtype::Float32));
+    cloud.SetPointAttr("intensities", open3d::core::Tensor(std::move(intensities), {n_points, 1}, open3d::core::Dtype::Float32));
+    cloud.SetPointAttr("timestamps", open3d::core::Tensor(std::move(timestamps), {n_points, 1}, open3d::core::Dtype::Float64));
 
     // Apply processing if requested
     if (process) {
