@@ -4,7 +4,6 @@ FrameBuffer::FrameBuffer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const
                                 pose_graph_(pose_graph), point_buffer_(point_buffer) {
     // Initialize 
     getParamOrThrow(nh, "frame_buffer/undistort_frames", undistort_frames_);
-    getParamOrThrow(nh, "frame_buffer/voxel_size", voxel_size_);
     getParamOrThrow(nh, "frame_buffer/window_size", window_size_);
 }
 
@@ -52,10 +51,6 @@ bool FrameBuffer::createFrame(int idx){
 
         frame.addPoint(position, it->intensity, ts_point);
     }
-
-    // Optional downsample
-    if (voxel_size_ > 0)
-        frame.downSample(voxel_size_);
     
     // Set initial transform
     frame.setTransform(pose1.matrix());

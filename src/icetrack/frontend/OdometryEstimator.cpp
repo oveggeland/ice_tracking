@@ -7,6 +7,7 @@ OdometryEstimator::OdometryEstimator(const ros::NodeHandle& nh, PoseGraph& pose_
     getParamOrThrow(nh, "/lidar_odometry/enabled", enabled_);
     getParamOrThrow(nh, "/lidar_odometry/frame_interval", frame_interval_);
     getParamOrThrow(nh, "/lidar_odometry/min_frame_size", min_frame_size_);
+    getParamOrThrow(nh, "/lidar_odometry/voxel_size", voxel_size_);
     getParamOrThrow(nh, "/lidar_odometry/icp_max_iter", icp_max_iter_);
     getParamOrThrow(nh, "/lidar_odometry/icp_threshold", icp_threshold_);
     getParamOrThrow(nh, "/lidar_odometry/icp_min_fitness", icp_min_fitness_);
@@ -33,8 +34,10 @@ void OdometryEstimator::estimateOdometry(int idx1) {
     Eigen::Matrix4d T_initial = pose0.between(pose1).matrix();
 
     // Perform ICP alignment
+    auto cloud0 = *frame0->local().VoxelDownSample(voxel_size_);
+    auto cloud1 = *frame1->local().VoxelDownSample(voxel_size_);
     auto result = open3d::pipelines::registration::RegistrationICP(
-        frame1->local(), frame0->local(), icp_threshold_, T_initial.matrix(),
+        cloud1, cloud0, icp_threshold_, T_initial.matrix(),
         open3d::pipelines::registration::TransformationEstimationPointToPoint(),
         open3d::pipelines::registration::ICPConvergenceCriteria(1.0e-6, 1.0e-6, icp_max_iter_)
     );
@@ -44,6 +47,6 @@ void OdometryEstimator::estimateOdometry(int idx1) {
     if (result.fitness_ < icp_min_fitness_)  // Fitness threshold (tune based on environment)
         return;
 
-    // visualizeAlignment(frame0->local(), frame1->local(), T_initial, T_align);
+    // visualizeAlignment(cloud0, cloud1, T_initial, T_align);
     pose_graph_.odometryCallback(idx0, idx1, T_align);
 }

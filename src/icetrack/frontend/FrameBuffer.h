@@ -53,7 +53,6 @@ private:
     size_t point_count_ = 0;        // Total number of points (in all frames)
 
     // Configuration
-    double voxel_size_;
     double window_size_;
     bool undistort_frames_;
 

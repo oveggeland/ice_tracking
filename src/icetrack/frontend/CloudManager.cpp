@@ -37,7 +37,7 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     // Create a new frame, return true on success
     if (frame_buffer_.createFrame(state_idx)){
         // Odometry with new frame
-        // odometry_estimator_.estimateOdometry(state_idx); // TODO: Optimize odometry
+        odometry_estimator_.estimateOdometry(state_idx); // TODO: Optimize odometry
         
         // Publish raw frame?
         if (publish_frames_){
@@ -48,10 +48,10 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     // Update map
     raw_cloud_ = frame_buffer_.buildMap();
-    processed_cloud_ = cloud_processor_.processCloud(raw_cloud_);
 
     // Publish
     if (publish_processed_){
+        processed_cloud_ = cloud_processor_.processCloud(raw_cloud_);
         cloud_publisher_.publishProcessedCloud(processed_cloud_);
     }
 }
