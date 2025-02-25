@@ -1,11 +1,6 @@
-#include "AugmentedImageFrame.h"
+#include "ImageFrame.h"
 
-AugmentedImageFrame::AugmentedImageFrame(const double ts, const cv::Mat& img, const open3d::t::geometry::PointCloud& pcd, const Camera& camera, const double scale) : ts_(ts) {
-    if (scale != 1.0)
-        resize(img, img_, cv::Size(), scale, scale);
-    else
-        img_ = img;
-
+ImageFrame::ImageFrame(const double ts, const cv::Mat& img, const open3d::t::geometry::PointCloud& pcd, const Camera& camera) : ts_(ts), img_(img) {
     int num_points = pcd.IsEmpty()? 0: pcd.GetPointPositions().GetShape(0);
     if (num_points == 0)
         return;
@@ -23,7 +18,7 @@ AugmentedImageFrame::AugmentedImageFrame(const double ts, const cv::Mat& img, co
         intensity_ = Eigen::Map<Eigen::VectorXf>(intensity_ptr, num_points);
     }
     else{
-        ROS_WARN("AugmentedImageFrame - intensities not available");
+        ROS_WARN("ImageFrame - intensities not available");
         intensity_.resize(num_points);
     }
 
@@ -35,13 +30,28 @@ AugmentedImageFrame::AugmentedImageFrame(const double ts, const cv::Mat& img, co
     else
         deformation_.resize(num_points); // Don't care about the content
 
+    // Attribute: deformation
+    if (pcd.HasPointAttr("timestamps")){
+        double* timestamp_ptr = pcd.GetPointAttr("timestamps").Contiguous().GetDataPtr<double>();
+        Eigen::VectorXf stamps = Eigen::Map<Eigen::VectorXd>(timestamp_ptr, num_points).cast<float>();
+        dt_ = stamps.array() - ts;
+    }
+    else
+        dt_.resize(num_points); // Don't care about the content
+
 
     // Project and find inliers
-    uv_ = camera.projectFromWorld(r_world, false); // TODO: The points should be distorted
+    uv_ = camera.projectFromWorld(r_world, true);
     inliers_ = camera.getInliers(uv_);
+}
 
-    if (scale != 1.0)
-        uv_ = uv_.array() * scale;
+void ImageFrame::scale(double s) {
+    if (s == 1.0)
+        return;
+    if (s > 1.0)
+        ROS_WARN("Resizing image frame with scale factor bigger than 1.");
+    
+    cv::resize(img_, img_, cv::Size(), s, s);
 }
 
 // Crop to [0, 255] and apply colormap. Clip values to min and max if provided.
@@ -74,11 +84,12 @@ cv::Mat getColorMap(const Eigen::VectorXf& values, int color_map, float min = NA
 
 
 // Constant color
-cv::Mat AugmentedImageFrame::getImposedImage(const cv::Scalar c) const{ 
+cv::Mat ImageFrame::getImposedImage(const cv::Scalar c) const{ 
     cv::Mat imposed = img_.clone();
 
     for (const int& idx: inliers_){
-        cv::circle(imposed, cv::Point2f(uv_(0, idx), uv_(1, idx)), 3, c, -1);
+        // Only a single point, not circle
+        imposed.at<cv::Vec3b>(uv_(1, idx), uv_(0, idx)) = cv::Vec3b(c[0], c[1], c[2]);  // Assign color
     }
 
     return imposed;
@@ -99,7 +110,7 @@ void drawPoint(cv::Mat& img, const Eigen::Vector2f uv, const cv::Vec3b& color, i
 
 
 // Point-wise color
-cv::Mat AugmentedImageFrame::getImposedImage(const cv::Mat& colors) const {
+cv::Mat ImageFrame::getImposedImage(const cv::Mat& colors) const {
     cv::Mat imposed = img_.clone();
 
     for (const int& idx: inliers_){
@@ -110,7 +121,7 @@ cv::Mat AugmentedImageFrame::getImposedImage(const cv::Mat& colors) const {
 }
 
 // From values
-cv::Mat AugmentedImageFrame::getImposedImage(const Eigen::VectorXf& values, int color_map, float min, float max) const {
+cv::Mat ImageFrame::getImposedImage(const Eigen::VectorXf& values, int color_map, float min, float max) const {
     if (pointCount() < 1)
         return img_.clone();
     cv::Mat colors = getColorMap(values, color_map, min, max);

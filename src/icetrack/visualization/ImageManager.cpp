@@ -1,16 +1,13 @@
 #include "visualization/ImageManager.h"
 
 ImageManager::ImageManager(ros::NodeHandle& nh, const PoseGraph& pose_graph, const CloudManager& cloud_manager)
-    : nh_(nh), camera_(nh), pose_graph_(pose_graph), cloud_manager_(cloud_manager){
+    : nh_(nh), camera_(nh), output_(nh), pose_graph_(pose_graph), cloud_manager_(cloud_manager){
+
     // Load config
     getParamOrThrow<bool>(nh, "/image_generator/enabled", enabled_);
     getParamOrThrow<bool>(nh, "/image_generator/display", display_);
     getParamOrThrow<double>(nh, "/image_generator/delay", delay_);
     getParamOrThrow<double>(nh, "/image_generator/offset", offset_);
-
-    // Initialize publisher
-    std::string topic = getParamOrThrow<std::string>(nh, "/image_generator/topic");
-    image_pub_ = nh.advertise<sensor_msgs::Image>(topic, 10);
 }
 
 
@@ -39,36 +36,15 @@ void ImageManager::processImage(double t_img, const cv::Mat& img){
     camera_.updateTransform(wTb);
 
     // Query cloud (in world frame)
-    const auto cloud = cloud_manager_.cloudQuery(true, t_img - offset_, t_img + offset_);
+    const auto cloud = cloud_manager_.cloudQuery(false, t_img - offset_, t_img + offset_);
     int num_points = cloud.IsEmpty()? 0: cloud.GetPointPositions().GetShape(0);
     if (num_points == 0){
         ROS_WARN_STREAM("ImageManager::processImage - No cloud points available at: " << std::fixed << t_img);
     }
 
     // Generate augmented image
-    AugmentedImageFrame augmented(t_img, img, cloud, camera_, 0.5);
-
-    // Get images
-    cv::Mat img_raw = augmented.getImage();
-    cv::Mat elev_imposed = augmented.getImposedElevationImage();
-    cv::Mat intensity_imposed = augmented.getImposedIntensityImage();
-    cv::Mat deformation_imposed = augmented.getImposedDeformationImage();
-
-    // Generate image stack
-    cv::Mat stacked_image;
-    cv::Mat row1, row2;
-
-    // Concatenate images horizontally: (raw, elev)
-    cv::hconcat(img_raw, elev_imposed, row1);
-    
-    // Concatenate images horizontally: (intensity, deformation)
-    cv::hconcat(intensity_imposed, deformation_imposed, row2);
-    
-    // Now stack the two rows vertically: (row1, row2)
-    cv::vconcat(row1, row2, stacked_image);
-    
-    publishImage(stacked_image);
-    //display("Stacked image", stacked_image);
+    ImageFrame img_frame(t_img, img, cloud, camera_);
+    output_.newImageFrame(img_frame);
 }
 
 // Main entry point. Unpack the image and schedule processing. 
@@ -86,13 +62,4 @@ void ImageManager::imageCallback(const sensor_msgs::Image::ConstPtr& msg) {
         boost::bind(&ImageManager::processImage, this, ts, img), // Callback
         true // One-shot
     ));
-}
-
-void ImageManager::publishImage(const cv::Mat& img) const{
-    if (!image_pub_.getNumSubscribers())
-        return;
-
-    sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
-    msg->header.stamp = ros::Time::now();
-    image_pub_.publish(msg);
 }

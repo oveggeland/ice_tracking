@@ -10,7 +10,8 @@
 #include "backend/PoseGraph.h"
 #include "frontend/CloudManager.h"
 
-#include "visualization/AugmentedImageFrame.h"
+#include "ImageFrame.h"
+#include "ImageFrameOutput.h"
 
 #include "utils/ros_params.h"
 #include "utils/calibration.h"
@@ -30,6 +31,7 @@ private:
     
     // Camera object (dealing with intrisics, extrinsics, projection, etc.)
     Camera camera_;
+    ImageFrameOutput output_;
 
     // ROS
     ros::NodeHandle nh_;
@@ -44,8 +46,4 @@ private:
     bool display_;              // Display image
     double delay_;       // Delay before image is processed (should be at least max_offset_)
     double offset_;             // Maximum offset between image and lidar points to be considered
-
-    // Publishing
-    ros::Publisher image_pub_;
-    void publishImage(const cv::Mat& img) const;
 };
