@@ -15,9 +15,7 @@ public:
     CallbackSequencer(): safe_delay_(0) {}
     CallbackSequencer(double safe_delay): safe_delay_(safe_delay) {}
 
-    double getSafeTime() const{
-        return ros::Time::now().toSec() - safe_delay_;
-    }
+    inline double getSafeTime() const { return ts_head_ - safe_delay_; }
 
     /*
     Add a callback to be sequenced according to its timestamp.
@@ -25,19 +23,21 @@ public:
     void addCallback(double ts, std::function<void()> cb){
         if (ts < getSafeTime()) // Discard if message if too late
             return;
+        
         callback_buffer_[ts] = cb;
-
-        // Check for new valid callbacks (TODO: schedule this?)
-        checkCallbackBuffer();
+        if (ts > ts_head_){
+            ts_head_ = ts;
+            checkCallbackBuffer();
+        }
     }
 
     /*
-    Check for callbacks that are safe to call (i.e. safe_delay has passed).
+    Proccesss callbacks with stamped before safe time.
     */
     void checkCallbackBuffer(){
         const double t_safe = getSafeTime();
 
-        // Process all messages stamped before safe time
+        // callback buffer iteration is chronological
         for (auto it = callback_buffer_.begin(); it != callback_buffer_.end();){
             double t_msg = it->first;
 
@@ -51,5 +51,6 @@ public:
 
 private:
     std::map<double, std::function<void()>> callback_buffer_;   // Buffer for callbacks
+    double ts_head_; 
     double safe_delay_;   // Difference between wall time and safe time.
 };
