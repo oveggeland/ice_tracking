@@ -30,11 +30,11 @@ ImageFrame::ImageFrame(const double ts, const cv::Mat& img, const open3d::t::geo
     else
         deformation_.resize(num_points); // Don't care about the content
 
-    // Attribute: deformation
+    // Attribute: timestamp
     if (pcd.HasPointAttr("timestamps")){
         double* timestamp_ptr = pcd.GetPointAttr("timestamps").Contiguous().GetDataPtr<double>();
-        Eigen::VectorXf stamps = Eigen::Map<Eigen::VectorXd>(timestamp_ptr, num_points).cast<float>();
-        dt_ = stamps.array() - ts;
+        Eigen::ArrayXd stamps = Eigen::Map<Eigen::ArrayXd>(timestamp_ptr, num_points);
+        dt_ = (stamps - ts).cast<float>();
     }
     else
         dt_.resize(num_points); // Don't care about the content
@@ -95,26 +95,12 @@ cv::Mat ImageFrame::getImposedImage(const cv::Scalar c) const{
     return imposed;
 }
 
-void drawPoint(cv::Mat& img, const Eigen::Vector2f uv, const cv::Vec3b& color, int size = 3) {
-    // Convert Eigen::Vector2f to cv::Point
-    cv::Point center(uv(0), uv(1));
-
-    // Calculate the top-left corner of the square
-    float half_size = size / 2;
-    cv::Point top_left(center.x - half_size, center.y - half_size);
-    cv::Point bottom_right(center.x + half_size, center.y + half_size);
-
-    // Draw the square on the image
-    cv::rectangle(img, top_left, bottom_right, color, -1);  // -1 means filled square
-}
-
-
 // Point-wise color
 cv::Mat ImageFrame::getImposedImage(const cv::Mat& colors) const {
     cv::Mat imposed = img_.clone();
 
     for (const int& idx: inliers_){
-        drawPoint(imposed, uv_.col(idx), colors.at<cv::Vec3b>(0, idx), 5);
+        imposed.at<cv::Vec3b>(uv_(1, idx), uv_(0, idx)) = colors.at<cv::Vec3b>(0, idx);  // Assign color
     }
 
     return imposed;

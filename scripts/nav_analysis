@@ -61,18 +61,11 @@ def plot_navigation(nav_data, save_path=""):
     plt.tight_layout(pad=3.0)
 
 
-    plt.figure()
+    plt.figure("Lever arm")
     plt.plot(nav_data['ts'].values, nav_data[["Lx", "Ly", "Lz"]], label=["Lx", "Ly", "Lz"])
     plt.legend()
     plt.tight_layout()
-    
-    try:
-        plt.figure()
-        plt.plot(nav_data['ts'].values, nav_data[["Dx", "Dy"]], label=["Dx", "Dy"])
-        plt.legend()
-        plt.tight_layout()
-    except:
-        print("Could not plot drift")
+
     
     if save_path:
         plt.savefig(save_path)
@@ -98,17 +91,13 @@ def gnss_vs_estimate(nav, gnss):
     
 if __name__ == "__main__":
     rospy.init_node("nav_analysis_node")
-    outpath = rospy.get_param('outpath')
     
-    nav_path = os.path.join(outpath, "navigation")
-    nav_data = pd.read_csv(os.path.join(nav_path, "ins.csv"))
+    ws = rospy.get_param("workspace")
+    exp = rospy.get_param("exp")
     
-    # gnss_path = os.path.join(outpath, "navigation", "sensors", "gnss.csv")
-    # gnss_data = pd.read_csv(gnss_path)
+    nav_path = os.path.join(ws, exp, "navigation")
+    nav_data = pd.read_csv(os.path.join(nav_path, "state.csv"))
     
-    # gnss_vs_estimate(nav_data, gnss_data)
-
-    
-    plot_navigation(nav_data, os.path.join(nav_path, "ins.pdf"))
+    plot_navigation(nav_data, os.path.join(nav_path, "state.pdf"))
     
     plt.show()

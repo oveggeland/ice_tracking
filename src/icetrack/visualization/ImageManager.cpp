@@ -44,7 +44,10 @@ void ImageManager::processImage(double t_img, const cv::Mat& img){
 
     // Generate augmented image
     ImageFrame img_frame(t_img, img, cloud, camera_);
-    output_.newImageFrame(img_frame);
+    
+    auto img_imposed = img_frame.getImposedImage();
+    display("imposed", img_imposed);
+    //output_.newImageFrame(img_frame);
 }
 
 // Main entry point. Unpack the image and schedule processing. 

@@ -32,6 +32,14 @@ public:
     cv::Mat getImposedDeformationImage() const { return getImposedImage(deformation_, cv::COLORMAP_MAGMA, 0.0f, 0.2f); };
     cv::Mat getImposedTimeDeltaImage() const { return getImposedImage(dt_, cv::COLORMAP_SPRING); };
 
+    // Accessors
+    const Eigen::VectorXf& elevation() const { return elevation_; }
+    const Eigen::VectorXf& intensity() const { return intensity_; }
+    const Eigen::VectorXf& deformation() const { return deformation_; }
+    const Eigen::VectorXf& dt() const { return dt_; }
+
+    const Eigen::Matrix2Xf& uv() const { return uv_; }
+    const std::vector<int>& inliers() const { return inliers_; }
 private:
     // Image    
     double ts_;

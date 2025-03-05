@@ -11,11 +11,11 @@ Camera::Camera(const ros::NodeHandle& nh){
 
 cv::Mat Camera::getUndistortedImage(const sensor_msgs::Image::ConstPtr& msg) const {
     cv::Mat image = cv_bridge::toCvCopy(msg, "bgr8")->image;
-    cv::Mat K = (cv::Mat_<double>(3, 3) << intrinsics_.f_x, 0, intrinsics_.c_x,
-                                            0, intrinsics_.f_y, intrinsics_.c_y,
+    cv::Mat K = (cv::Mat_<double>(3, 3) << intrinsics_.fx, 0, intrinsics_.cx,
+                                            0, intrinsics_.fy, intrinsics_.cy,
                                             0, 0, 1);
-    cv::Mat distCoeffs = (cv::Mat_<double>(4, 1) << intrinsics_.distortion_coeffs[0], intrinsics_.distortion_coeffs[1],
-                                                    intrinsics_.distortion_coeffs[2], intrinsics_.distortion_coeffs[3]);
+    cv::Mat distCoeffs = (cv::Mat_<double>(4, 1) << intrinsics_.k1, intrinsics_.k2,
+                                                    intrinsics_.p1, intrinsics_.p2); // Radtan (k1, k2, r1, r2)
     cv::Mat undistorted_image;
     cv::undistort(image, undistorted_image, K, distCoeffs);
     return undistorted_image;
@@ -27,25 +27,21 @@ cv::Mat Camera::getDistortedImage(const sensor_msgs::Image::ConstPtr& msg) const
 
 
 Eigen::Matrix2Xf Camera::projectFromWorld(const Eigen::Matrix3Xf& r_world, bool undistort) const {
-    Eigen::Matrix<float, 3, 4> image_transform = intrinsics_.getProjectionMatrix() * cTw_.topRows<3>(); // Find world -> image transformation
-
-    Eigen::Matrix3Xf uv_h = (image_transform.leftCols(3) * r_world).colwise() + image_transform.col(3); // Get homogenous image coordinates
-    Eigen::Matrix2Xf uv = (uv_h.topRows(2).array().rowwise() / uv_h.row(2).array()).matrix();           // Normalize to get pixel coordinates
-
-    if (undistort)
-        undistortPoints(uv);
-
-    return uv;
+    Eigen::Matrix3Xf r_cam = (cTw_.topLeftCorner<3, 3>() * r_world).colwise() + cTw_.topRightCorner<3, 1>();
+    return projectFromCam(r_cam, undistort);
 }
 
 
 Eigen::Matrix2Xf Camera::projectFromCam(const Eigen::Matrix3Xf& r_cam, bool undistort) const {
-    Eigen::Matrix3Xf uv_h = intrinsics_.getProjectionMatrix() * r_cam;                          // Get homogenous image coordinates
-    Eigen::Matrix2Xf uv = (uv_h.topRows(2).array().rowwise() / uv_h.row(2).array()).matrix();   // Normalize to get pixel coordinates
+    // Normalize to image plane
+    Eigen::Matrix2Xf xy_img = (r_cam.topRows<2>().array().rowwise() / r_cam.row(2).array()).matrix();
 
+    // Undistort if desired
     if (undistort)
-        undistortPoints(uv);
+        undistortPoints(xy_img);
 
+    // Pixel projection
+    Eigen::Matrix2Xf uv = (xy_img.array().colwise() * Eigen::Array2f(intrinsics_.fx, intrinsics_.fy)).colwise() + Eigen::Array2f(intrinsics_.cx, intrinsics_.cy);
     return uv;
 }
 
@@ -60,6 +56,7 @@ std::vector<int> Camera::getInliers(const Eigen::Matrix2Xf& uv) const{
         if (inBounds(uv.col(i)))
             inliers.push_back(i);
     }
+
     return inliers;
 }
 
@@ -75,49 +72,51 @@ std::vector<bool> Camera::getInlierMask(const Eigen::Matrix2Xf& uv) const{
     return mask;
 }
 
-void Camera::undistortPoints(Eigen::Matrix2Xf& uv) const {
-    Eigen::Matrix2Xf uv_distorted = uv;
-    for (int i = 0; i < uv.cols(); ++i) {
-        double x = (uv(0, i) - intrinsics_.c_x) / intrinsics_.f_x;
-        double y = (uv(1, i) - intrinsics_.c_y) / intrinsics_.f_y;
-        double r2 = x * x + y * y;
-        double r4 = r2 * r2;
-        double r6 = r2 * r4;
-        double x_dist = x * (1 + intrinsics_.distortion_coeffs[0] * r2 + intrinsics_.distortion_coeffs[1] * r4)
-                     + 2 * intrinsics_.distortion_coeffs[2] * x * y + intrinsics_.distortion_coeffs[3] * (r2 + 2 * x * x);
-        double y_dist = y * (1 + intrinsics_.distortion_coeffs[0] * r2 + intrinsics_.distortion_coeffs[1] * r4)
-                     + 2 * intrinsics_.distortion_coeffs[3] * x * y + intrinsics_.distortion_coeffs[2] * (r2 + 2 * y * y);
-        uv_distorted(0, i) = intrinsics_.f_x * x_dist + intrinsics_.c_x;
-        uv_distorted(1, i) = intrinsics_.f_y * y_dist + intrinsics_.c_y;
+void Camera::undistortPoints(Eigen::Matrix2Xf& xy) const {
+    const int n_points = xy.cols();
+    for (int i = 0; i < n_points; ++i) {
+        // Get point reference
+        float& x = xy(0, i);
+        float& y = xy(1, i);
+
+        // Precompute radial factor
+        const float r2 = x * x + y * y;
+        const float r4 = r2 * r2;
+        const float radial_factor = (1 + intrinsics_.k1 * r2 + intrinsics_.k2 * r4);
+
+        // Compute undistorted coordinates
+        const float x_dist = x * radial_factor + 2 * intrinsics_.p1 * x * y + intrinsics_.p2 * (r2 + 2 * x * x);
+        const float y_dist = y * radial_factor + 2 * intrinsics_.p2 * x * y + intrinsics_.p1 * (r2 + 2 * y * y);
+
+        // Write back to xy
+        x = x_dist;
+        y = y_dist;
     }
-    uv = uv_distorted;
 }
+
 
 void Camera::loadIntrinsicsFromFile(const std::string& intrinsics_file) {
     try {
         YAML::Node config = YAML::LoadFile(intrinsics_file);
-        if (config["camera_model"].as<std::string>() != "pinhole") {
-            ROS_ERROR("Only pinhole camera model is supported.");
-            return;
-        }
-        intrinsics_.distortion_model = config["distortion_model"].as<std::string>();
-        if (intrinsics_.distortion_model != "radtan") {
-            ROS_ERROR("Only 'radtan' distortion model is supported.");
-            return;
-        }
-        intrinsics_.distortion_coeffs = config["distortion_coeffs"].as<std::vector<double>>();
+
+        // Load distortion
+        std::vector<double> dist_coeffs = config["distortion_coeffs"].as<std::vector<double>>();
+        intrinsics_.k1 = dist_coeffs[0];
+        intrinsics_.k2 = dist_coeffs[1];
+        intrinsics_.p1 = dist_coeffs[2];
+        intrinsics_.p2 = dist_coeffs[3];
+        
+        // Load projection matrix
         std::vector<double> intrinsics = config["intrinsics"].as<std::vector<double>>();
-        if (intrinsics.size() == 4) {
-            intrinsics_.f_x = intrinsics[0];
-            intrinsics_.f_y = intrinsics[1];
-            intrinsics_.c_x = intrinsics[2];
-            intrinsics_.c_y = intrinsics[3];
-        }
+        intrinsics_.fx = intrinsics[0];
+        intrinsics_.fy = intrinsics[1];
+        intrinsics_.cx = intrinsics[2];
+        intrinsics_.cy = intrinsics[3];
+        
         std::vector<int> resolution = config["resolution"].as<std::vector<int>>();
-        if (resolution.size() == 2) {
-            intrinsics_.w = resolution[0];
-            intrinsics_.h = resolution[1];
-        }
+        intrinsics_.w = resolution[0];
+        intrinsics_.h = resolution[1];
+        
     } catch (const YAML::Exception& e) {
         ROS_ERROR("Failed to load camera intrinsics from file: %s", e.what());
     }

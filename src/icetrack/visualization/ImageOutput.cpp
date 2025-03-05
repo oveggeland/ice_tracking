@@ -1,8 +1,7 @@
 #include "ImageOutput.h"
 
-ImageOutput::ImageOutput(ros::NodeHandle& nh, const std::string& folder, const std::string& topic, int queue_size) {
+ImageOutput::ImageOutput(ros::NodeHandle& nh, const std::string& folder, const std::string& topic, const int queue_size) {
     if (!folder.empty()) {
-        std::filesystem::create_directories(folder);
         image_folder_ = folder;
     }
 
@@ -12,9 +11,9 @@ ImageOutput::ImageOutput(ros::NodeHandle& nh, const std::string& folder, const s
 }
     
 
-void ImageOutput::newImage(double ts, const cv::Mat& img) const{
+void ImageOutput::newImage(const std::string& label, const double ts, const cv::Mat& img) const{
     if (!image_folder_.empty()) {
-        saveImage(ts, img);
+        saveImage(label, img);
     }
 
     if (image_pub_) {  // Check if publisher is initialized
@@ -23,18 +22,15 @@ void ImageOutput::newImage(double ts, const cv::Mat& img) const{
 }
     
 
-void ImageOutput::saveImage(double ts, const cv::Mat& img) const {
-    std::stringstream fname;
-    fname << std::fixed << static_cast<int>(1000 * ts) << ".png";
-    std::string fpath = image_folder_ + "/" + fname.str();
-
+void ImageOutput::saveImage(const std::string& label, const cv::Mat& img) const {
+    std::string fpath = joinPaths({image_folder_, label+".png"});
     if (!cv::imwrite(fpath, img)) {
         ROS_WARN("Failed to save image at %s", fpath.c_str());
     }
 }
     
 
-void ImageOutput::publishImage(double ts, const cv::Mat& img) const {
+void ImageOutput::publishImage(const double ts, const cv::Mat& img) const {
     if (image_pub_.getNumSubscribers() == 0) {
         return;
     }

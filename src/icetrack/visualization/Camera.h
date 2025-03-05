@@ -14,15 +14,14 @@
 #include "utils/calibration.h"
 
 struct CameraIntrinsics {
-    double f_x, f_y;    // Focal Length
-    double c_x, c_y;    // Optical center
+    double fx, fy;    // Focal Length
+    double cx, cy;    // Optical center
     int w, h;           // Image size
 
-    std::vector<double> distortion_coeffs; // Distortion coefficients (k1, k2, p1, p2)
-    std::string distortion_model;          // Distortion model (e.g., "radtan")
+    double k1, k2, p1, p2; // Radtan
 
     Eigen::Matrix3f getProjectionMatrix() const {
-        return (Eigen::Matrix3f() << f_x, 0, c_x, 0, f_y, c_y, 0, 0, 1).finished();
+        return (Eigen::Matrix3f() << fx, 0, cx, 0, fy, cy, 0, 0, 1).finished();
     }
 };
 
