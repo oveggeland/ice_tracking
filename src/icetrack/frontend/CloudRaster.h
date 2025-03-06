@@ -6,6 +6,10 @@
 #include <open3d/t/geometry/PointCloud.h>
 
 
+#include <opencv2/opencv.hpp>
+#include <map>
+#include <random>
+
 // Defines an index in the raster
 struct IdxType {
     int x;
@@ -27,6 +31,7 @@ public:
     open3d::t::geometry::PointCloud toPointCloud() const;
 
     // Processing methods
+    void cluster(size_t eps, size_t min_points);
     void smoothUniform(size_t window_size); // Uniform convolution of attributes
     void estimateDeformation(size_t window_size); // Estimate deformation (local elevation variance) 
 
@@ -47,6 +52,7 @@ private:
     void defineGrid(const Eigen::Matrix2Xf& xy);
 
     // Data grid
+    Eigen::MatrixXi idx_;
     Eigen::MatrixXi count_;             // Number of points, falling within a cell during initialization
     Eigen::MatrixXf elevation_;         // Mean elevation within a cell
     Eigen::MatrixXf intensity_;         // Mean intensity
@@ -56,6 +62,9 @@ private:
     std::vector<IdxType> occupied_;
 
     // Helpers
+    std::vector<int> findNeighbors(const IdxType& idx, const size_t eps);
+    bool expandCluster(std::vector<int>& labels, const int idx, int cluster_id, size_t eps, size_t min_points);
+
     void smoothPoint(const IdxType& idx, const size_t window_size);
     void estimatePointDeformation(const IdxType& idx, const size_t window_size);
 };

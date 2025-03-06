@@ -68,6 +68,7 @@ CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, float grid_
     count_ = Eigen::MatrixXi::Constant(height_, width_, 0);
     elevation_ = Eigen::MatrixXf(height_, width_);
     intensity_ = Eigen::MatrixXf(height_, width_);
+    idx_ = Eigen::MatrixXi(height_, width_);
 
     // Reserve space in index vector
     occupied_.reserve(num_points);
@@ -80,6 +81,7 @@ CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, float grid_
         
         if (0 == count_(y, x)++){ // Check for first allocation to a grid cell
             occupied_.emplace_back(x, y);
+            idx_(y, x) = occupied_.size() - 1;
 
             elevation_(y, x) = z(i);
             intensity_(y, x) = intensities(i);
@@ -98,6 +100,91 @@ CloudRaster::CloudRaster(const open3d::t::geometry::PointCloud& pcd, float grid_
         intensity_(idx.y, idx.x) /= cnt;
     }
 }
+
+
+std::vector<int> CloudRaster::findNeighbors(const IdxType& idx, const size_t eps){
+    std::vector<int> neighbors;
+    neighbors.reserve((2*eps)*(2*eps));
+
+    for (int x = std::max<int>(0, idx.x - eps); x < std::min<int>(width_, idx.x + eps + 1); ++x){
+        for (int y = std::max<int>(0, idx.y - eps); y < std::min<int>(height_, idx.y + eps + 1); ++y){
+            if (count_(y, x) > 0)
+                neighbors.push_back(idx_(y, x));
+        }
+    }
+    return neighbors;
+}
+
+
+bool CloudRaster::expandCluster(std::vector<int>& labels, const int idx, int cluster_id, size_t eps, size_t min_points){
+    std::vector<int> neighbors = findNeighbors(occupied_[idx], eps);
+        if (neighbors.size() < min_points){
+            labels[idx] = -1; // Noise
+            return false;
+        }
+        else{
+            labels[idx] = cluster_id;
+            // Expand cluster
+            for (size_t j = 0; j < neighbors.size(); ++j) {
+                const int neighbor_idx = neighbors[j];
+
+                if (labels[neighbor_idx] == -1) {  // Noise -> Border point
+                    labels[neighbor_idx] = cluster_id;
+                }
+
+                if (labels[neighbor_idx] == 0) {  // Unvisited
+                    labels[neighbor_idx] = cluster_id;  // Mark first to prevent infinite recursion
+                    expandCluster(labels, neighbor_idx, cluster_id, eps, min_points);
+                }
+            }
+
+            return true;
+        }
+}
+
+void CloudRaster::cluster(size_t eps, size_t min_points){
+    size_t n_pixels = occupied_.size();
+
+    std::vector<int> labels(n_pixels, 0);
+
+    int cluster_id = 1;
+    for (int i = 0; i < n_pixels; ++i){
+        if (labels[i] != 0)
+            continue; // Already labelled
+        
+        if (expandCluster(labels, i, cluster_id, eps, min_points))
+            cluster_id ++;        
+    }
+
+    if (cluster_id < 10)
+        return;
+
+    // Create an image to visualize clusters
+    cv::Mat cluster_image(height_, width_, CV_8UC3, cv::Scalar(0, 0, 0)); // Black background
+
+    // Generate random colors for each cluster
+    std::map<int, cv::Vec3b> cluster_colors;
+    std::mt19937 rng(1234); // Fixed seed for reproducibility
+    std::uniform_int_distribution<int> dist(0, 255);
+
+    for (int i = 0; i < n_pixels; ++i) {
+        int label = labels[i];
+        if (label > 0) {  // Ignore noise (-1) and unvisited points (0)
+            if (cluster_colors.find(label) == cluster_colors.end()) {
+                cluster_colors[label] = cv::Vec3b(dist(rng), dist(rng), dist(rng));
+            }
+
+            IdxType idx = occupied_[i];  // Get pixel position
+            cluster_image.at<cv::Vec3b>(idx.y, idx.x) = cluster_colors[label];
+        }
+    }
+
+    // Display the result
+    cv::imshow("Cluster Visualization", cluster_image);
+    cv::waitKey(0);
+}
+
+
 
 void CloudRaster::smoothPoint(const IdxType& idx, const size_t window_size){
     const size_t offset = window_size / 2;
