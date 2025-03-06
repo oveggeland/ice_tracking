@@ -23,9 +23,13 @@ private:
     PoseGraph& pose_graph_;
     const FrameBuffer& frame_buffer_;
 
+    // Keep track of previous key frame
+    int prev_idx_ = 0;
+    std::shared_ptr<PointCloud> prev_cloud_ = nullptr;
+
     // Config
     bool enabled_;
-    int frame_interval_; // Align every second frame
+    int key_frame_interval_; // Only align key frames
     int min_frame_size_;
     double voxel_size_;
     double icp_threshold_;

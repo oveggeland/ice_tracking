@@ -2,7 +2,7 @@
 # General
 safe_delay: 0.5
 gravity_norm: 9.831
-fixed_lag: 60
+fixed_lag: 30
 hot_start_delay: 3
 
 crs_source: "EPSG:4326"

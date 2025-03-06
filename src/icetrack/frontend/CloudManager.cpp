@@ -38,7 +38,7 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     // Create a new frame, return true on success
     if (frame_buffer_.createFrame(state_idx)){
         // Odometry with new frame
-        odometry_estimator_.estimateOdometry(state_idx); // TODO: Optimize odometry
+        odometry_estimator_.estimateOdometry(state_idx);
         
         // Publish raw frame?
         if (publish_frames_){

@@ -43,7 +43,7 @@ surface_estimator/ransac_iterations: 5
 
 # Odometry
 lidar_odometry/enabled: true
-lidar_odometry/frame_interval: 1
+lidar_odometry/key_frame_interval: 5
 lidar_odometry/min_frame_size: 500
 lidar_odometry/voxel_size: 1.0
 
