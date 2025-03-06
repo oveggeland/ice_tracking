@@ -6,7 +6,7 @@ PoseGraph::PoseGraph(ros::NodeHandle& nh)
 
     // Initialize smoother
     double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
-    smoother_ = BatchFixedLagSmoother(lag); // TODO: Isam2?
+    smoother_ = IncrementalFixedLagSmoother(lag);
 
     readParams(nh);
 }   
@@ -18,6 +18,8 @@ void PoseGraph::readParams(const ros::NodeHandle& nh){
     getParamOrThrow(nh, "/navigation/lever_norm_threshold", lever_norm_threshold_);
     getParamOrThrow(nh, "/navigation/lever_norm_sigma", lever_norm_sigma_);
     getParamOrThrow(nh, "/navigation/lever_altitude_sigma", lever_altitude_sigma_);
+
+    getParamOrThrow(nh, "/navigation/hot_start_delay", hot_start_delay_);
 }
 
 void PoseGraph::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
@@ -101,8 +103,10 @@ void PoseGraph::addState(double ts){
     updateFactors(state_.idx, ts);
 
     // Update pose graph and current state
-    updateSmoother();
-    updateState(state_.idx);
+    if (state_.idx > hot_start_delay_){
+        updateSmoother();
+        updateState(state_.idx);
+    }
 
     // Reset integration
     imu_integration_.resetIntegration(ts, state_.bias);

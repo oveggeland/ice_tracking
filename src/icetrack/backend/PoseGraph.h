@@ -4,7 +4,7 @@
 
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/slam/BetweenFactor.h>
-#include <gtsam_unstable/nonlinear/BatchFixedLagSmoother.h>
+#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
 #include "navigation.h"
 #include "ImuIntegration.h"
@@ -126,7 +126,8 @@ private:
     NonlinearFactorGraph factors_; 
 
     double lag_;
-    BatchFixedLagSmoother smoother_;
+    int hot_start_delay_;
+    IncrementalFixedLagSmoother smoother_;
 
     // Factor generator modules
     ImuIntegration imu_integration_;
