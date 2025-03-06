@@ -70,7 +70,6 @@ void PoseGraph::surfaceCallback(int state_idx, const Eigen::Vector4d& plane_coef
 
     if (init_){
         factors_.add(surface_correction_.getAltitudeFactor(X(state_idx)));
-        factors_.add(surface_correction_.getAttitudeFactor(X(state_idx)));
     }
     else
         initialize();
@@ -123,7 +122,9 @@ void PoseGraph::addPriors(int idx){
 
     // Altitude prior
     factors_.add(surface_correction_.getAltitudeFactor(X(idx)));
-    factors_.add(surface_correction_.getAttitudeFactor(X(idx)));
+
+    // Attitude prior
+    factors_.add(imu_integration_.getAttitudeFactor(X(idx)));
 
     // Bias prior
     auto initial_bias_noise = noiseModel::Diagonal::Sigmas(

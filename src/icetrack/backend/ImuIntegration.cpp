@@ -84,6 +84,10 @@ CombinedImuFactor ImuIntegration::getIntegrationFactor(int state_idx){
         preint_imu);
 }
 
+Pose3AttitudeFactor ImuIntegration::getAttitudeFactor(Key key) const{
+    return Pose3AttitudeFactor(key, Unit3(0, 0, 1), noiseModel::Isotropic::Sigma(2, imu_attitude_sigma_), Unit3(acc_));
+}
+
 void ImuIntegration::predictState(PoseGraphState& state) const{
     NavState pred = preintegration_->predict(NavState(state.pose, state.velocity), state.bias);
     state.pose = pred.pose();
