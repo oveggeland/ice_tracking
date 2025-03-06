@@ -10,7 +10,6 @@
 #include "frontend/FrameBuffer.h"
 #include "frontend/SurfaceEstimator.h"
 #include "frontend/OdometryEstimator.h"
-#include "frontend/CloudProcessor.h"
 #include "frontend/CloudPublisher.h"
 
 #include "utils/ros_params.h"
@@ -27,11 +26,6 @@ public:
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-    // Accessors
-    open3d::t::geometry::PointCloud cloudQuery(bool process, 
-        std::optional<double> t0 = std::nullopt, std::optional<double> t1 = std::nullopt) const;
-
-
 private:
     // PoseGraph interface
     PoseGraph& pose_graph_;
@@ -44,20 +38,18 @@ private:
     SurfaceEstimator surface_estimator_; // Estimate the ice sheet as under a plane assumption
     OdometryEstimator odometry_estimator_; // Frame-to-frame odometry
 
-    // Processing modules
-    CloudProcessor cloud_processor_; // Process raw pointclouds
-
     // Publisher(s)
     CloudPublisher cloud_publisher_;
 
     // Keep track of raw and processed clouds
     open3d::t::geometry::PointCloud raw_cloud_;
-    open3d::t::geometry::PointCloud processed_cloud_;
-    bool processed_ = false; // Indicates if the current raw cloud has been processed
 
     // Config
+    bool publish_cloud_;
+    double ts_last_cloud_pub_ = 0.0;
+    double cloud_pub_interval_;
+
     bool publish_frames_;
-    bool publish_processed_;
 
     // Subscriber(s)
     ros::Subscriber lidar_sub_;

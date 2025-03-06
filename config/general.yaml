@@ -56,7 +56,7 @@ lidar_odometry/icp_min_fitness: 0.9
 
 
 # Image stuff
-image_generator/enabled: true
+image_generator/enabled: false
 image_generator/display: false
 image_generator/topic: "/viz/image"
 image_generator/delay: 5.0
@@ -82,5 +82,11 @@ cloud_processor/smoothing_window_size: 3
 cloud_processor/deformation_window_size: 5
 
 # Cloud manager
-cloud_manager/publish_frames: true
-cloud_manager/publish_processed: true
+cloud_manager/publish_cloud: true
+cloud_manager/cloud_pub_interval: 5
+
+cloud_manager/publish_frames: false
+
+# Cloud publisher
+cloud_publisher/cloud_topic: "/icetrack/raw_cloud"
+cloud_publisher/frame_topic: "/icetrack/frame"

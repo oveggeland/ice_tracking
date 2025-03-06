@@ -17,37 +17,30 @@ public:
     CloudPublisher(ros::NodeHandle& nh);
 
     // Interface to publish cloud
-    void publishRawCloud(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities);
-    void publishProcessedCloud(const open3d::t::geometry::PointCloud& cloud);
+    void publishFrame(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities);
+    void publishCloud(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities);
 
 private:
-    // Raw cloud
-    ros::Publisher raw_cloud_pub_;
-    sensor_msgs::PointCloud2 raw_cloud_msg_;  
+    // Single frame
+    ros::Publisher frame_pub_;
+    sensor_msgs::PointCloud2 frame_msg_; 
 
-    void setupRawCloudPublisher(ros::NodeHandle& nh);
-    void fillRawCloudMessage(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities); 
+    // Global cloud
+    ros::Publisher cloud_pub_;
+    sensor_msgs::PointCloud2 cloud_msg_;  
 
-    // Processed cloud
-    ros::Publisher processed_cloud_pub_;                
-    sensor_msgs::PointCloud2 processed_cloud_msg_; 
+    // Setup
+    void setupPublishers(ros::NodeHandle& nh);
+    void initializeMessages();
 
-    void setupProcessedCloudPublisher(ros::NodeHandle& nh);
-    void fillProcessedCloudMessage(const open3d::t::geometry::PointCloud& cloud);
+    // Fill message
+    void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities); 
 };
 
 // Defines the memory map of a point in the cloud message
 #pragma pack(push, 1)
 struct PackedPointXYZI {
     Eigen::Vector3f position;
-    float intensity;
-};
-
-struct PackedPointXYZDI {
-    float x;
-    float y;
-    float z;
-    float deformation;
     float intensity;
 };
 #pragma pack(pop)

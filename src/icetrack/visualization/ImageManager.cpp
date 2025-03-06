@@ -36,17 +36,17 @@ void ImageManager::processImage(double t_img, const cv::Mat& img){
     camera_.updateTransform(wTb);
 
     // Query cloud (in world frame)
-    const auto cloud = cloud_manager_.cloudQuery(false, t_img - offset_, t_img + offset_);
-    int num_points = cloud.IsEmpty()? 0: cloud.GetPointPositions().GetShape(0);
-    if (num_points == 0){
-        ROS_WARN_STREAM("ImageManager::processImage - No cloud points available at: " << std::fixed << t_img);
-    }
+    // const auto cloud = cloud_manager_.cloudQuery(false, t_img - offset_, t_img + offset_);
+    // int num_points = cloud.IsEmpty()? 0: cloud.GetPointPositions().GetShape(0);
+    // if (num_points == 0){
+    //     ROS_WARN_STREAM("ImageManager::processImage - No cloud points available at: " << std::fixed << t_img);
+    // }
 
     // Generate augmented image
-    ImageFrame img_frame(t_img, img, cloud, camera_);
+    // ImageFrame img_frame(t_img, img, cloud, camera_);
     
-    auto img_imposed = img_frame.getImposedImage();
-    display("imposed", img_imposed);
+    // auto img_imposed = img_frame.getImposedImage();
+    // display("imposed", img_imposed);
     //output_.newImageFrame(img_frame);
 }
 
