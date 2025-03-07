@@ -2,9 +2,7 @@
 
 // Constructor
 FloeManager::FloeManager(const ros::NodeHandle& nh, const PoseGraph& pg, FrameBuffer& fb) : pg_(pg), fb_(fb) {
-    max_floes_ = 4;
-    floe_id_counter_ = 1;
-    floes_[0] = Floe(0);
+    background_ = Floe(0);
 };
 
 
@@ -25,67 +23,124 @@ void FloeManager::processFrame(const CloudFrame& frame){
     // Iterate over all points in frame
     for (int i = 0; i < frame_size; ++i){
         const int& label = floe_labels[i];
-        floes_[label].addPoint(points[i], frame.idx(), i);
+
+        if (label == 0)
+            background_.addPoint(points[i], frame.idx(), i);
+        else
+            floes_[label].addPoint(points[i], frame.idx(), i);
     }
 }
 
 /*
 Iterate over all frames and refine the floes
 */
-void FloeManager::refineFloes(){
-    // Reset floes
-    clearAllFloes();
+void FloeManager::updateFloes(){
+    // Clear for rebuild
+    background_.clear();
+    clearFloes();
 
-    // Allocate enough memory in all floes
-    const int point_count = fb_.pointCount(); // Upper bound (if all points are assigned to a single floe)
-    reserveMemoryForFloes(point_count);
+    // Allocate memory for background points (floes are allocated on creation)
+    const int point_count = fb_.pointCount(); // Upper bound
+    background_.reserve(point_count);
 
-    // Refine based on each lidar frame in the buffer
+    // Refine based on each frame in the buffer
     for (auto frame_it = fb_.begin(); frame_it != fb_.end(); ++frame_it){
         processFrame(*frame_it);
     }
 
-    // TODO: Remove old/small/empty floes
-
-
-    // if (point_count > 100000)
-    //     visualizeFloes();
-}
-
-
-/*
-Reassigns a set of points from one Floe object to another. Indices represent the point idx of source. 
-*/
-void FloeManager::reassignPoints(const Floe source, Floe& target, const std::vector<int>& indices){
-    for (const int idx: indices) {
-        // Reassign label
-        // fb_.setFloeLabel(source.frame_id_[idx], source.frame_idx_[idx], target.id());
-        
-        // Copy data
-        target.copyFrom(source, idx);
+    // Maintain
+    for (auto it = floes_.begin(); it != floes_.end(); ) {
+        if (it->second.size() < min_floe_size_) {
+            ROS_INFO_STREAM("Delete floe: " << it->first);
+            reassignPoints(it->second, background_);
+            it = floes_.erase(it);
+        } 
+        else {
+            it->second.buildSearchTree();
+            ++it;
+        }
     }
 }
 
+int FloeManager::assignToFloe(const Eigen::Vector3d& point){
+    for (auto& [floe_id, floe] : floes_) {
+        if (floe_id == 0)
+            continue; // Skip background
+
+        if (floe.isCompatible(point))
+            return floe_id; // Use first 
+    }
+    return 0;
+}
+
+// Expand floes with points from background (including newly added frame)
+void FloeManager::expandFloes(){
+    ROS_WARN("expandFloes() not implemented");
+    return;
+    // Extract background points
+    const std::vector<Eigen::Vector3d>& points = background_.getCloud()->points_;
+    const int n_points = points.size();
+    
+    // Allocate vector for floe labels
+    std::vector<int> floe_label;
+    floe_label.reserve(n_points);
+
+    // Iterate and assign a floe label
+    for (int i = 0; i < n_points; ++i){
+        floe_label.push_back(assignToFloe(points[i]));
+    }
+
+    // 
+}
+
+// Reassign a single point from source to target
+// Does not remove the point from source!
+void FloeManager::reassignPoint(const Floe& source, Floe& target, const int idx){
+    fb_.setFloeLabel(source.frame_id_[idx], source.frame_idx_[idx], target.id());
+    target.copyFrom(source, idx);
+}
+
+/*
+Reassigns a points based from source to target, based on the indices of source.
+*/
+void FloeManager::reassignPoints(Floe& source, Floe& target, const std::vector<int>& indices){
+    target.reserveAdditional(indices.size());
+    
+    for (const int idx: indices) {
+        reassignPoint(source, target, idx);
+    }
+
+    source.removeByIndex(indices);
+}
+
+/*
+Reassign all points from source to target
+*/
+void FloeManager::reassignPoints(Floe& source, Floe& target){
+    const int n_points = source.size();
+    target.reserveAdditional(n_points);
+    
+    for (int idx = 0; idx < n_points; ++idx) {
+        reassignPoint(source, target, idx);
+    }
+
+    source.clear();
+}
 
 
-void FloeManager::discoverNewFloes(){
-    int min_floe_size_ = 5000;
 
-    // Get background floe
-    Floe& background = floes_.at(0);
-    if (background.size() < min_floe_size_)
-        return;
 
-    // Down-sample
-    auto cloud = background.getCloud();
+void FloeManager::discoverFloes(){
+    // Down-sample and trace
+    auto cloud = background_.getCloud();
     auto min_bound = cloud->GetMinBound();
     auto max_bound = cloud->GetMaxBound();
-    auto [cloud_ds, trace, inliers] = background.getCloud()->VoxelDownSampleAndTrace(1.0, min_bound, max_bound);
+    auto [cloud_ds, trace, inliers] = cloud->VoxelDownSampleAndTrace(1.0, min_bound, max_bound);
 
     // Cluster
     std::vector<int> labels = cloud_ds->ClusterDBSCAN(5.0, 50);
 
-    // Convert to a list per-label indices
+    // Convert to a list of per-label indices
     std::vector<std::vector<int>> clusters;
     for (int i = 0; i < labels.size(); ++i){
         const int idx = labels[i]+1;
@@ -94,62 +149,56 @@ void FloeManager::discoverNewFloes(){
         clusters[idx].push_back(i);
     }
 
-
-    Floe new_background;
-    int new_floe_count = 0;
-
-
+    // Allocation cluster trace vector
     std::vector<int> cluster_trace;
-    cluster_trace.reserve(background.size());
-    for (int i = 0; i < clusters.size(); ++i){
+    cluster_trace.reserve(background_.size()); // Upper limit reservation
+
+    // Iterate through non-background clusters
+    for (int i = 1; i < clusters.size(); ++i){
         auto& cluster = clusters[i];
-        for (auto voxel_idx: cluster){
+
+        // Get cluster trace
+        for (const int voxel_idx: cluster){
             std::vector<int>& voxel_points = inliers[voxel_idx];
             cluster_trace.insert(cluster_trace.end(), voxel_points.begin(), voxel_points.end());
         }
-        
-        if (i == 0){
-            new_background = Floe(0, cluster_trace.size());
-            reassignPoints(background, new_background, cluster_trace);
-        }
-        else if (cluster_trace.size() > min_floe_size_){
-            ROS_INFO_STREAM("Found a big non-background cluster of size: " << cluster_trace.size());
-
+    
+        // Check if cluster is big enough
+        if (cluster_trace.size() > min_floe_size_){
+            ROS_INFO_STREAM("Add floe: " << floe_id_counter_ << " of size: " << cluster_trace.size());
             // Okay, lets make a new flow with id and pre-determined capacity
-            Floe new_floe(++floe_id_counter_, cluster_trace.size());
+            Floe new_floe(floe_id_counter_++, cluster_trace.size());
 
             // Removes points from background and puts them in new_floe
-            reassignPoints(background, new_floe, cluster_trace);
+            reassignPoints(background_, new_floe, cluster_trace);
 
             // Add floe to buffer
             floes_[new_floe.id()] = new_floe;
 
-            new_floe_count++;
-            //break; // We just messed up the trace in reassignPoints...
+            break; // Only allow one new flow every time
         }
 
         cluster_trace.clear();
     }
 
-    background = new_background;
-
-    if (new_floe_count > 1 && fb_.pointCount() > 100000)
+    if (pointCount() > 100000)
         visualizeFloes();
 }
 
+int FloeManager::pointCount() const {
+    int cnt = 0;
+    for (auto& [floe_id, floe] : floes_) {
+        cnt += floe.size();
+    }
+    return cnt;
+}
 
-
-void FloeManager::clearAllFloes() {
+void FloeManager::clearFloes() {
     for (auto& [floe_id, floe] : floes_) {
         floe.clear();
     }
 }
 
-void FloeManager::reserveMemoryForFloes(const int n_points) {
-    for (auto& [floe_id, floe] : floes_) {
-        floe.reserve(n_points);
-    }
-}
 
 void FloeManager::visualizeFloes() {
     std::vector<std::shared_ptr<const open3d::geometry::Geometry>> clouds_to_visualize;
