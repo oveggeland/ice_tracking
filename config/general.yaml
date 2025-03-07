@@ -29,7 +29,7 @@ processed_cloud_queue_size_: 10
 
 # Frame buffer
 frame_buffer/undistort_frames: true
-frame_buffer/window_size: 10
+frame_buffer/window_size: 5
 
 # Surface estimator
 surface_estimator/update_interval: 10
@@ -83,7 +83,7 @@ cloud_processor/deformation_window_size: 5
 
 # Cloud manager
 cloud_manager/publish_cloud: true
-cloud_manager/cloud_pub_interval: 5
+cloud_manager/cloud_pub_interval: 1
 
 cloud_manager/publish_frames: false
 

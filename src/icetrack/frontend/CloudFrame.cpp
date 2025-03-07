@@ -5,6 +5,7 @@ CloudFrame::CloudFrame(int idx, size_t capacity) : idx_(idx){
     cloud_.points_.reserve(capacity);
     intensities_.reserve(capacity);
     timestamps_.reserve(capacity);
+    floe_labels_.resize(capacity, 0);
 }
 
 void CloudFrame::addPoint(const Eigen::Vector3d& pos, const float i, const double ts) {

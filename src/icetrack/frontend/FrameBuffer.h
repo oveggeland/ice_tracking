@@ -16,6 +16,7 @@
 
 using FrameType = CloudFrame;
 using FrameBufferType = std::deque<FrameType>;
+using FrameBufferIterator = FrameBufferType::iterator;
 using FrameBufferConstIterator = FrameBufferType::const_iterator;
 
 class FrameBuffer{
@@ -30,6 +31,10 @@ public:
 
     open3d::t::geometry::PointCloud buildMap() const;
 
+
+    void setFloeLabel(const int frame_id, const int idx, const int label){
+        getFrame(frame_id)->setFloeLabel(idx, label);
+    };
     // Query frames with specified attributes. If timestamps are not specified, all points are returned.
     // TensorCloud getTensorCloud() const; // Return t::geometry::pointcloud object with global positions and intensities
     // CloudFrame::Ptr getPoints(bool local, bool global, bool intensities, bool timestamps) const; // Get all points
@@ -39,13 +44,18 @@ public:
     double t0() const { return buffer_.empty()? 0.0: buffer_.front().t0(); }
     double t1() const { return buffer_.empty()? 0.0: buffer_.back().t1(); }
     size_t pointCount() const { return point_count_; }
-
+    
+    FrameType* getFrame(int idx);
     const FrameType* getFrame(int idx) const;
 
     const FrameType& front() const { return buffer_.front(); }
     const FrameType& back() const { return buffer_.back(); }
+
+    FrameBufferIterator begin() { return buffer_.begin(); }
+    FrameBufferIterator end() { return buffer_.end(); }
     FrameBufferConstIterator begin() const { return buffer_.begin(); }
     FrameBufferConstIterator end() const { return buffer_.end(); }
+
     size_t size() const { return buffer_.size(); }
 
 private:

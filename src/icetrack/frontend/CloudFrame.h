@@ -16,6 +16,8 @@ public:
     void addPoint(const Eigen::Vector3d& pos, const float i, const double ts);
     void setTransform(const Eigen::Matrix4d& T) { transform_ = T; }
 
+    void setFloeLabel(const int idx, const int label){ floe_labels_[idx] = label; }
+
     void downSample(double voxel_size);
 
     //const TensorCloud toTensorCloud() const;
@@ -35,6 +37,7 @@ public:
     inline const std::vector<Eigen::Vector3d>& positions() const { return cloud_.points_; }
     inline const std::vector<float>& intensities() const { return intensities_; }
     inline const std::vector<double>& timestamps() const { return timestamps_; }
+    inline const std::vector<int>& floeLabels() const { return floe_labels_; }
 
     inline const open3d::geometry::PointCloud& local() const { return cloud_; }
     std::shared_ptr<open3d::geometry::PointCloud> global() const;
@@ -45,4 +48,5 @@ private:
     open3d::geometry::PointCloud cloud_;
     std::vector<float> intensities_;
     std::vector<double> timestamps_;
+    std::vector<int> floe_labels_;
 };

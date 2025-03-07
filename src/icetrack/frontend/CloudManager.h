@@ -12,6 +12,8 @@
 #include "frontend/OdometryEstimator.h"
 #include "frontend/CloudPublisher.h"
 
+#include "frontend/FloeManager.h"
+
 #include "utils/ros_params.h"
 
 /*
@@ -40,6 +42,9 @@ private:
 
     // Publisher(s)
     CloudPublisher cloud_publisher_;
+
+    // Floe tracking
+    FloeManager floe_manager_;
 
     // Keep track of raw and processed clouds
     open3d::t::geometry::PointCloud raw_cloud_;

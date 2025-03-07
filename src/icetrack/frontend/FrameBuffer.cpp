@@ -87,8 +87,21 @@ void FrameBuffer::refineFrames() {
 /*
 Query a frame by index. Return nullptr if frame is non-existent.
 */
-const FrameType* FrameBuffer::getFrame(int idx) const {
-    for (const auto& it : buffer_) {
+FrameType* FrameBuffer::getFrame(int idx) {
+    for (auto& it : buffer_) {
+        if (it.idx() == idx) {
+            return &it;  // Return a pointer to the found frame
+        }
+    }
+    return nullptr;  // Frame not found
+}
+
+
+/*
+Query a frame by index. Return nullptr if frame is non-existent.
+*/
+const FrameType* FrameBuffer::getFrame(int idx) const{
+    for (auto& it : buffer_) {
         if (it.idx() == idx) {
             return &it;  // Return a pointer to the found frame
         }

@@ -6,7 +6,8 @@ CloudManager::CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph) :
     frame_buffer_(nh, pose_graph, point_buffer_),
     surface_estimator_(nh, pose_graph, point_buffer_),
     odometry_estimator_(nh, pose_graph, frame_buffer_),
-    cloud_publisher_(nh) {
+    cloud_publisher_(nh),
+    floe_manager_(nh, pose_graph, frame_buffer_) {
 
     // Config
     getParamOrThrow(nh, "/cloud_manager/publish_frames", publish_frames_);
@@ -48,16 +49,19 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     }
 
     // Update map
-    raw_cloud_ = frame_buffer_.buildMap();
+    floe_manager_.refineFloes();
+    floe_manager_.discoverNewFloes();
+
+    // raw_cloud_ = frame_buffer_.buildMap();
 
     // Publishing
-    if (publish_cloud_ && (ts - ts_last_cloud_pub_ > cloud_pub_interval_)){
-        const auto points = raw_cloud_.ToLegacy().points_;
-        const std::vector<float> intensities(points.size());
-        cloud_publisher_.publishCloud(points, intensities);
+    // if (publish_cloud_ && (ts - ts_last_cloud_pub_ > cloud_pub_interval_)){
+    //     const auto points = raw_cloud_.ToLegacy().points_;
+    //     const std::vector<float> intensities(points.size());
+    //     cloud_publisher_.publishCloud(points, intensities);
 
-        ts_last_cloud_pub_ = ts;
-    }
+    //     ts_last_cloud_pub_ = ts;
+    // }
 }
 
 /*
