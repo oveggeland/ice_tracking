@@ -6,6 +6,9 @@
 
 #include "frontend/Floe.h"
 #include "frontend/FrameBuffer.h"
+#include "frontend/DBScanner.h"
+
+#include "frontend/ClusterRaster.h"
 
 class FloeManager {
 public:
@@ -34,7 +37,7 @@ private:
     FrameBuffer& fb_;     // For point access
 
     // Helpers
-    int assignToFloe(const Eigen::Vector3d& point);
+    int findFloeMatch(const Eigen::Vector3d& point);
 
     void reassignPoint(const Floe& source, Floe& target, const int idx);
     void reassignPoints(Floe& source, Floe& target); 

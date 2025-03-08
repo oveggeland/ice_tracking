@@ -51,46 +51,30 @@ void FloeManager::updateFloes(){
     // Maintain
     for (auto it = floes_.begin(); it != floes_.end(); ) {
         if (it->second.size() < min_floe_size_) {
-            ROS_INFO_STREAM("Delete floe: " << it->first);
             reassignPoints(it->second, background_);
             it = floes_.erase(it);
         } 
         else {
-            it->second.buildSearchTree();
+            // it->second.buildSearchTree();
             ++it;
         }
     }
 }
 
-int FloeManager::assignToFloe(const Eigen::Vector3d& point){
+int FloeManager::findFloeMatch(const Eigen::Vector3d& point){
     for (auto& [floe_id, floe] : floes_) {
-        if (floe_id == 0)
-            continue; // Skip background
-
         if (floe.isCompatible(point))
             return floe_id; // Use first 
     }
     return 0;
 }
 
-// Expand floes with points from background (including newly added frame)
+// Expand floes with points from background
 void FloeManager::expandFloes(){
-    ROS_WARN("expandFloes() not implemented");
-    return;
-    // Extract background points
-    const std::vector<Eigen::Vector3d>& points = background_.getCloud()->points_;
-    const int n_points = points.size();
-    
-    // Allocate vector for floe labels
-    std::vector<int> floe_label;
-    floe_label.reserve(n_points);
-
-    // Iterate and assign a floe label
-    for (int i = 0; i < n_points; ++i){
-        floe_label.push_back(assignToFloe(points[i]));
-    }
-
-    // 
+    // for (auto& floe: floes_){
+    //     std::vector<int> inliers = floe_.findInliers(*background_.getCloud());
+    //     reassignPoints(background_, floe, inliers);
+    // }
 }
 
 // Reassign a single point from source to target
@@ -130,59 +114,35 @@ void FloeManager::reassignPoints(Floe& source, Floe& target){
 
 
 
+#include <chrono>
+#include <iostream>
+
 void FloeManager::discoverFloes(){
-    // Down-sample and trace
-    auto cloud = background_.getCloud();
-    auto min_bound = cloud->GetMinBound();
-    auto max_bound = cloud->GetMaxBound();
-    auto [cloud_ds, trace, inliers] = cloud->VoxelDownSampleAndTrace(1.0, min_bound, max_bound);
-
-    // Cluster
-    std::vector<int> labels = cloud_ds->ClusterDBSCAN(5.0, 50);
-
-    // Convert to a list of per-label indices
-    std::vector<std::vector<int>> clusters;
-    for (int i = 0; i < labels.size(); ++i){
-        const int idx = labels[i]+1;
-        if (idx >= clusters.size())
-            clusters.resize(idx+1);
-        clusters[idx].push_back(i);
-    }
-
-    // Allocation cluster trace vector
-    std::vector<int> cluster_trace;
-    cluster_trace.reserve(background_.size()); // Upper limit reservation
-
-    // Iterate through non-background clusters
-    for (int i = 1; i < clusters.size(); ++i){
-        auto& cluster = clusters[i];
-
-        // Get cluster trace
-        for (const int voxel_idx: cluster){
-            std::vector<int>& voxel_points = inliers[voxel_idx];
-            cluster_trace.insert(cluster_trace.end(), voxel_points.begin(), voxel_points.end());
-        }
+    auto cloud = background_.getCloud()->points_;
+    if (cloud.size() < 1)
+        return;
     
-        // Check if cluster is big enough
-        if (cluster_trace.size() > min_floe_size_){
-            ROS_INFO_STREAM("Add floe: " << floe_id_counter_ << " of size: " << cluster_trace.size());
+    ClusterRaster raster(cloud, 1.0);
+    std::vector<std::vector<int>> clusters = raster.getClusters();
+
+
+    for (const auto& cluster: clusters){
+        if (cluster.size() > min_floe_size_){
             // Okay, lets make a new flow with id and pre-determined capacity
-            Floe new_floe(floe_id_counter_++, cluster_trace.size());
+            Floe new_floe(floe_id_counter_++, cluster.size());
 
             // Removes points from background and puts them in new_floe
-            reassignPoints(background_, new_floe, cluster_trace);
+            reassignPoints(background_, new_floe, cluster);
 
             // Add floe to buffer
             floes_[new_floe.id()] = new_floe;
 
             break; // Only allow one new flow every time
         }
-
-        cluster_trace.clear();
     }
 
-    if (pointCount() > 100000)
-        visualizeFloes();
+    // if (pointCount() > 100000)
+    //     visualizeFloes();
 }
 
 int FloeManager::pointCount() const {

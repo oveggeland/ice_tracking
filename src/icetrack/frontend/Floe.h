@@ -108,6 +108,13 @@ public:
         );
     }   
 
+    std::tuple<Eigen::Vector3d, Eigen::Vector3d> getBoundingBox(){
+        return {
+            cloud_->GetMinBound(),
+            cloud_->GetMaxBound()
+        };
+    }
+
     bool isCompatible(const Eigen::Vector3d& point){
         if (!tree_){
             ROS_WARN("No searc tree available for compatibility check");

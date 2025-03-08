@@ -90,7 +90,7 @@ void PoseGraph::initialize(){
 
 void PoseGraph::addState(double ts){
     state_.idx++;
-    ROS_INFO_STREAM("Add state " << state_.idx);
+    std::cout << "Add state " << state_.idx << std::endl;
 
     // Finish integration and predict state
     imu_integration_.finishIntegration(ts);

@@ -39,7 +39,6 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     // Create a new frame, return true on success
     if (frame_buffer_.createFrame(state_idx)){ // (2) Create new frame (measure)
-        ROS_INFO("Created frame");
         // Update positions (new frame is added to "background")
         floe_manager_.updateFloes();
 
@@ -48,8 +47,6 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
         // Discover new points
         floe_manager_.discoverFloes();
-
-        ROS_INFO_STREAM("Number of floes: " << floe_manager_.getFloeCount());
 
         // (3) Associate frame with floes
         // floe_manager_.associateFrame(frame_buffer_.back());
