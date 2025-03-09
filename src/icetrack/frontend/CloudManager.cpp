@@ -48,12 +48,10 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
         // Discover new points
         floe_manager_.discoverFloes();
 
-        // if (frame_buffer_.pointCount() > 100000)
-        //     floe_manager_.visualizeFloes();
-        // (3) Associate frame with floes
-        // floe_manager_.associateFrame(frame_buffer_.back());
-    
-
+        if (frame_buffer_.pointCount() > 100000){
+            ROS_INFO_STREAM("Number of floes is " << floe_manager_.floeCount());
+            floe_manager_.visualizeFloes();
+        }
 
         // Odometry with new frame
         // odometry_estimator_.estimateOdometry(state_idx);

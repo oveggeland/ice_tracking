@@ -25,13 +25,14 @@ void Raster::defineGrid(const std::vector<Eigen::Vector3d>& points){
     const auto [x_min, x_max, y_min, y_max] = getBounds(points);
 
     // Set x-axis params
-    x_min_ = x_min;
-    width_ = 1 + (x_max-x_min) / grid_size_;
+    x_min_ = std::floor(x_min / grid_size_) * grid_size_;
+    width_ = 1 + (x_max - x_min_) / grid_size_;
 
     // Y-axis params
-    y_min_ = y_min;
-    height_ = 1 + (y_max-y_min) / grid_size_;
+    y_min_ = std::floor(y_min / grid_size_) * grid_size_;
+    height_ = 1 + (y_max - y_min_) / grid_size_;
 }
+
 
 
 RasterCell Raster::getCell(const Eigen::Vector3d& p){
@@ -77,6 +78,20 @@ Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_siz
         }
     }
 }
+
+// Create a new raster by expanding with new points
+Raster Raster::expand(const std::vector<Eigen::Vector3d>& points) const {
+    if (points.empty())
+        return Raster(points_);
+        
+    // Create a new vector containing both existing and new points
+    std::vector<Eigen::Vector3d> expanded_points = points_; // Assuming `points_` is a member
+    expanded_points.insert(expanded_points.end(), points.begin(), points.end());
+
+    // Return a new Raster object with the expanded point set
+    return Raster(expanded_points);
+};
+
 
 // NB, this is also returning "self" as neighbor. 
 std::vector<int> Raster::findNeighbors(const RasterCell& cell, const int eps){

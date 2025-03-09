@@ -28,12 +28,6 @@ public:
         cloud_->Clear();  // Clear the Open3D point cloud
         frame_id_.clear();
         frame_idx_.clear();
-        point_class_.clear();
-        tree_ = nullptr;
-    }
-
-    void buildSearchTree(){
-        tree_ = std::make_shared<open3d::geometry::KDTreeFlann>(*cloud_);
     }
 
     // Reserve space for the point cloud and metadata vectors
@@ -41,8 +35,9 @@ public:
         cloud_->points_.reserve(n_points);  // Reserve memory for points
         frame_id_.reserve(n_points);
         frame_idx_.reserve(n_points);
-        point_class_.reserve(n_points);
     }
+
+    std::vector<int> associatePoints(const std::vector<Eigen::Vector3d>& points);
 
     // Get current capacity
     int capacity() const {
@@ -69,21 +64,18 @@ public:
         for (int i = 0; i < size(); ++i) {
             if (!remove_mask[i]) {
                 cloud_->points_[new_size] = cloud_->points_[i];
+                cloud_->colors_[new_size] = cloud_->colors_[i];
                 frame_id_[new_size] = frame_id_[i];
                 frame_idx_[new_size] = frame_idx_[i];
-                point_class_[new_size] = point_class_[i];
                 ++new_size;
             }
         }
     
         // Resize the vectors to the new size
         cloud_->points_.resize(new_size);
+        cloud_->colors_.resize(new_size);
         frame_id_.resize(new_size);
         frame_idx_.resize(new_size);
-        point_class_.resize(new_size);
-    
-        // Reset the KDTree
-        tree_ = nullptr;
     }
 
     // Accessors
@@ -98,7 +90,6 @@ public:
         cloud_->colors_.push_back(color_);  // Assign the floe's color
         frame_id_.push_back(frame_id);
         frame_idx_.push_back(frame_idx);
-        point_class_.push_back(0); // Class defaults to noise
     }
 
     // Helper to copy a point from another Floe, maintaining the same color
@@ -128,30 +119,12 @@ public:
 
     std::vector<int> findOutliers();
 
-    bool isCompatible(const Eigen::Vector3d& point){
-        if (!tree_){
-            ROS_WARN("No searc tree available for compatibility check");
-            buildSearchTree();
-        }
-        
-        std::vector<int> idx;
-        std::vector<double> r2;
-
-        tree_->SearchKNN(point, 10, idx, r2);
-        if (*std::max_element(r2.begin(), r2.end()) < 1)
-            return true;
-        return false;
-    }
 
     /////////////////////// Members //////////////////////////////////7
     int floe_id_;  // ID of this floe
 
     // Stores the points for this floe
     std::shared_ptr<open3d::geometry::PointCloud> cloud_;
-    std::vector<uint8_t> point_class_;     // 0: noise, 1: edge, 2: core 
-
-    // Efficient lookup
-    std::shared_ptr<open3d::geometry::KDTreeFlann> tree_ = nullptr;
 
     // Metadata about the origin of points
     std::vector<int> frame_id_;   // ID of the frame the point came from

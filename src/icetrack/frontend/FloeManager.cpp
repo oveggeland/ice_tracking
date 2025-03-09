@@ -67,20 +67,14 @@ void FloeManager::updateFloes(){
     }
 }
 
-int FloeManager::findFloeMatch(const Eigen::Vector3d& point){
-    for (auto& [floe_id, floe] : floes_) {
-        if (floe.isCompatible(point))
-            return floe_id; // Use first 
-    }
-    return 0;
-}
-
 // Expand floes with points from background
 void FloeManager::expandFloes(){
-    // for (auto& floe: floes_){
-    //     std::vector<int> inliers = floe_.findInliers(*background_.getCloud());
-    //     reassignPoints(background_, floe, inliers);
-    // }
+    for (auto& [floe_id, floe]: floes_){
+        std::vector<int> inliers = floe.associatePoints(background_.getCloud()->points_);
+
+        if (inliers.size() > 0)
+           reassignPoints(background_, floe, inliers);
+    }
 }
 
 // Reassign a single point from source to target
@@ -157,7 +151,9 @@ void FloeManager::clearFloes() {
 void FloeManager::visualizeFloes(){
     std::vector<std::shared_ptr<const open3d::geometry::Geometry>> clouds_to_visualize;
     for (auto& [floe_id, floe] : floes_) {
-        clouds_to_visualize.push_back(floe.getCloud());
+        auto cloud = floe.getCloud();
+        open3d::visualization::DrawGeometries({cloud}, "Single floe");
+        clouds_to_visualize.push_back(cloud);
     }
 
     open3d::visualization::DrawGeometries(clouds_to_visualize, "Floe Visualization");

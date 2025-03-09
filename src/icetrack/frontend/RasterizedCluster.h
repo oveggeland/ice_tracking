@@ -19,10 +19,15 @@ public:
     RasterizedCluster(const std::vector<Eigen::Vector3d>& points, const double grid_size=1.0)
          : raster_(points, grid_size) {}
 
+
+    void addPoints(const std::vector<Eigen::Vector3d>& points);
+
+
     void runClustering();
     std::unordered_map<int, std::vector<int>> getClusters() { return clusters_; }
 
     int clusterCount() const { return clusters_.size(); }
+    int pointCount() const { return labels_.size(); }
     
     // Used for floe maintanance
     void keepLargest(const int n_clusters);
@@ -30,9 +35,15 @@ public:
     std::vector<int> getNoise();
 
 
+    void expandSingleCluster(const int cluster_id);
+
     void visualizeClusters();
 
     std::vector<int> getBiggestCluster() const;
+    int getLargestClusterId() const;
+
+
+    const std::vector<int>& labels() const { return labels_; }
 
 private:
     Raster raster_;

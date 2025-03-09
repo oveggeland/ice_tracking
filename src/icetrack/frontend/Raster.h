@@ -18,6 +18,9 @@ public:
     // Construct from 3D points
     Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size=0.2);
 
+    // Expanding with new points
+    Raster expand(const std::vector<Eigen::Vector3d>& points) const;
+
     // Neighbor search
     std::vector<int> findNeighbors(const RasterCell& cell, const int eps);
     std::vector<int> findNeighbors(const int cell_idx, const int eps);
@@ -33,6 +36,8 @@ public:
     const std::vector<std::vector<int>>& pointTrace() const { return point_trace_; }
 
 private:
+    std::vector<Eigen::Vector3d> points_;
+
     // Grid definition
     float x_min_, y_min_;          // Coordinates of corner of raster region
     int width_, height_;            // Number of cells on each axis

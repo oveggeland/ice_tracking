@@ -1,10 +1,7 @@
 #include "RasterizedCluster.h"
 
 void RasterizedCluster::expandCluster(const int idx){
-    int& label = super_labels_[idx];
-    if (label > 0)
-        return; // Already been here
-    label = cluster_id_;
+    super_labels_[idx] = cluster_id_;
     super_clusters_[cluster_id_].push_back(idx);
     
     // Find neighbors
@@ -15,8 +12,37 @@ void RasterizedCluster::expandCluster(const int idx){
         return; // I am edge, do not keep expanding
     
     for (const int& neighbor_idx: neighbors)
-        expandCluster(neighbor_idx);
+        if (super_labels_[neighbor_idx] < 1)
+            expandCluster(neighbor_idx);
 }
+
+
+void RasterizedCluster::addPoints(const std::vector<Eigen::Vector3d>& points){
+    if (points.empty())
+        return;
+
+    const int size0 = raster_.cellCount();
+    raster_ = raster_.expand(points);
+    const int size1 = raster_.cellCount();
+
+    // Add noise labels to new points
+    super_labels_.insert(super_labels_.end(), size1 - size0, -1);
+    labels_.insert(labels_.end(), points.size(), -1);
+}
+
+
+void RasterizedCluster::expandSingleCluster(const int cluster_id){
+    cluster_id_ = cluster_id;
+
+    auto cluster = super_clusters_[cluster_id];
+    for (auto& idx: cluster){
+        // For each point in the cluster, let's go ahead and expand it
+        expandCluster(idx);
+    }
+
+    retrace();
+}
+
 
 
 void RasterizedCluster::runClustering(){
@@ -97,6 +123,20 @@ std::vector<int> RasterizedCluster::getBiggestCluster() const {
 
     return clusters_.at(cluster_sizes.rbegin()->second);
 }
+
+int RasterizedCluster::getLargestClusterId() const{
+    if (super_clusters_.empty())
+        return 0;  // Not clusters
+
+    // Sort by size (in raster scale)
+    std::multimap<int, int> cluster_sizes;
+    for (const auto& [cluster_id, cluster] : super_clusters_) {
+        cluster_sizes.emplace(cluster.size(), cluster_id);
+    }
+
+    return cluster_sizes.rbegin()->second;
+}
+
 
 
 void RasterizedCluster::removeCluster(const int cluster_id){

@@ -19,7 +19,7 @@ public:
     void discoverFloes(); 
 
     // Accessors
-    int getFloeCount() const { return floes_.size(); }
+    int floeCount() const { return floes_.size(); }
     void visualizeFloes();
 
 private:
