@@ -5,6 +5,8 @@
 #include <open3d/geometry/PointCloud.h>
 #include <open3d/geometry/KDTreeFlann.h>
 
+#include "RasterizedCluster.h"
+
 class Floe {
 public:
     // Default constructor
@@ -114,6 +116,8 @@ public:
             cloud_->GetMaxBound()
         };
     }
+
+    std::vector<int> findOutliers();
 
     bool isCompatible(const Eigen::Vector3d& point){
         if (!tree_){

@@ -50,14 +50,20 @@ void FloeManager::updateFloes(){
 
     // Maintain
     for (auto it = floes_.begin(); it != floes_.end(); ) {
+        Floe& floe = it->second;
+
+        // Reassign outliers to "background"
+        std::vector<int> outliers = floe.findOutliers();
+        if (outliers.size() > 0)
+            reassignPoints(floe, background_, outliers);
+
+        // Erase
         if (it->second.size() < min_floe_size_) {
             reassignPoints(it->second, background_);
             it = floes_.erase(it);
         } 
-        else {
-            // it->second.buildSearchTree();
+        else
             ++it;
-        }
     }
 }
 
