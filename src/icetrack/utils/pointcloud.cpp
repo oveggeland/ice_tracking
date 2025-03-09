@@ -1,5 +1,16 @@
 #include "pointcloud.h"
 
+
+void compareClouds(const PointCloud& cloud0, const PointCloud& cloud1){
+    auto cloud0_ptr = std::make_shared<PointCloud>(cloud0);
+    auto cloud1_ptr = std::make_shared<PointCloud>(cloud1);
+
+    cloud0_ptr->PaintUniformColor({0, 1, 0});
+    cloud1_ptr->PaintUniformColor({0, 0, 1});
+    cloud1_ptr->Translate({0.1, 0.1, 0.1});
+    open3d::visualization::DrawGeometries({cloud0_ptr, cloud1_ptr}, "Compare clouds");
+}
+
 void visualizeCloud(const PointCloud& cloud) {
     visualizeCloud(std::make_shared<PointCloud>(cloud));
 }

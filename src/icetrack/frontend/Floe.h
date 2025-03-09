@@ -1,5 +1,6 @@
 #pragma once
 
+#include <random>
 #include <ros/ros.h>
 
 #include <open3d/geometry/PointCloud.h>
@@ -13,7 +14,9 @@ public:
     Floe() : floe_id_(-1), cloud_(nullptr) {}
 
     // Constructor with ID
-    Floe(int id) : floe_id_(id), cloud_(std::make_shared<open3d::geometry::PointCloud>()) {}
+    Floe(int id) : floe_id_(id), cloud_(std::make_shared<open3d::geometry::PointCloud>()) {
+        assignRandomColor();
+    }
 
     // Constructor with ID and capacity
     Floe(int id, int capacity) : Floe(id) {
@@ -83,32 +86,38 @@ public:
         tree_ = nullptr;
     }
 
-    // Set a constant color for the point cloud in the Floe
-    void setColor(const Eigen::Vector3d& color) {
-        cloud_->colors_.resize(cloud_->points_.size(), color);  // Set color for all points in the cloud
-    }
- 
     // Accessors
     int size() const { return cloud_->points_.size(); }
     int id() const { return floe_id_; }
     std::shared_ptr<open3d::geometry::PointCloud> getCloud() const { return cloud_; }
-
-    // Add a point to the Floe
+    
+    
+    // Add a point to the Floe and assign the default color
     void addPoint(const Eigen::Vector3d& point, const int frame_id, const int frame_idx) {
-        cloud_->points_.push_back(point);    // Add point to the point cloud
+        cloud_->points_.push_back(point);    
+        cloud_->colors_.push_back(color_);  // Assign the floe's color
         frame_id_.push_back(frame_id);
         frame_idx_.push_back(frame_idx);
         point_class_.push_back(0); // Class defaults to noise
     }
 
-    // Helper to copy a point from another flow
+    // Helper to copy a point from another Floe, maintaining the same color
     void copyFrom(const Floe& source, const int idx){
         addPoint(
             source.cloud_->points_[idx],
             source.frame_id_[idx],
             source.frame_idx_[idx]
         );
-    }   
+    }  
+
+    // Assign a random color at creation
+    void assignRandomColor() {
+        static std::random_device rd;
+        static std::mt19937 rng(rd());
+        static std::uniform_real_distribution<double> dist(0.0, 1.0); // Open3D uses normalized colors [0,1]
+
+        color_ = Eigen::Vector3d(dist(rng), dist(rng), dist(rng)); 
+    }
 
     std::tuple<Eigen::Vector3d, Eigen::Vector3d> getBoundingBox(){
         return {
@@ -147,4 +156,6 @@ public:
     // Metadata about the origin of points
     std::vector<int> frame_id_;   // ID of the frame the point came from
     std::vector<int> frame_idx_;  // Index of the point within the frame
+
+    Eigen::Vector3d color_;  // Assigned random color for this floe
 };

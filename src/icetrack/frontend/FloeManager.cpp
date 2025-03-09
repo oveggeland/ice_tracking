@@ -117,38 +117,26 @@ void FloeManager::reassignPoints(Floe& source, Floe& target){
     source.clear();
 }
 
-
-
-
-#include <chrono>
-#include <iostream>
-
 void FloeManager::discoverFloes(){
-    auto cloud = background_.getCloud()->points_;
-    if (cloud.size() < 1)
+    auto points = background_.getCloud()->points_;
+    if (points.size() < 1)
         return;
     
-    ClusterRaster raster(cloud, 1.0);
-    std::vector<std::vector<int>> clusters = raster.getClusters();
+    RasterizedCluster raster(points);
+    raster.runClustering();
 
+    std::vector<int> cluster = raster.getBiggestCluster();
 
-    for (const auto& cluster: clusters){
-        if (cluster.size() > min_floe_size_){
-            // Okay, lets make a new flow with id and pre-determined capacity
-            Floe new_floe(floe_id_counter_++, cluster.size());
+    if (cluster.size() > min_floe_size_){
+        // Okay, lets make a new flow with id and pre-determined capacity
+        Floe new_floe(floe_id_counter_++, cluster.size());
 
-            // Removes points from background and puts them in new_floe
-            reassignPoints(background_, new_floe, cluster);
+        // Removes points from background and puts them in new_floe
+        reassignPoints(background_, new_floe, cluster);
 
-            // Add floe to buffer
-            floes_[new_floe.id()] = new_floe;
-
-            break; // Only allow one new flow every time
-        }
+        // Add floe to buffer
+        floes_[new_floe.id()] = new_floe;
     }
-
-    // if (pointCount() > 100000)
-    //     visualizeFloes();
 }
 
 int FloeManager::pointCount() const {
@@ -166,21 +154,11 @@ void FloeManager::clearFloes() {
 }
 
 
-void FloeManager::visualizeFloes() {
+void FloeManager::visualizeFloes(){
     std::vector<std::shared_ptr<const open3d::geometry::Geometry>> clouds_to_visualize;
-
-    std::mt19937 gen(std::random_device{}());  // Random generator
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);  // Range for color components
-
-    // Iterate over all floes and assign random colors
     for (auto& [floe_id, floe] : floes_) {
-        // Assign random color to the floe
-        floe.setColor(Eigen::Vector3d(dist(gen), dist(gen), dist(gen)));
-
-        // Add the cloud to the list of clouds to visualize
         clouds_to_visualize.push_back(floe.getCloud());
     }
 
-    // Visualize all the clouds
     open3d::visualization::DrawGeometries(clouds_to_visualize, "Floe Visualization");
 }

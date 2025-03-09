@@ -8,6 +8,8 @@ using PointCloudPtr = std::shared_ptr<PointCloud>;
 using TensorCloud = open3d::t::geometry::PointCloud;
 using TensorCloudPtr = std::shared_ptr<TensorCloud>;
 
+void compareClouds(const PointCloud& cloud0, const PointCloud& cloud1);
+
 void visualizeCloud(const PointCloud& cloud);
 void visualizeCloud(const PointCloudPtr cloud);
 

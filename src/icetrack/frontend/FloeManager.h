@@ -6,9 +6,8 @@
 
 #include "frontend/Floe.h"
 #include "frontend/FrameBuffer.h"
-#include "frontend/DBScanner.h"
 
-#include "frontend/ClusterRaster.h"
+#include "frontend/RasterizedCluster.h"
 
 class FloeManager {
 public:
@@ -21,6 +20,7 @@ public:
 
     // Accessors
     int getFloeCount() const { return floes_.size(); }
+    void visualizeFloes();
 
 private:
     // Background ice
@@ -49,6 +49,4 @@ private:
 
     void clearFloes();                                      // Reset every floe in floes_ (clears point cloud)
     void reserveMemoryForFloes(const int n_points);         // Reserve enough space in floe for n points
-
-    void visualizeFloes();
 };

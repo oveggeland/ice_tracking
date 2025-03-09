@@ -85,10 +85,22 @@ void RasterizedCluster::keepLargest(const int n_clusters) {
     }
 }
 
+std::vector<int> RasterizedCluster::getBiggestCluster() const {
+    if (super_clusters_.empty())
+        return {};  // Return an empty vector if there are no clusters
+
+    // Sort by size (in raster scale)
+    std::multimap<int, int> cluster_sizes;
+    for (const auto& [cluster_id, cluster] : super_clusters_) {
+        cluster_sizes.emplace(cluster.size(), cluster_id);
+    }
+
+    return clusters_.at(cluster_sizes.rbegin()->second);
+}
+
 
 void RasterizedCluster::removeCluster(const int cluster_id){
-    ROS_INFO_STREAM("Removing cluster " << cluster_id);
-    // First set label to -1
+    // Set label to noise (-1)
     for (const int& i: clusters_[cluster_id])
         labels_[i] = -1;
     for (const int& i: super_clusters_[cluster_id])

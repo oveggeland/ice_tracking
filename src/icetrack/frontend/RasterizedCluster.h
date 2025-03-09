@@ -32,6 +32,8 @@ public:
 
     void visualizeClusters();
 
+    std::vector<int> getBiggestCluster() const;
+
 private:
     Raster raster_;
 

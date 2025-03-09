@@ -43,11 +43,13 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
         floe_manager_.updateFloes();
 
         // Expand existing floes with nearby background points
-        //floe_manager_.expandFloes();
+        // floe_manager_.expandFloes();
 
         // Discover new points
         floe_manager_.discoverFloes();
 
+        // if (frame_buffer_.pointCount() > 100000)
+        //     floe_manager_.visualizeFloes();
         // (3) Associate frame with floes
         // floe_manager_.associateFrame(frame_buffer_.back());
     
