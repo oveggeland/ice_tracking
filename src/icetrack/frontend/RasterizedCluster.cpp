@@ -21,9 +21,9 @@ void RasterizedCluster::addPoints(const std::vector<Eigen::Vector3d>& points){
     if (points.empty())
         return;
 
-    const int size0 = raster_.cellCount();
+    const int size0 = raster_.numOccupiedCells();
     raster_.expand(points);
-    const int size1 = raster_.cellCount();
+    const int size1 = raster_.numOccupiedCells();
 
     // Add noise labels to new points
     super_labels_.insert(super_labels_.end(), size1 - size0, -1);
@@ -46,7 +46,7 @@ void RasterizedCluster::expandSingleCluster(const int cluster_id){
 
 
 void RasterizedCluster::runClustering(){
-    const size_t n_pixels = raster_.cellCount();
+    const size_t n_pixels = raster_.numOccupiedCells();
     super_labels_ = std::vector<int>(n_pixels, 0);
 
     for (int i = 0; i < n_pixels; ++i){
@@ -69,7 +69,7 @@ void RasterizedCluster::runClustering(){
 
 void RasterizedCluster::retrace(){
     const std::vector<std::vector<int>>& trace = raster_.pointTrace();
-    labels_.resize(raster_.pointCount(), -1); // Initialize labels to -1
+    labels_.resize(raster_.numPoints(), -1); // Initialize labels to -1
 
     // For each cluster
     for (const auto& [id, super_cluster] : super_clusters_){
@@ -184,7 +184,7 @@ void RasterizedCluster::visualizeClusters(){
         const int& label = super_labels_[i];    // Get label
         const auto& cell = cells[i];            // Get position
 
-        cluster_image.at<cv::Vec3b>(cell.y, cell.x) = cluster_colors[label];
+        cluster_image.at<cv::Vec3b>(cell.v, cell.u) = cluster_colors[label];
     }    
 
     // Display the result

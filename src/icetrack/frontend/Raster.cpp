@@ -25,12 +25,12 @@ void Raster::defineGrid(const std::vector<Eigen::Vector3d>& points){
     const auto [x_min, x_max, y_min, y_max] = getBounds(points);
 
     // Set x-axis params
-    x_min_ = x_min - 0.5 * grid_size_;
-    width_ = 1 + (x_max - x_min_) / grid_size_;
+    x0_ = x_min - 0.5 * grid_size_;
+    width_ = 1 + (x_max - x0_) / grid_size_;
 
     // Y-axis params
-    y_min_ = y_min - 0.5 * grid_size_;
-    height_ = 1 + (y_max - y_min_) / grid_size_;
+    y0_ = y_min - 0.5 * grid_size_;
+    height_ = 1 + (y_max - y0_) / grid_size_;
 }
 
 
@@ -40,8 +40,8 @@ RasterCell Raster::getCell(const Eigen::Vector3d& p) const{
 
 RasterCell Raster::getCell(const Eigen::Vector2d& p) const{
     return RasterCell{
-        static_cast<int>((p.x() - x_min_) / grid_size_),
-        static_cast<int>((p.y() - y_min_) / grid_size_)
+        static_cast<int>((p.x() - x0_) / grid_size_),
+        static_cast<int>((p.y() - y0_) / grid_size_)
     };
 }
 
@@ -65,7 +65,7 @@ Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_siz
         const RasterCell cell = getCell(points[i]);
         
         // Check if cell is previously assigned
-        int& cell_idx = raster_(cell.y, cell.x);
+        int& cell_idx = raster_(cell.v, cell.u);
         if (cell_idx == -1){ 
             // First time this cell is assigned
             cell_idx = cells_.size();
@@ -84,23 +84,19 @@ Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_siz
 
 Eigen::Vector2d Raster::getVector(const RasterCell& cell) const{
     return Eigen::Vector2d(
-        x_min_ + cell.x*grid_size_,
-        y_min_ + cell.y*grid_size_
+        x0_ + cell.u*grid_size_,
+        y0_ + cell.v*grid_size_
     );
 }
 
 bool Raster::inBounds(const RasterCell& cell) const {
-    return (cell.x > 0 && cell.x < width_ && cell.y > 0 && cell.y < height_);
+    return (cell.u > 0 && cell.u < width_ && cell.v > 0 && cell.v < height_);
 }
 
 bool Raster::isOccupied(const RasterCell& cell) const {
     if (!inBounds(cell))
         return false;
-    return (raster_(cell.y, cell.x) != -1);
-}
-
-double Raster::getArea() const {
-    return cells_.size() * std::pow(grid_size_, 2);
+    return (raster_(cell.v, cell.u) != -1);
 }
 
 double Raster::intersection(const Raster& other) const{
@@ -122,8 +118,8 @@ void Raster::expand(const std::vector<Eigen::Vector3d>& points) {
         return;
 
     // Temp save some current config
-    const double x_min_old = x_min_;
-    const double y_min_old = y_min_;
+    const double x0_old = x0_;
+    const double y0_old = y0_;
     const int idx0 = points_.size(); // Start iterating from here later
 
     // Insert new points
@@ -133,26 +129,18 @@ void Raster::expand(const std::vector<Eigen::Vector3d>& points) {
     defineGrid(points_);
 
     // Find shift between new and old raster
-    int x_shift = (x_min_old - x_min_) / grid_size_;
-    int y_shift = (y_min_old - y_min_) / grid_size_;
+    int x_shift = (x0_old - x0_) / grid_size_;
+    int y_shift = (y0_old - y0_) / grid_size_;
     
     // Copy old raster
-    if (y_shift + raster_.rows() > height_ || x_shift + raster_.cols() > width_) {
-        ROS_INFO_STREAM(x_min_old << ", " << y_min_old);
-        ROS_INFO_STREAM(x_min_ << ", " << y_min_);
-        ROS_INFO_STREAM(x_shift << ", " << y_shift);
-        ROS_INFO_STREAM(raster_.cols() << ", " << raster_.rows());
-        ROS_INFO_STREAM(width_ << ", " << height_);
-        throw std::runtime_error("Shifting raster out of bounds.");
-    }
     Eigen::MatrixXi new_raster = Eigen::MatrixXi::Constant(height_, width_, -1);
     new_raster.block(y_shift, x_shift, raster_.rows(), raster_.cols()) = raster_;
     raster_ = new_raster; 
 
     // Shift cell list
     for (auto& cell: cells_){
-        cell.x += x_shift;
-        cell.y += y_shift;
+        cell.u += x_shift;
+        cell.v += y_shift;
     }
 
     // Reserve more space
@@ -164,7 +152,7 @@ void Raster::expand(const std::vector<Eigen::Vector3d>& points) {
         const RasterCell cell = getCell(points_[i]);
 
         // Fill in cell
-        int& cell_idx = raster_(cell.y, cell.x);
+        int& cell_idx = raster_(cell.v, cell.u);
         if (cell_idx == -1){ 
             cell_idx = cells_.size();
             cells_.push_back(cell);
@@ -179,23 +167,24 @@ void Raster::expand(const std::vector<Eigen::Vector3d>& points) {
 };
 
 
-// NB, this is also returning "self" as neighbor. 
-std::vector<int> Raster::findNeighbors(const RasterCell& cell, const int eps){
+std::vector<int> Raster::findNeighbors(const RasterCell& cell, const int eps) const{
     std::vector<int> neighbors;
-    neighbors.reserve(pow((2*eps+1), 2));
+    neighbors.reserve((2*eps + 1)*(2*eps + 1));
 
-    for (int x = std::max<int>(0, cell.x - eps); x < std::min<int>(width_, cell.x + eps + 1); ++x){
-        for (int y = std::max<int>(0, cell.y - eps); y < std::min<int>(height_, cell.y + eps + 1); ++y){
-            const int& cell_idx = raster_(y, x);
+    // Define neighborhood for searching
+    const int u0 = std::max<int>(0, cell.u - eps);
+    const int u1 = std::min<int>(width_, cell.u + eps + 1);
+
+    const int v0 = std::max<int>(0, cell.v - eps);
+    const int v1 = std::min<int>(height_, cell.v + eps + 1);
+
+    // Iterate in neighborhood and push back neighbors
+    for (int u = u0; u < u1; ++u){
+        for (int v = v0; v < v1; ++v){
+            const int cell_idx = raster_(v, u);
             if (cell_idx != -1)
                 neighbors.push_back(cell_idx);
         }
     }
     return neighbors;
-}
-
-
-// NB, this is also returning "self" as neighbor. 
-std::vector<int> Raster::findNeighbors(const int cell_idx, const int eps){
-    return findNeighbors(cells_[cell_idx], eps);
 }

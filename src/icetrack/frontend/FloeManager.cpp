@@ -126,7 +126,7 @@ void FloeManager::mergeFloes() {
 // Reassign a single point from source to target
 // Does not remove the point from source!
 void FloeManager::reassignPoint(const Floe& source, Floe& target, const int idx){
-    fb_.setFloeLabel(source.frame_id_[idx], source.frame_idx_[idx], target.id());
+    fb_.setFloeLabel(source.getFrameId(idx), source.getFrameIdx(idx), target.id());
     target.copyFrom(source, idx);
 }
 

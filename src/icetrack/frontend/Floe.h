@@ -23,7 +23,7 @@ public:
 
     // Estimate area of intersection between this and other
     double intersection(const Floe& other) const;
-    double getArea() const { return Raster(cloud_->points_).getArea(); }
+    double getArea() const { return Raster(cloud_->points_).occupiedArea(); }
 
     // Clear the point cloud and associated metadata
     void clear() {
@@ -125,9 +125,12 @@ public:
 
     std::vector<int> findOutliers();
 
+    int getFrameId(const int point_idx) const { return frame_id_[point_idx]; }
+    int getFrameIdx(const int point_idx) const { return frame_idx_[point_idx]; }
 
-    /////////////////////// Members //////////////////////////////////7
+private:
     int floe_id_;  // ID of this floe
+
 
     // Stores the points for this floe
     std::shared_ptr<open3d::geometry::PointCloud> cloud_;
