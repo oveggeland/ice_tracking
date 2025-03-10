@@ -17,6 +17,7 @@ public:
     void updateFloes();
     void expandFloes();
     void discoverFloes(); 
+    void mergeFloes();
 
     // Accessors
     int floeCount() const { return floes_.size(); }
@@ -46,6 +47,9 @@ private:
     int pointCount() const;
 
     void processFrame(const CloudFrame& frame); // refine floes and map based on input frame
+
+    // Try to merge floe0 and floe1
+    bool mergeFloePair(Floe& floe0, Floe& floe1);
 
     void clearFloes();                                      // Reset every floe in floes_ (clears point cloud)
     void reserveMemoryForFloes(const int n_points);         // Reserve enough space in floe for n points

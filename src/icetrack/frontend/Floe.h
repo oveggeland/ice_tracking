@@ -4,8 +4,6 @@
 #include <ros/ros.h>
 
 #include <open3d/geometry/PointCloud.h>
-#include <open3d/geometry/KDTreeFlann.h>
-
 #include "RasterizedCluster.h"
 
 class Floe {

@@ -81,6 +81,34 @@ void FloeManager::expandFloes(){
     }
 }
 
+// Try to merge floe0 and floe1, return id of deleted floe (or 0 is no merging takes place)
+bool FloeManager::mergeFloePair(Floe& floe0, Floe& floe1){
+    ROS_INFO_STREAM("Try to merge floes: " << floe0.id() << " and " << floe1.id());
+    return false;
+}
+
+// Try all floe-to-floe combinations and see if they should be merged
+void FloeManager::mergeFloes() {
+    std::vector<std::pair<int, int>> floe_pairs;
+
+    // Only compare each pair once
+    for (auto floe0_it = floes_.begin(); floe0_it != floes_.end(); ++floe0_it) {
+        for (auto floe1_it = std::next(floe0_it); floe1_it != floes_.end(); ++floe1_it) {
+            floe_pairs.emplace_back(floe0_it->first, floe1_it->first);
+        }
+    }
+
+    // Process the merging after gathering all pairs
+    for (const auto& pair : floe_pairs) {
+        auto floe0_it = floes_.find(pair.first);
+        auto floe1_it = floes_.find(pair.second);
+
+        if (floe0_it != floes_.end() && floe1_it != floes_.end()){
+            mergeFloePair(floe0_it->second, floe1_it->second);
+        }
+    }
+}
+
 // Reassign a single point from source to target
 // Does not remove the point from source!
 void FloeManager::reassignPoint(const Floe& source, Floe& target, const int idx){

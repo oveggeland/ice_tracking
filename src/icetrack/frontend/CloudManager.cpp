@@ -43,6 +43,7 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     floe_manager_.updateFloes();
     floe_manager_.expandFloes();
     floe_manager_.discoverFloes();
+    floe_manager_.mergeFloes();
 
 
     if (floe_manager_.floeCount() > 0)
