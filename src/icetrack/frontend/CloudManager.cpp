@@ -46,8 +46,8 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     floe_manager_.mergeFloes();
 
 
-    if (floe_manager_.floeCount() > 0)
-        floe_manager_.visualizeFloes();
+    // if (floe_manager_.floeCount() > 0)
+    //     floe_manager_.visualizeFloes();
     
 
     // Odometry with new frame

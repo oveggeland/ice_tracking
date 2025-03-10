@@ -16,7 +16,10 @@ struct RasterCell {
 class Raster{
 public:
     // Construct from 3D points
-    Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size=1.0);
+    Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size=0.5);
+
+    // Estimate area of intersection between this and other
+    double intersection(const Raster& other) const;
 
     // Expanding with new points
     void expand(const std::vector<Eigen::Vector3d>& points);
@@ -28,6 +31,7 @@ public:
     // Accessors
     int cellCount() const { return cells_.size(); }
     int pointCount() const { return points_.size(); }
+    double getArea() const;
     int width() const { return width_; }
     int height() const { return height_; }
 
@@ -51,5 +55,9 @@ private:
     std::vector<std::vector<int>> point_trace_;     // Trace back from cell to original points
 
     // Helpers
-    RasterCell getCell(const Eigen::Vector3d& p);
+    bool inBounds(const RasterCell& cell) const;
+    bool isOccupied(const RasterCell& cell) const;
+    Eigen::Vector2d getVector(const RasterCell& cell) const;
+    RasterCell getCell(const Eigen::Vector2d& p) const;
+    RasterCell getCell(const Eigen::Vector3d& p) const;
 };

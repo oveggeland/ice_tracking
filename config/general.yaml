@@ -29,7 +29,7 @@ processed_cloud_queue_size_: 10
 
 # Frame buffer
 frame_buffer/undistort_frames: true
-frame_buffer/window_size: 5
+frame_buffer/window_size: 20
 
 # Surface estimator
 surface_estimator/update_interval: 10

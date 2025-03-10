@@ -53,4 +53,7 @@ private:
 
     void clearFloes();                                      // Reset every floe in floes_ (clears point cloud)
     void reserveMemoryForFloes(const int n_points);         // Reserve enough space in floe for n points
+
+
+    double floe_intersection_threshold_ = 10.0;
 };

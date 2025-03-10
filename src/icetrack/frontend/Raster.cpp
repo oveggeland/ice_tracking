@@ -34,7 +34,11 @@ void Raster::defineGrid(const std::vector<Eigen::Vector3d>& points){
 }
 
 
-RasterCell Raster::getCell(const Eigen::Vector3d& p){
+RasterCell Raster::getCell(const Eigen::Vector3d& p) const{
+    return getCell(Eigen::Vector2d(p.x(), p.y()));
+}
+
+RasterCell Raster::getCell(const Eigen::Vector2d& p) const{
     return RasterCell{
         static_cast<int>((p.x() - x_min_) / grid_size_),
         static_cast<int>((p.y() - y_min_) / grid_size_)
@@ -75,6 +79,41 @@ Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_siz
             point_trace_[cell_idx].push_back(i);
         }
     }
+}
+
+
+Eigen::Vector2d Raster::getVector(const RasterCell& cell) const{
+    return Eigen::Vector2d(
+        x_min_ + cell.x*grid_size_,
+        y_min_ + cell.y*grid_size_
+    );
+}
+
+bool Raster::inBounds(const RasterCell& cell) const {
+    return (cell.x > 0 && cell.x < width_ && cell.y > 0 && cell.y < height_);
+}
+
+bool Raster::isOccupied(const RasterCell& cell) const {
+    if (!inBounds(cell))
+        return false;
+    return (raster_(cell.y, cell.x) != -1);
+}
+
+double Raster::getArea() const {
+    return cells_.size() * std::pow(grid_size_, 2);
+}
+
+double Raster::intersection(const Raster& other) const{
+    double area = 0;
+    for (const auto& cell: cells_){
+        const Eigen::Vector2d pos = getVector(cell);
+        
+        auto other_cell = other.getCell(getVector(cell));
+        if (other.isOccupied(other_cell))
+            area += grid_size_*grid_size_;
+    }
+
+    return area;
 }
 
 // Create a new raster by expanding with new points

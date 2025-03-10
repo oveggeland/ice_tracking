@@ -21,6 +21,10 @@ public:
         reserve(capacity);
     }
 
+    // Estimate area of intersection between this and other
+    double intersection(const Floe& other) const;
+    double getArea() const { return Raster(cloud_->points_).getArea(); }
+
     // Clear the point cloud and associated metadata
     void clear() {
         cloud_->Clear();  // Clear the Open3D point cloud

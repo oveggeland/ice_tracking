@@ -81,9 +81,23 @@ void FloeManager::expandFloes(){
     }
 }
 
-// Try to merge floe0 and floe1, return id of deleted floe (or 0 is no merging takes place)
+// Check and see if floe0 and floe1 should be merged
 bool FloeManager::mergeFloePair(Floe& floe0, Floe& floe1){
-    ROS_INFO_STREAM("Try to merge floes: " << floe0.id() << " and " << floe1.id());
+    if (floe0.intersection(floe1) > floe_intersection_threshold_){
+        ROS_WARN_STREAM("Merge floe " << floe0.id() << " and " << floe1.id());
+
+        // Merge the smaller into the bigger
+        if (floe0.getArea() > floe1.getArea()){
+            reassignPoints(floe1, floe0);
+            floes_.erase(floe1.id());
+        }
+        else{
+            reassignPoints(floe0, floe1);
+            floes_.erase(floe0.id());
+        }
+
+        return true;
+    }
     return false;
 }
 

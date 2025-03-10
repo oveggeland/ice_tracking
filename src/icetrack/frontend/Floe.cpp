@@ -37,3 +37,11 @@ std::vector<int> Floe::associatePoints(const std::vector<Eigen::Vector3d>& point
     }
     return inliers;
 }
+
+
+double Floe::intersection(const Floe& other) const{
+    Raster raster0(cloud_->points_);
+    Raster raster1(other.cloud_->points_);
+
+    return raster0.intersection(raster1);
+}
