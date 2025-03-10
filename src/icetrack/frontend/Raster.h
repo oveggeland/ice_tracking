@@ -16,10 +16,10 @@ struct RasterCell {
 class Raster{
 public:
     // Construct from 3D points
-    Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size=0.2);
+    Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size=1.0);
 
     // Expanding with new points
-    Raster expand(const std::vector<Eigen::Vector3d>& points) const;
+    void expand(const std::vector<Eigen::Vector3d>& points);
 
     // Neighbor search
     std::vector<int> findNeighbors(const RasterCell& cell, const int eps);
@@ -27,7 +27,7 @@ public:
 
     // Accessors
     int cellCount() const { return cells_.size(); }
-    int pointCount() const { return point_count_; }
+    int pointCount() const { return points_.size(); }
     int width() const { return width_; }
     int height() const { return height_; }
 
@@ -42,8 +42,6 @@ private:
     float x_min_, y_min_;          // Coordinates of corner of raster region
     int width_, height_;            // Number of cells on each axis
     float grid_size_;              // Metric distance between grid cells
-
-    int point_count_;
 
     void defineGrid(const std::vector<Eigen::Vector3d>& points);
 

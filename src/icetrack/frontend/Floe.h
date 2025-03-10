@@ -37,6 +37,10 @@ public:
         frame_idx_.reserve(n_points);
     }
 
+    void setColor(const Eigen::Vector3d& color){
+        color_ = color;
+    }
+
     std::vector<int> associatePoints(const std::vector<Eigen::Vector3d>& points);
 
     // Get current capacity

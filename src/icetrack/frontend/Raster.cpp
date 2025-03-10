@@ -25,14 +25,13 @@ void Raster::defineGrid(const std::vector<Eigen::Vector3d>& points){
     const auto [x_min, x_max, y_min, y_max] = getBounds(points);
 
     // Set x-axis params
-    x_min_ = std::floor(x_min / grid_size_) * grid_size_;
+    x_min_ = x_min - 0.5 * grid_size_;
     width_ = 1 + (x_max - x_min_) / grid_size_;
 
     // Y-axis params
-    y_min_ = std::floor(y_min / grid_size_) * grid_size_;
+    y_min_ = y_min - 0.5 * grid_size_;
     height_ = 1 + (y_max - y_min_) / grid_size_;
 }
-
 
 
 RasterCell Raster::getCell(const Eigen::Vector3d& p){
@@ -43,8 +42,7 @@ RasterCell Raster::getCell(const Eigen::Vector3d& p){
 }
 
 
-Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size) : grid_size_(grid_size){
-    point_count_ = points.size();
+Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size) : points_(points), grid_size_(grid_size){
     if (points.empty())
         return;
 
@@ -53,11 +51,11 @@ Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_siz
     raster_ = Eigen::MatrixXi::Constant(height_, width_, -1);
 
     // Reserve space in index vector
-    const int num_points = points.size();
-    cells_.reserve(num_points);
-    point_trace_.reserve(num_points);
+    cells_.reserve(height_*width_);
+    point_trace_.reserve(height_*width_);
 
     // Sum up cell attributes for each point in cloud
+    const int num_points = points.size();
     for (int i = 0; i < num_points; ++i){
         // Get point coordinate in raster
         const RasterCell cell = getCell(points[i]);
@@ -80,16 +78,65 @@ Raster::Raster(const std::vector<Eigen::Vector3d>& points, const double grid_siz
 }
 
 // Create a new raster by expanding with new points
-Raster Raster::expand(const std::vector<Eigen::Vector3d>& points) const {
+void Raster::expand(const std::vector<Eigen::Vector3d>& points) {
     if (points.empty())
-        return Raster(points_);
-        
-    // Create a new vector containing both existing and new points
-    std::vector<Eigen::Vector3d> expanded_points = points_; // Assuming `points_` is a member
-    expanded_points.insert(expanded_points.end(), points.begin(), points.end());
+        return;
 
-    // Return a new Raster object with the expanded point set
-    return Raster(expanded_points);
+    // Temp save some current config
+    const int x_min_old = x_min_;
+    const int y_min_old = y_min_;
+    const int idx0 = points_.size(); // Start iterating from here later
+
+    // Insert new points
+    points_.insert(points_.end(), points.begin(), points.end());
+    
+    // Redefine grid
+    defineGrid(points_);
+
+    // Find shift between new and old raster
+    int x_shift = (x_min_old - x_min_) / grid_size_;
+    int y_shift = (y_min_old - y_min_) / grid_size_;
+    
+    // Copy old raster
+    if (y_shift + raster_.rows() > height_ || x_shift + raster_.cols() > width_) {
+        ROS_INFO_STREAM(x_min_old << ", " << y_min_old);
+        ROS_INFO_STREAM(x_min_ << ", " << y_min_);
+        ROS_INFO_STREAM(y_shift << ", " << x_shift);
+        ROS_INFO_STREAM(raster_.rows() << ", " << raster_.cols());
+        ROS_INFO_STREAM(height_ << ", " << width_);
+        throw std::runtime_error("Shifting raster out of bounds.");
+    }
+    Eigen::MatrixXi new_raster = Eigen::MatrixXi::Constant(height_, width_, -1);
+    new_raster.block(y_shift, x_shift, raster_.rows(), raster_.cols()) = raster_;
+    raster_ = new_raster; 
+
+    // Shift cell list
+    for (auto& cell: cells_){
+        cell.x += x_shift;
+        cell.y += y_shift;
+    }
+
+    // Reserve more space
+    cells_.reserve(width_*height_);
+    point_trace_.reserve(width_*height_);
+
+    for (int i = idx0; i < points_.size()-1; ++i){
+        // Get point coordinate in raster
+        const RasterCell cell = getCell(points_[i]);
+
+        // Fill in cell
+        int& cell_idx = raster_(cell.y, cell.x);
+        if (cell_idx == -1){ 
+            cell_idx = cells_.size();
+            cells_.push_back(cell);
+
+            point_trace_.push_back(std::vector<int>(1, i));
+        }
+        else{
+            // Push point trace
+            point_trace_[cell_idx].push_back(i);
+        }
+    };
 };
 
 

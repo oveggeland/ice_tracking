@@ -36,32 +36,28 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     frame_buffer_.removeOldFrames();
     frame_buffer_.refineFrames();
 
+    // Create new frame
+    bool new_frame = frame_buffer_.createFrame(state_idx);
 
-    // Create a new frame, return true on success
-    if (frame_buffer_.createFrame(state_idx)){ // (2) Create new frame (measure)
-        // Update positions (new frame is added to "background")
-        floe_manager_.updateFloes();
+    // Update floe positions
+    floe_manager_.updateFloes();
+    floe_manager_.expandFloes();
+    floe_manager_.discoverFloes();
 
-        // Expand existing floes with nearby background points
-        // floe_manager_.expandFloes();
 
-        // Discover new points
-        floe_manager_.discoverFloes();
+    if (floe_manager_.floeCount() > 0)
+        floe_manager_.visualizeFloes();
+    
 
-        if (frame_buffer_.pointCount() > 100000){
-            ROS_INFO_STREAM("Number of floes is " << floe_manager_.floeCount());
-            floe_manager_.visualizeFloes();
-        }
+    // Odometry with new frame
+    // odometry_estimator_.estimateOdometry(state_idx);
+    
+    // // Publish raw frame?
+    // if (publish_frames_){
+    //     auto frame = frame_buffer_.back();
+    //     cloud_publisher_.publishFrame(frame.local().points_, frame.intensities());
+    // }
 
-        // Odometry with new frame
-        // odometry_estimator_.estimateOdometry(state_idx);
-        
-        // // Publish raw frame?
-        // if (publish_frames_){
-        //     auto frame = frame_buffer_.back();
-        //     cloud_publisher_.publishFrame(frame.local().points_, frame.intensities());
-        // }
-    }
 
     // raw_cloud_ = frame_buffer_.buildMap();
 

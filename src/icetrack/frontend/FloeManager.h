@@ -27,7 +27,7 @@ private:
     Floe background_; 
 
     // Floe tracking
-    int floe_id_counter_ = 0;
+    int floe_id_counter_ = 1;
     std::map<int, Floe> floes_;     // Maps a floe id (int) to a Floe object
 
     int min_floe_size_ = 3000;

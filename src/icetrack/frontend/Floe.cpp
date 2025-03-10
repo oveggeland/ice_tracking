@@ -21,7 +21,7 @@ std::vector<int> Floe::associatePoints(const std::vector<Eigen::Vector3d>& point
     const int id = cluster.getLargestClusterId();
     const int size0 = cluster.pointCount();
 
-    // Add points and expand cluster
+    // Expand the cluster around the floe
     cluster.addPoints(points);
     cluster.expandSingleCluster(id);
 
@@ -32,9 +32,8 @@ std::vector<int> Floe::associatePoints(const std::vector<Eigen::Vector3d>& point
     // Iterate through labels and check if any points were assigned to the cluster
     const std::vector<int>& labels = cluster.labels();
     for (int i = size0; i < labels.size(); ++i){
-        if (labels[i] == 1)
-            inliers.push_back(i);
+        if (labels[i] == id)
+            inliers.push_back(i - size0);
     }
-    
     return inliers;
 }

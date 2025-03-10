@@ -3,6 +3,7 @@
 // Constructor
 FloeManager::FloeManager(const ros::NodeHandle& nh, const PoseGraph& pg, FrameBuffer& fb) : pg_(pg), fb_(fb) {
     background_ = Floe(0);
+    background_.setColor({0, 0, 0});
 };
 
 
@@ -54,11 +55,14 @@ void FloeManager::updateFloes(){
 
         // Reassign outliers to "background"
         std::vector<int> outliers = floe.findOutliers();
-        if (outliers.size() > 0)
+        if (outliers.size() > 0){
             reassignPoints(floe, background_, outliers);
+            ROS_INFO_STREAM("Removed " << outliers.size() << " outliers from floe " << it->first);
+        }
 
         // Erase
-        if (it->second.size() < min_floe_size_) {
+        if (floe.size() < min_floe_size_) {
+            ROS_INFO_STREAM("Floe " << floe.id() << " with size " << floe.size() << " will be deleted");
             reassignPoints(it->second, background_);
             it = floes_.erase(it);
         } 
@@ -71,9 +75,9 @@ void FloeManager::updateFloes(){
 void FloeManager::expandFloes(){
     for (auto& [floe_id, floe]: floes_){
         std::vector<int> inliers = floe.associatePoints(background_.getCloud()->points_);
+        reassignPoints(background_, floe, inliers);
 
-        if (inliers.size() > 0)
-           reassignPoints(background_, floe, inliers);
+        ROS_INFO_STREAM("Expanded floe " << floe_id << " with " << inliers.size() << " points");
     }
 }
 
@@ -129,7 +133,10 @@ void FloeManager::discoverFloes(){
         reassignPoints(background_, new_floe, cluster);
 
         // Add floe to buffer
-        floes_[new_floe.id()] = new_floe;
+        floes_[new_floe.id()] = new_floe;   
+
+        Floe& this_floe = floes_.rbegin()->second;
+        ROS_INFO_STREAM("Added floe " << this_floe.id() << " with size: " << this_floe.size());
     }
 }
 
@@ -150,10 +157,10 @@ void FloeManager::clearFloes() {
 
 void FloeManager::visualizeFloes(){
     std::vector<std::shared_ptr<const open3d::geometry::Geometry>> clouds_to_visualize;
+    clouds_to_visualize.push_back(background_.getCloud());
+
     for (auto& [floe_id, floe] : floes_) {
-        auto cloud = floe.getCloud();
-        open3d::visualization::DrawGeometries({cloud}, "Single floe");
-        clouds_to_visualize.push_back(cloud);
+        clouds_to_visualize.push_back(floe.getCloud());
     }
 
     open3d::visualization::DrawGeometries(clouds_to_visualize, "Floe Visualization");

@@ -22,7 +22,7 @@ void RasterizedCluster::addPoints(const std::vector<Eigen::Vector3d>& points){
         return;
 
     const int size0 = raster_.cellCount();
-    raster_ = raster_.expand(points);
+    raster_.expand(points);
     const int size1 = raster_.cellCount();
 
     // Add noise labels to new points
@@ -167,24 +167,23 @@ std::vector<int> RasterizedCluster::getNoise(){
 void RasterizedCluster::visualizeClusters(){
     // Create an image to visualize clusters
     cv::Mat cluster_image(raster_.height(), raster_.width(), CV_8UC3, cv::Scalar(0, 0, 0)); // Black background
-    ROS_INFO_STREAM("Size of image: " << raster_.height() << ", " << raster_.width());
 
     // Generate random colors for each cluster
-    std::map<int, cv::Vec3b> cluster_colors;
     std::mt19937 rng(123); // Fixed seed for reproducibility
     std::uniform_int_distribution<int> dist(0, 255);
 
+    std::map<int, cv::Vec3b> cluster_colors;
     cluster_colors[-1] = cv::Vec3b(255, 255, 255);
+    for (int i = 0; i < super_clusters_.size(); ++i){
+        cluster_colors[i+1] = cv::Vec3b(dist(rng), dist(rng), dist(rng));
+    }
 
+    // Iterate through and draw clusters
     const auto& cells = raster_.cells();
     for (int i = 0; i < cells.size(); ++i) {
-        const int& label = super_labels_[i];
+        const int& label = super_labels_[i];    // Get label
+        const auto& cell = cells[i];            // Get position
 
-        if (cluster_colors.find(label) == cluster_colors.end()) {
-            cluster_colors[label] = cv::Vec3b(dist(rng), dist(rng), dist(rng));
-        }
-
-        const auto cell = cells[i];  // Get pixel position
         cluster_image.at<cv::Vec3b>(cell.y, cell.x) = cluster_colors[label];
     }    
 
