@@ -43,9 +43,9 @@ private:
     std::vector<Eigen::Vector3d> points_;
 
     // Grid definition
-    float x_min_, y_min_;          // Coordinates of corner of raster region
+    double x_min_, y_min_;          // Coordinates of corner of raster region
     int width_, height_;            // Number of cells on each axis
-    float grid_size_;              // Metric distance between grid cells
+    double grid_size_;              // Metric distance between grid cells
 
     void defineGrid(const std::vector<Eigen::Vector3d>& points);
 

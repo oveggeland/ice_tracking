@@ -122,8 +122,8 @@ void Raster::expand(const std::vector<Eigen::Vector3d>& points) {
         return;
 
     // Temp save some current config
-    const int x_min_old = x_min_;
-    const int y_min_old = y_min_;
+    const double x_min_old = x_min_;
+    const double y_min_old = y_min_;
     const int idx0 = points_.size(); // Start iterating from here later
 
     // Insert new points
@@ -140,9 +140,9 @@ void Raster::expand(const std::vector<Eigen::Vector3d>& points) {
     if (y_shift + raster_.rows() > height_ || x_shift + raster_.cols() > width_) {
         ROS_INFO_STREAM(x_min_old << ", " << y_min_old);
         ROS_INFO_STREAM(x_min_ << ", " << y_min_);
-        ROS_INFO_STREAM(y_shift << ", " << x_shift);
-        ROS_INFO_STREAM(raster_.rows() << ", " << raster_.cols());
-        ROS_INFO_STREAM(height_ << ", " << width_);
+        ROS_INFO_STREAM(x_shift << ", " << y_shift);
+        ROS_INFO_STREAM(raster_.cols() << ", " << raster_.rows());
+        ROS_INFO_STREAM(width_ << ", " << height_);
         throw std::runtime_error("Shifting raster out of bounds.");
     }
     Eigen::MatrixXi new_raster = Eigen::MatrixXi::Constant(height_, width_, -1);

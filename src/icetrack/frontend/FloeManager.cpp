@@ -57,12 +57,12 @@ void FloeManager::updateFloes(){
         std::vector<int> outliers = floe.findOutliers();
         if (outliers.size() > 0){
             reassignPoints(floe, background_, outliers);
-            ROS_INFO_STREAM("Removed " << outliers.size() << " outliers from floe " << it->first);
+            ROS_DEBUG_STREAM("Removed " << outliers.size() << " outliers from floe " << it->first);
         }
 
         // Erase
         if (floe.size() < min_floe_size_) {
-            ROS_INFO_STREAM("Floe " << floe.id() << " with size " << floe.size() << " will be deleted");
+            ROS_DEBUG_STREAM("Floe " << floe.id() << " with size " << floe.size() << " will be deleted");
             reassignPoints(it->second, background_);
             it = floes_.erase(it);
         } 
@@ -77,7 +77,7 @@ void FloeManager::expandFloes(){
         std::vector<int> inliers = floe.associatePoints(background_.getCloud()->points_);
         reassignPoints(background_, floe, inliers);
 
-        ROS_INFO_STREAM("Expanded floe " << floe_id << " with " << inliers.size() << " points");
+        ROS_DEBUG_STREAM("Expanded floe " << floe_id << " with " << inliers.size() << " points");
     }
 }
 
@@ -178,7 +178,7 @@ void FloeManager::discoverFloes(){
         floes_[new_floe.id()] = new_floe;   
 
         Floe& this_floe = floes_.rbegin()->second;
-        ROS_INFO_STREAM("Added floe " << this_floe.id() << " with size: " << this_floe.size());
+        ROS_DEBUG_STREAM("Added floe " << this_floe.id() << " with size: " << this_floe.size());
     }
 }
 
