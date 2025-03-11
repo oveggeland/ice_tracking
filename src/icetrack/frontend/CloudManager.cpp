@@ -48,6 +48,26 @@ bool CloudManager::generateLidarFrame(const int idx){
 
 
 /*
+Optional refining (redo undistortion) for all frames with new pose estimates.
+*/
+void CloudManager::refineFrames(){
+    double t0, t1;
+    gtsam::Pose3 pose0, pose1;
+
+    for (auto it = frame_buffer_.begin(); it != frame_buffer_.end(); ++it){
+        const int frame_id = it->id();
+    
+        if (pose_graph_.timePoseQuery(frame_id-1, t0, pose0) && 
+            pose_graph_.timePoseQuery(frame_id, t1, pose1)){
+            // Succesful queries
+            it->undistort(t0, t1, pose0, pose1);
+        }
+    }   
+}
+
+
+
+/*
 Rebuild map based on an updates pose graph and the frame buffer
 */
 void CloudManager::rebuildMap(){
@@ -65,11 +85,10 @@ void CloudManager::rebuildMap(){
 
         // Now we transform the points
         const std::vector<Eigen::Vector3d>& frame_points = it->undistorted()->points_;
-        const int n_points = frame_points.size();
 
         // Transform points into map
         for (const Eigen::Vector3d& p: frame_points){
-            cloud_points.push_back(frame_pose.transformFrom(p));
+            cloud_points.emplace_back(frame_pose.transformFrom(p));
         }
     }   
 }
@@ -96,6 +115,7 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
         odometry_estimator_.estimateOdometry(state_idx);
 
     // Rebuild map!
+    // refineFrames();
     rebuildMap();
 
     // Publish

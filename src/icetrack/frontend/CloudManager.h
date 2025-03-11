@@ -53,6 +53,7 @@ private:
     bool publish_frames_;
 
     bool generateLidarFrame(const int state_idx);
+    void refineFrames();
     void rebuildMap();
 
 
