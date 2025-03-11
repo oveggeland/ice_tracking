@@ -84,7 +84,7 @@ void CloudManager::rebuildMap(){
             continue; // Pose not available?
 
         // Get frame values
-        const std::vector<Eigen::Vector3d>& frame_points = it->undistorted()->points_;
+        const std::vector<Eigen::Vector3d>& frame_points = it->undistortedPoints();
         const std::vector<float>& frame_intensities = it->intensities();
         const int frame_size = frame_points.size();
 
@@ -125,7 +125,7 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
         // Optional: Publish frame
         if (publish_frames_){
             const LidarFrame& frame = frame_buffer_.back();
-            cloud_publisher_.publishFrame(frame.undistorted()->points_, frame.intensities());
+            cloud_publisher_.publishFrame(frame.undistortedPoints(), frame.intensities());
         }
     }
 

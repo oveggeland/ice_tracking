@@ -21,7 +21,7 @@ void OdometryEstimator::estimateOdometry(int idx1) {
     
     // Temporary storage of previous index and cloud
     const int idx0 = prev_idx_;
-    const auto cloud0_ds = prev_cloud_;
+    const auto cloud0 = prev_cloud_;
 
     // Reset prev values
     prev_idx_ = idx1;
@@ -32,14 +32,11 @@ void OdometryEstimator::estimateOdometry(int idx1) {
     if (!frame1 || frame1->size() < min_frame_size_)
         return; // Frame not big enough...
 
-    auto cloud1 = frame1->undistorted();
-    if (!cloud1)
-        return; // Frame is not undistorted
-    auto cloud1_ds = cloud1->VoxelDownSample(voxel_size_);
-    prev_cloud_ = cloud1_ds;
+    auto cloud1 = open3d::geometry::PointCloud(frame1->undistortedPoints()).VoxelDownSample(voxel_size_);
+    prev_cloud_ = cloud1;
 
     // Check that both clouds exist
-    if (!cloud0_ds || !cloud1_ds)
+    if (!cloud0 || !cloud1)
         return; 
 
     // Get pose and estimate initial alignment
@@ -51,7 +48,7 @@ void OdometryEstimator::estimateOdometry(int idx1) {
 
     // ICP
     auto result = open3d::pipelines::registration::RegistrationICP(
-        *cloud1_ds, *cloud0_ds, icp_threshold_, T_initial,
+        *cloud1, *cloud0, icp_threshold_, T_initial,
         open3d::pipelines::registration::TransformationEstimationPointToPoint(),
         open3d::pipelines::registration::ICPConvergenceCriteria(icp_relative_fitness_, icp_relative_rmse_, icp_max_iter_)
     ); 

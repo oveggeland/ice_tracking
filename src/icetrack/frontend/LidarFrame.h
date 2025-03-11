@@ -4,9 +4,6 @@
 
 #include <gtsam/geometry/Pose3.h>
 
-#include <open3d/geometry/PointCloud.h>
-#include <open3d/visualization/utility/DrawGeometry.h>
-
 #include "PointBuffer.h" // For point definition
 
 /*
@@ -19,24 +16,16 @@ public:
 
     // Point handling
     void addPoint(const PointXYZIT& point);
-    
-    void downSample(const double voxel_size);
     void undistort(const double t0, const double t1, const gtsam::Pose3& pose0, const gtsam::Pose3& pose1);
-
-    void show(const bool distorted=true){
-        std::shared_ptr<open3d::geometry::PointCloud> cloud = distorted ? distorted_ : undistorted_;
-        open3d::visualization::DrawGeometries({cloud}, "LidarFrame Viewer");
-    }
 
     // Accessors
     int id() const { return id_; }
     double timestamp() const { return ts_; }
 
-    size_t size() const { return distorted_->points_.size(); }
+    size_t size() const { return distorted_points_.size(); }
 
-    std::shared_ptr<const open3d::geometry::PointCloud> distorted() const { return distorted_; }
-    std::shared_ptr<const open3d::geometry::PointCloud> undistorted() const { return undistorted_; }
-
+    const std::vector<Eigen::Vector3d>& distortedPoints() const { return distorted_points_; }
+    const std::vector<Eigen::Vector3d>& undistortedPoints() const { return undistorted_points_; }
     const std::vector<float>& intensities() const { return intensities_; }
     const std::vector<float>& dt() const { return dt_; }
 
@@ -44,9 +33,9 @@ private:
     int id_;        // Frame id - corresponds to a state idx in pose graph
     double ts_;     // Timestamp of frame
 
-    // Keep track of both distorted and undistorted cloud (undistortion might be re-applied)
-    std::shared_ptr<open3d::geometry::PointCloud> distorted_ = nullptr;
-    std::shared_ptr<open3d::geometry::PointCloud> undistorted_ = nullptr;
+    // Keep track of both distorted and undistorted points
+    std::vector<Eigen::Vector3d> distorted_points_;
+    std::vector<Eigen::Vector3d> undistorted_points_;
 
     // Point cloud attributes
     std::vector<float> intensities_;    // Lidar intensity 
