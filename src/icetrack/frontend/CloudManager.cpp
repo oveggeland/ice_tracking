@@ -48,12 +48,41 @@ bool CloudManager::generateLidarFrame(const int idx){
 
 
 /*
+Rebuild map based on an updates pose graph and the frame buffer
+*/
+void CloudManager::rebuildMap(){
+    // Clear cloud object and reserve 
+    std::vector<Eigen::Vector3d>& cloud_points = cloud_.points_;
+    cloud_points.clear();
+    cloud_points.reserve(frame_buffer_.numPoints());
+    
+    // Iterate through frames 
+    gtsam::Pose3 frame_pose; 
+    for (auto it = frame_buffer_.cbegin(); it != frame_buffer_.cend(); ++it){
+        // First query pose
+        if (!pose_graph_.poseQuery(it->id(), frame_pose))
+            continue; // Pose not available?
+
+        // Now we transform the points
+        const std::vector<Eigen::Vector3d>& frame_points = it->undistorted()->points_;
+        const int n_points = frame_points.size();
+
+        // Transform points into map
+        for (const Eigen::Vector3d& p: frame_points){
+            cloud_points.push_back(frame_pose.transformFrom(p));
+        }
+    }   
+}
+
+
+
+/*
 On new state events, we do the following steps:
-1. Maintain frame buffer (discard old frames, refine frames)
+1. Maintain frame buffer (discard old frames)
 2. Create a new frame
 3. Estimate odometry (frame-to-frame)
-4. Process refined cloud
-5. Publish refined cloud
+4. Rebuild map
+5. Publish map
 */
 void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
     const double ts = msg->header.stamp.toSec();
@@ -65,6 +94,12 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     // Create new frame
     if (generateLidarFrame(state_idx));
         odometry_estimator_.estimateOdometry(state_idx);
+
+    // Rebuild map!
+    rebuildMap();
+
+    // Publish
+    cloud_publisher_.publishCloud(cloud_.points_, std::vector<float>(cloud_.points_.size(), 0));
 }
 
 /*

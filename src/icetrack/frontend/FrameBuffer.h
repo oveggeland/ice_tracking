@@ -29,8 +29,8 @@ public:
     FrameBufferIterator begin() { return buffer_.begin(); }
     FrameBufferIterator end() { return buffer_.end(); }
 
-    FrameBufferConstIterator begin() const { return buffer_.begin(); }
-    FrameBufferConstIterator end() const { return buffer_.end(); }
+    FrameBufferConstIterator cbegin() const { return buffer_.cbegin(); }
+    FrameBufferConstIterator cend() const { return buffer_.cend(); }
 
 private:
     FrameBufferType buffer_;       // Main buffer

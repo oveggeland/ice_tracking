@@ -43,6 +43,7 @@ private:
 
     // Keep track of raw and processed clouds
     open3d::t::geometry::PointCloud raw_cloud_;
+    open3d::geometry::PointCloud cloud_;
 
     // Config
     bool publish_cloud_;
@@ -52,6 +53,8 @@ private:
     bool publish_frames_;
 
     bool generateLidarFrame(const int state_idx);
+    void rebuildMap();
+
 
     // Subscriber(s)
     ros::Subscriber lidar_sub_;
