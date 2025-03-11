@@ -9,9 +9,9 @@ CloudManager::CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph) :
     odometry_estimator_(nh, pose_graph, frame_buffer_){
 
     // Config
+    getParamOrThrow(nh, "/cloud_manager/refine_frames", refine_frames_);
     getParamOrThrow(nh, "/cloud_manager/publish_frames", publish_frames_);
     getParamOrThrow(nh, "/cloud_manager/publish_cloud", publish_cloud_);
-    getParamOrThrow(nh, "/cloud_manager/cloud_pub_interval", cloud_pub_interval_);
 
     // Setup subscribers
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
@@ -71,10 +71,14 @@ void CloudManager::refineFrames(){
 Rebuild map based on an updates pose graph and the frame buffer
 */
 void CloudManager::rebuildMap(){
-    // Clear cloud object and reserve 
-    std::vector<Eigen::Vector3d>& cloud_points = cloud_.points_;
-    cloud_points.clear();
-    cloud_points.reserve(frame_buffer_.numPoints());
+    // Clear and reserve 
+    const size_t num_points = frame_buffer_.numPoints();
+
+    points_.clear();
+    points_.reserve(num_points);
+
+    intensities_.clear();
+    intensities_.reserve(num_points);
     
     // Iterate through frames 
     gtsam::Pose3 frame_pose; 
@@ -83,12 +87,15 @@ void CloudManager::rebuildMap(){
         if (!pose_graph_.poseQuery(it->id(), frame_pose))
             continue; // Pose not available?
 
-        // Now we transform the points
+        // Get frame values
         const std::vector<Eigen::Vector3d>& frame_points = it->undistorted()->points_;
+        const std::vector<float>& frame_intensities = it->intensities();
+        const int frame_size = frame_points.size();
 
-        // Transform points into map
-        for (const Eigen::Vector3d& p: frame_points){
-            cloud_points.emplace_back(frame_pose.transformFrom(p));
+        // Add to map
+        for (int i = 0; i < frame_size; ++i){
+            points_.emplace_back(frame_pose.transformFrom(frame_points[i]));
+            intensities_.push_back(frame_intensities[i]);
         }
     }   
 }
@@ -107,19 +114,30 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     const double ts = msg->header.stamp.toSec();
     const int state_idx = pose_graph_.getCurrentStateIdx();
 
-    // Maintain frame buffer
+    // Maintain buffer
     frame_buffer_.maintain();
 
     // Create new frame
-    if (generateLidarFrame(state_idx));
+    if (generateLidarFrame(state_idx)){
         odometry_estimator_.estimateOdometry(state_idx);
 
-    // Rebuild map!
-    // refineFrames();
+        // Optional: Publish frame
+        if (publish_frames_){
+            const LidarFrame& frame = frame_buffer_.back();
+            cloud_publisher_.publishFrame(frame.undistorted()->points_, frame.intensities());
+        }
+    }
+
+    // Optional: Refine frames (computationally heavy)
+    if (refine_frames_)
+        refineFrames();
+    
+    // Rebuild map
     rebuildMap();
 
-    // Publish
-    cloud_publisher_.publishCloud(cloud_.points_, std::vector<float>(cloud_.points_.size(), 0));
+    // Optional: Publish cloud
+    if (publish_cloud_)
+        cloud_publisher_.publishCloud(points_, intensities_);
 }
 
 /*

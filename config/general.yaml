@@ -82,10 +82,9 @@ cloud_processor/smoothing_window_size: 3
 cloud_processor/deformation_window_size: 5
 
 # Cloud manager
-cloud_manager/publish_cloud: true
-cloud_manager/cloud_pub_interval: 1
-
+cloud_manager/refine_frames: false
 cloud_manager/publish_frames: false
+cloud_manager/publish_cloud: true
 
 # Cloud publisher
 cloud_publisher/cloud_topic: "/icetrack/raw_cloud"

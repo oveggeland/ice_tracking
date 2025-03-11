@@ -26,6 +26,9 @@ public:
     LidarFrame* getFrame(const int frame_id);
     const LidarFrame* getFrame(const int frame_id) const;
 
+    const LidarFrame& front() const { return buffer_.front(); }
+    const LidarFrame& back() const { return buffer_.back(); }
+
     FrameBufferIterator begin() { return buffer_.begin(); }
     FrameBufferIterator end() { return buffer_.end(); }
 

@@ -41,21 +41,19 @@ private:
     // Publisher(s)
     CloudPublisher cloud_publisher_;
 
-    // Keep track of raw and processed clouds
-    open3d::t::geometry::PointCloud raw_cloud_;
-    open3d::geometry::PointCloud cloud_;
+    // Cloud data
+    std::vector<Eigen::Vector3d> points_;
+    std::vector<float> intensities_;
 
-    // Config
-    bool publish_cloud_;
-    double ts_last_cloud_pub_ = 0.0;
-    double cloud_pub_interval_;
-
-    bool publish_frames_;
-
+    // Functionality
     bool generateLidarFrame(const int state_idx);
     void refineFrames();
     void rebuildMap();
 
+    // Config
+    bool refine_frames_;
+    bool publish_frames_;
+    bool publish_cloud_;
 
     // Subscriber(s)
     ros::Subscriber lidar_sub_;
