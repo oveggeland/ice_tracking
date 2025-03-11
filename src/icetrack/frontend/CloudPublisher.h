@@ -19,7 +19,7 @@ public:
     CloudPublisher(ros::NodeHandle& nh);
 
     // Interface to publish cloud
-    void publishFrame(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities);
+    void publishFrame(const std::vector<Eigen::Vector3f>& positions, const std::vector<float>& intensities);
     void publishCloud(const std::vector<PointXYZI>& points);
 
 private:
@@ -36,7 +36,7 @@ private:
     void initializeMessages();
 
     // Fill message
-    void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities); 
+    void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<Eigen::Vector3f>& positions, const std::vector<float>& intensities); 
     void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<PointXYZI>& points); 
 };
 

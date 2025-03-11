@@ -50,7 +50,7 @@ void CloudPublisher::publishCloud(const std::vector<PointXYZI>& points){
     cloud_pub_.publish(cloud_msg_);
 }
 
-void CloudPublisher::publishFrame(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities){
+void CloudPublisher::publishFrame(const std::vector<Eigen::Vector3f>& positions, const std::vector<float>& intensities){
     if (frame_pub_.getNumSubscribers() == 0)
         return; // No point
 
@@ -74,7 +74,7 @@ void CloudPublisher::fillCloudMessage(sensor_msgs::PointCloud2& msg,
 }
 
 void CloudPublisher::fillCloudMessage(sensor_msgs::PointCloud2& msg, 
-                                        const std::vector<Eigen::Vector3d>& positions, 
+                                        const std::vector<Eigen::Vector3f>& positions, 
                                         const std::vector<float>& intensities){
     // Metadata
     msg.header.stamp = ros::Time::now();
@@ -86,7 +86,7 @@ void CloudPublisher::fillCloudMessage(sensor_msgs::PointCloud2& msg,
     sensor_msgs::PointCloud2Iterator<PackedPointXYZI> msg_it(msg, "x");
     for (size_t i = 0; i < msg.width; ++i, ++msg_it) {
         *msg_it = PackedPointXYZI{
-            positions[i].cast<float>(),
+            positions[i],
             intensities[i]
         };
     }

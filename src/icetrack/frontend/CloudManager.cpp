@@ -42,7 +42,7 @@ bool CloudManager::generateLidarFrame(const int idx){
     }
 
     // Undistort
-    frame.undistort(t0, t1, pose0, pose1);
+    frame.undistortFirstOrder(t0, t1, pose0, pose1);
     return true;
 }
 
@@ -83,14 +83,18 @@ void CloudManager::rebuildMap(){
         if (!pose_graph_.poseQuery(it->id(), frame_pose))
             continue; // Pose not available?
 
+        // Convert to eigen float
+        Eigen::Matrix3f R_frame = frame_pose.matrix().topLeftCorner<3, 3>().cast<float>();
+        Eigen::Vector3f t_frame = frame_pose.matrix().topRightCorner<3, 1>().cast<float>();
+
         // Get frame values
-        const std::vector<Eigen::Vector3d>& frame_points = it->undistortedPoints();
+        const std::vector<Eigen::Vector3f>& frame_points = it->undistortedPoints();
         const std::vector<float>& frame_intensities = it->intensities();
         const int frame_size = frame_points.size();
 
         // Add to map
         for (int i = 0; i < frame_size; ++i){
-            const Eigen::Vector3f p = frame_pose.transformFrom(frame_points[i]).cast<float>();
+            const Eigen::Vector3f p = R_frame*frame_points[i] + t_frame;
             points_.push_back({
                 p.x(),
                 p.y(),
