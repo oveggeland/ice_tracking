@@ -107,6 +107,23 @@ public:
         );
     }  
 
+    // Copy points from source, specified by indices
+    void copyFrom(const Floe& source, const std::vector<int>& indices){
+        reserveAdditional(indices.size());
+
+        for (const int idx: indices)
+            copyFrom(source, idx);
+    }  
+
+    // Copy all points from source
+    void copyFrom(const Floe& source){
+        const int n_points = source.size();
+        reserveAdditional(n_points);
+
+        for (int i = 0; i < n_points; ++i)
+            copyFrom(source, i);
+    }  
+
     // Assign a random color at creation
     void assignRandomColor() {
         static std::random_device rd;

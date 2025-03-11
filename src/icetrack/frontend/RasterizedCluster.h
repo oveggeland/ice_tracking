@@ -42,15 +42,26 @@ public:
     std::vector<int> getBiggestCluster() const;
     int getLargestClusterId() const;
 
+    double getClusterArea(const int cluster_id) const {
+        const auto cluster_it = super_clusters_.find(cluster_id);
+        if (cluster_it == super_clusters_.end())
+            return 0.0; 
+        return cluster_it->second.size() * raster_.cellArea();
+    }
 
+    // Accessors
+    const std::vector<int>& superLabels() const { return super_labels_; }
     const std::vector<int>& labels() const { return labels_; }
+
+    const std::unordered_map<int, std::vector<int>>& superClusters() const { return super_clusters_; }
+    const std::unordered_map<int, std::vector<int>>& clusters() const { return clusters_; }
 
 private:
     Raster raster_;
 
     int cluster_id_ = 1;
-    size_t eps_ = 3;
-    size_t min_points_ = 25;
+    size_t eps_ = 2;
+    size_t min_points_ = 200;
 
     // Raster scale labels and clusters
     std::vector<int> super_labels_;

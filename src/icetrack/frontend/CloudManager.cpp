@@ -38,38 +38,18 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     // Create new frame
     bool new_frame = frame_buffer_.createFrame(state_idx);
+    if (new_frame)
+        odometry_estimator_.estimateOdometry(state_idx);
 
-    // Update floe positions
-    floe_manager_.updateFloes();
+    // Floe logic
+    floe_manager_.rebuildFloes();
     floe_manager_.expandFloes();
-    floe_manager_.discoverFloes();
     floe_manager_.mergeFloes();
 
+    floe_manager_.discoverFloes();
 
-    // if (floe_manager_.floeCount() > 0)
-    //     floe_manager_.visualizeFloes();
-    
-
-    // Odometry with new frame
-    // odometry_estimator_.estimateOdometry(state_idx);
-    
-    // // Publish raw frame?
-    // if (publish_frames_){
-    //     auto frame = frame_buffer_.back();
-    //     cloud_publisher_.publishFrame(frame.local().points_, frame.intensities());
-    // }
-
-
-    // raw_cloud_ = frame_buffer_.buildMap();
-
-    // Publishing
-    // if (publish_cloud_ && (ts - ts_last_cloud_pub_ > cloud_pub_interval_)){
-    //     const auto points = raw_cloud_.ToLegacy().points_;
-    //     const std::vector<float> intensities(points.size());
-    //     cloud_publisher_.publishCloud(points, intensities);
-
-    //     ts_last_cloud_pub_ = ts;
-    // }
+    if (state_idx > 300 && state_idx % 10 == 0)
+        floe_manager_.visualizeFloes();
 }
 
 /*

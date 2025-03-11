@@ -2,12 +2,13 @@
 
 // Constructor
 FloeManager::FloeManager(const ros::NodeHandle& nh, const PoseGraph& pg, FrameBuffer& fb) : pg_(pg), fb_(fb) {
+    // Initialize background floe
     background_ = Floe(0);
     background_.setColor({0, 0, 0});
 };
 
 
-void FloeManager::processFrame(const CloudFrame& frame){
+void FloeManager::rebuildFromFrame(const CloudFrame& frame){
     const int frame_size = frame.size(); 
     if (frame_size == 0)
         return;
@@ -35,18 +36,18 @@ void FloeManager::processFrame(const CloudFrame& frame){
 /*
 Iterate over all frames and refine the floes
 */
-void FloeManager::updateFloes(){
+void FloeManager::rebuildFloes(){
     // Clear for rebuild
     background_.clear();
     clearFloes();
 
-    // Allocate memory for background points (floes are allocated on creation)
+    // Allocate memory for background points (floes are pre-allocated on creation)
     const int point_count = fb_.pointCount(); // Upper bound
     background_.reserve(point_count);
 
-    // Refine based on each frame in the buffer
+    // Rebuild based on each frame
     for (auto frame_it = fb_.begin(); frame_it != fb_.end(); ++frame_it){
-        processFrame(*frame_it);
+        rebuildFromFrame(*frame_it);
     }
 
     // Maintain
@@ -123,72 +124,65 @@ void FloeManager::mergeFloes() {
     }
 }
 
-// Reassign a single point from source to target
-// Does not remove the point from source!
-void FloeManager::reassignPoint(const Floe& source, Floe& target, const int idx){
-    fb_.setFloeLabel(source.getFrameId(idx), source.getFrameIdx(idx), target.id());
-    target.copyFrom(source, idx);
-}
-
-/*
-Reassigns a points based from source to target, based on the indices of source.
-*/
-void FloeManager::reassignPoints(Floe& source, Floe& target, const std::vector<int>& indices){
-    target.reserveAdditional(indices.size());
-    
-    for (const int idx: indices) {
-        reassignPoint(source, target, idx);
-    }
-
-    source.removeByIndex(indices);
-}
-
 /*
 Reassign all points from source to target
 */
 void FloeManager::reassignPoints(Floe& source, Floe& target){
+    target.copyFrom(source);
+
+    const int target_id = target.id(); 
     const int n_points = source.size();
-    target.reserveAdditional(n_points);
-    
-    for (int idx = 0; idx < n_points; ++idx) {
-        reassignPoint(source, target, idx);
+    for (int idx = 0; idx < n_points; ++idx){
+        fb_.setFloeLabel(source.getFrameId(idx), source.getFrameIdx(idx), target_id);
     }
 
     source.clear();
 }
 
+/*
+Reassign points from source to target based on a index list
+*/
+void FloeManager::reassignPoints(Floe& source, Floe& target, const std::vector<int>& indices){
+    target.copyFrom(source, indices);
+
+    const int target_id = target.id(); 
+    for (const int idx: indices) {
+        fb_.setFloeLabel(source.getFrameId(idx), source.getFrameIdx(idx), target_id);
+    }
+    source.removeByIndex(indices);
+}
+
 void FloeManager::discoverFloes(){
-    auto points = background_.getCloud()->points_;
-    if (points.size() < 1)
+    if (background_.size() < min_floe_size_)
         return;
     
-    RasterizedCluster raster(points);
+    // Cluster background points
+    RasterizedCluster raster(background_.getCloud()->points_);
     raster.runClustering();
 
-    std::vector<int> cluster = raster.getBiggestCluster();
+    // Iterate through clusters
+    const auto& clusters = raster.clusters();
+    for (auto it = clusters.begin(); it != clusters.end(); ++it){
+        // Fetch cluster data
+        const int cluster_id = it->first;
+        const std::vector<int>& cluster = it->second;
 
-    if (cluster.size() > min_floe_size_){
-        // Okay, lets make a new flow with id and pre-determined capacity
-        Floe new_floe(floe_id_counter_++, cluster.size());
+        if (raster.getClusterArea(cluster_id) > min_floe_area_ &&
+            cluster.size() > min_floe_size_){
 
-        // Removes points from background and puts them in new_floe
-        reassignPoints(background_, new_floe, cluster);
+            // Woho, new floe!
+            Floe new_floe(floe_id_counter_++, cluster.size());
 
-        // Add floe to buffer
-        floes_[new_floe.id()] = new_floe;   
+            // Removes points from background and puts them in new_floe
+            reassignPoints(background_, new_floe, cluster);
 
-        Floe& this_floe = floes_.rbegin()->second;
-        ROS_DEBUG_STREAM("Added floe " << this_floe.id() << " with size: " << this_floe.size());
+            // Add floe to buffer
+            floes_[new_floe.id()] = new_floe;
+            break; // For now, only allow one new floe each round
+        }
     }
 }
 
-int FloeManager::pointCount() const {
-    int cnt = 0;
-    for (auto& [floe_id, floe] : floes_) {
-        cnt += floe.size();
-    }
-    return cnt;
-}
 
 void FloeManager::clearFloes() {
     for (auto& [floe_id, floe] : floes_) {

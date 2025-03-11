@@ -18,7 +18,7 @@ struct RasterCell {
 class Raster{
 public:
     // Construct from 3D points
-    Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size=0.5);
+    Raster(const std::vector<Eigen::Vector3d>& points, const double grid_size=0.2);
 
     // Expand raster with new points
     void expand(const std::vector<Eigen::Vector3d>& points);
@@ -31,6 +31,15 @@ public:
     std::vector<int> findNeighbors(const int cell_idx, const int eps) const{
         return findNeighbors(cells_[cell_idx], eps);
     };
+
+    // Count the total number of points in the set of cells
+    int countPoints(const std::vector<int>& cells) const{
+        int sum = 0;
+        for (const int cell: cells){
+            sum += point_trace_[cell].size();
+        }
+        return sum;
+    }
 
     // Accessors
     int width() const { return width_; }

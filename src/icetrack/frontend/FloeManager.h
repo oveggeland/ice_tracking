@@ -14,10 +14,11 @@ public:
     FloeManager(const ros::NodeHandle& nh, const PoseGraph& pg, FrameBuffer& fb);
 
     // Top level functionality (in order of execution)
-    void updateFloes();
+    void rebuildFloes();
     void expandFloes();
-    void discoverFloes(); 
     void mergeFloes();
+
+    void discoverFloes(); 
 
     // Accessors
     int floeCount() const { return floes_.size(); }
@@ -31,29 +32,23 @@ private:
     int floe_id_counter_ = 1;
     std::map<int, Floe> floes_;     // Maps a floe id (int) to a Floe object
 
-    int min_floe_size_ = 3000;
+    double min_floe_area_ = 50; // Square meters
+    int min_floe_size_ = 3000;  // Number of points
+    double floe_intersection_threshold_ = 10.0;
 
     // Resources
     const PoseGraph& pg_;       // For state estimates
     FrameBuffer& fb_;     // For point access
 
-    // Helpers
-    int findFloeMatch(const Eigen::Vector3d& point);
 
-    void reassignPoint(const Floe& source, Floe& target, const int idx);
     void reassignPoints(Floe& source, Floe& target); 
     void reassignPoints(Floe& source, Floe& target, const std::vector<int>& indices);
 
-    int pointCount() const;
 
-    void processFrame(const CloudFrame& frame); // refine floes and map based on input frame
+    void rebuildFromFrame(const CloudFrame& frame); // refine floes and map based on input frame
 
     // Try to merge floe0 and floe1
     bool mergeFloePair(Floe& floe0, Floe& floe1);
 
     void clearFloes();                                      // Reset every floe in floes_ (clears point cloud)
-    void reserveMemoryForFloes(const int n_points);         // Reserve enough space in floe for n points
-
-
-    double floe_intersection_threshold_ = 10.0;
 };

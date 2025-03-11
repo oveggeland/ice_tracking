@@ -8,7 +8,7 @@ void RasterizedCluster::expandCluster(const int idx){
     std::vector<int> neighbors = raster_.findNeighbors(idx, eps_);
     
     // Core or edge?
-    if (neighbors.size() < min_points_)
+    if (raster_.countPoints(neighbors) < min_points_)
         return; // I am edge, do not keep expanding
     
     for (const int& neighbor_idx: neighbors)
@@ -54,7 +54,7 @@ void RasterizedCluster::runClustering(){
             continue; // Already labelled
         
         const std::vector<int> neighbors = raster_.findNeighbors(i, eps_);
-        if (neighbors.size() < min_points_)
+        if (raster_.countPoints(neighbors) < min_points_)
             super_labels_[i] = -1;
         else{
             super_clusters_[cluster_id_];
