@@ -3,11 +3,10 @@
 CloudManager::CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph) : 
     pose_graph_(pose_graph),
     point_buffer_(nh), 
-    frame_buffer_(nh, pose_graph, point_buffer_),
-    surface_estimator_(nh, pose_graph, point_buffer_),
-    odometry_estimator_(nh, pose_graph, frame_buffer_),
+    frame_buffer_(nh),
     cloud_publisher_(nh),
-    floe_manager_(nh, pose_graph, frame_buffer_) {
+    surface_estimator_(nh, pose_graph, point_buffer_),
+    odometry_estimator_(nh, pose_graph, frame_buffer_){
 
     // Config
     getParamOrThrow(nh, "/cloud_manager/publish_frames", publish_frames_);
@@ -20,6 +19,34 @@ CloudManager::CloudManager(ros::NodeHandle& nh, PoseGraph& pose_graph) :
 }
 
 
+bool CloudManager::generateLidarFrame(const int idx){
+    double t0, t1;
+    gtsam::Pose3 pose0, pose1;
+    
+    if (!pose_graph_.timePoseQuery(idx-1, t0, pose0) || !pose_graph_.timePoseQuery(idx, t1, pose1)){
+        ROS_WARN_STREAM("Pose not available at idx: " << idx);
+        return false;
+    }
+
+    // Find bounds for point buffer iteration
+    auto start = point_buffer_.lowerBound(t0);
+    auto end = point_buffer_.lowerBound(t1);
+    int num_points = start.distance_to(end);
+
+    // Initialize frame with idx and capacity
+    LidarFrame& frame = frame_buffer_.emplaceFrame(idx, t1, num_points);//  frame(idx1, num_points);
+
+    // Iterate through and add points
+    for (auto it = start; it != end; ++it) {
+        frame.addPoint(*it);
+    }
+
+    // Undistort
+    frame.undistort(t0, t1, pose0, pose1);
+    return true;
+}
+
+
 /*
 On new state events, we do the following steps:
 1. Maintain frame buffer (discard old frames, refine frames)
@@ -29,27 +56,15 @@ On new state events, we do the following steps:
 5. Publish refined cloud
 */
 void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
-    double ts = msg->header.stamp.toSec();
-    int state_idx = pose_graph_.getCurrentStateIdx();
+    const double ts = msg->header.stamp.toSec();
+    const int state_idx = pose_graph_.getCurrentStateIdx();
 
     // Maintain frame buffer
-    frame_buffer_.removeOldFrames();
-    frame_buffer_.refineFrames();
+    frame_buffer_.maintain();
 
     // Create new frame
-    bool new_frame = frame_buffer_.createFrame(state_idx);
-    if (new_frame)
+    if (generateLidarFrame(state_idx));
         odometry_estimator_.estimateOdometry(state_idx);
-
-    // Floe logic
-    floe_manager_.rebuildFloes();
-    floe_manager_.expandFloes();
-    floe_manager_.mergeFloes();
-
-    floe_manager_.discoverFloes();
-
-    if (state_idx > 300 && state_idx % 10 == 0)
-        floe_manager_.visualizeFloes();
 }
 
 /*

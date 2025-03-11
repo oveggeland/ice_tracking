@@ -12,8 +12,6 @@
 #include "frontend/OdometryEstimator.h"
 #include "frontend/CloudPublisher.h"
 
-#include "frontend/FloeManager.h"
-
 #include "utils/ros_params.h"
 
 /*
@@ -43,9 +41,6 @@ private:
     // Publisher(s)
     CloudPublisher cloud_publisher_;
 
-    // Floe tracking
-    FloeManager floe_manager_;
-
     // Keep track of raw and processed clouds
     open3d::t::geometry::PointCloud raw_cloud_;
 
@@ -55,6 +50,8 @@ private:
     double cloud_pub_interval_;
 
     bool publish_frames_;
+
+    bool generateLidarFrame(const int state_idx);
 
     // Subscriber(s)
     ros::Subscriber lidar_sub_;

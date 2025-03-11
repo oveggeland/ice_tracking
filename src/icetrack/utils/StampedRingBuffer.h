@@ -10,17 +10,6 @@ Templated container for a ringbuffer, with a timestamp key for efficient lookup.
 #include <algorithm>
 #include <cstdint>
 
-// Some common point types
-struct PointXYZT {
-    float x, y, z;
-    double ts;
-};
-
-struct PointXYZIT {
-    float x, y, z, i;
-    double ts;
-};
-
 // Forward declaration of the iterator
 template <typename T>
 class StampedRingBufferIterator;

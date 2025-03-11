@@ -16,16 +16,16 @@
 #include "utils/StampedRingBuffer.h"
 
 // Define point type
-struct LidarPointType {
-    double ts;
+struct PointXYZIT {
     float x;
     float y;
     float z;
-    float intensity;
+    float i;
+    double ts;
 };
 
-using PointBufferType = StampedRingBuffer<LidarPointType>;
-using PointBufferIterator = StampedRingBufferIterator<LidarPointType>;
+using PointBufferType = StampedRingBuffer<PointXYZIT>;
+using PointBufferIterator = StampedRingBufferIterator<PointXYZIT>;
 
 class PointBuffer{
 public:
