@@ -15,14 +15,7 @@
 #include "utils/ros_params.h"
 #include "utils/StampedRingBuffer.h"
 
-// Define point type
-struct PointXYZIT {
-    float x;
-    float y;
-    float z;
-    float i;
-    double ts;
-};
+#include "point_types.h"
 
 using PointBufferType = StampedRingBuffer<PointXYZIT>;
 using PointBufferIterator = StampedRingBufferIterator<PointXYZIT>;

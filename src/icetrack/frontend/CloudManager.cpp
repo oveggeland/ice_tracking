@@ -73,12 +73,8 @@ Rebuild map based on an updates pose graph and the frame buffer
 void CloudManager::rebuildMap(){
     // Clear and reserve 
     const size_t num_points = frame_buffer_.numPoints();
-
     points_.clear();
     points_.reserve(num_points);
-
-    intensities_.clear();
-    intensities_.reserve(num_points);
     
     // Iterate through frames 
     gtsam::Pose3 frame_pose; 
@@ -94,8 +90,13 @@ void CloudManager::rebuildMap(){
 
         // Add to map
         for (int i = 0; i < frame_size; ++i){
-            points_.emplace_back(frame_pose.transformFrom(frame_points[i]));
-            intensities_.push_back(frame_intensities[i]);
+            const Eigen::Vector3f p = frame_pose.transformFrom(frame_points[i]).cast<float>();
+            points_.push_back({
+                p.x(),
+                p.y(),
+                p.z(),
+                frame_intensities[i]
+            });
         }
     }   
 }
@@ -137,7 +138,7 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     // Optional: Publish cloud
     if (publish_cloud_)
-        cloud_publisher_.publishCloud(points_, intensities_);
+        cloud_publisher_.publishCloud(points_); 
 }
 
 /*

@@ -6,6 +6,8 @@
 
 #include <open3d/t/geometry/PointCloud.h>
 
+#include "point_types.h"
+
 #include "utils/ros_params.h"
 
 /*
@@ -18,7 +20,7 @@ public:
 
     // Interface to publish cloud
     void publishFrame(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities);
-    void publishCloud(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities);
+    void publishCloud(const std::vector<PointXYZI>& points);
 
 private:
     // Single frame
@@ -35,6 +37,7 @@ private:
 
     // Fill message
     void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities); 
+    void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<PointXYZI>& points); 
 };
 
 // Defines the memory map of a point in the cloud message

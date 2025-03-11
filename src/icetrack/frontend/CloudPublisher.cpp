@@ -39,11 +39,11 @@ void CloudPublisher::initializeMessages(){
     cloud_msg_.header.frame_id = "map";  // Publish in nav frame
 }
 
-void CloudPublisher::publishCloud(const std::vector<Eigen::Vector3d>& positions, const std::vector<float>& intensities){
+void CloudPublisher::publishCloud(const std::vector<PointXYZI>& points){
     if (cloud_pub_.getNumSubscribers() == 0)
         return; // No point
 
-    fillCloudMessage(cloud_msg_, positions, intensities);
+    fillCloudMessage(cloud_msg_, points);
     if (cloud_msg_.width == 0.0)
         return; // No points
 
@@ -59,6 +59,18 @@ void CloudPublisher::publishFrame(const std::vector<Eigen::Vector3d>& positions,
         return; // No points
 
     frame_pub_.publish(frame_msg_);
+}
+
+void CloudPublisher::fillCloudMessage(sensor_msgs::PointCloud2& msg, 
+                                        const std::vector<PointXYZI>& points){
+    // Metadata
+    msg.header.stamp = ros::Time::now();
+    msg.width = points.size();
+    msg.row_step = msg.width*msg.point_step;
+    msg.data.resize(msg.row_step);
+
+    // Memcpy from points to msg.data
+    std::memcpy(msg.data.data(), points.data(), msg.data.size());
 }
 
 void CloudPublisher::fillCloudMessage(sensor_msgs::PointCloud2& msg, 

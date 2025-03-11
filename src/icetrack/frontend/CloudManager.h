@@ -12,6 +12,8 @@
 #include "frontend/OdometryEstimator.h"
 #include "frontend/CloudPublisher.h"
 
+#include "frontend/point_types.h"
+
 #include "utils/ros_params.h"
 
 /*
@@ -42,8 +44,7 @@ private:
     CloudPublisher cloud_publisher_;
 
     // Cloud data
-    std::vector<Eigen::Vector3d> points_;
-    std::vector<float> intensities_;
+    std::vector<PointXYZI> points_;
 
     // Functionality
     bool generateLidarFrame(const int state_idx);
