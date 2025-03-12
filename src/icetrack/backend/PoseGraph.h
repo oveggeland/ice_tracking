@@ -78,27 +78,30 @@ public:
     }
 
 
-    bool poseQuery(double ts, Pose3& pose) const {
+    bool poseQuery(const double ts, Pose3& pose) const {
         if (!isInit() || !inRange(ts))
             return false;
         pose = getPose(ts);
         return true;
     }
 
-    bool poseQuery(int idx, Pose3& pose) const {
+    bool poseQuery(const int idx, Pose3& pose) const {
         if (!exists(idx))
             return false;
         pose = smoother_.calculateEstimate<Pose3>(X(idx));
         return true;
     }
 
-    bool timePoseQuery(int idx, double& ts, Pose3& pose) const{
+    bool timeQuery(const int idx, double& ts) const {
         if (!exists(idx))
             return false;
         
         ts = smoother_.timestamps().at(X(idx));
-        pose = smoother_.calculateEstimate<Pose3>(X(idx));
         return true;
+    }
+
+    bool timePoseQuery(const int idx, double& ts, Pose3& pose) const{
+        return poseQuery(idx, pose) && timeQuery(idx, ts);
     }
 
 private:

@@ -133,6 +133,9 @@ void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
         }
     }
 
+    // Try surface estimation (on previous state)
+    surface_estimator_.estimateSurface(state_idx - 1);
+
     // Optional: Refine frames (computationally heavy)
     if (refine_frames_)
         refineFrames();
@@ -152,5 +155,4 @@ On new lidar measurements, we do the following steps:
 */
 void CloudManager::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {
     point_buffer_.addPoints(msg);
-    surface_estimator_.surfaceEstimation();
 }

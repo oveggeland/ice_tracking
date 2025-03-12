@@ -53,6 +53,9 @@ void PoseGraph::gnssCallback(const sensor_msgs::NavSatFix::ConstPtr& msg){
         // Reset IMU and wait for planeFitCallback to finish initialization
         imu_integration_.resetIntegration(ts, state_.bias);
         state_.ts = ts;
+
+        surface_correction_.setPlaneCoeffs(Eigen::Vector4d(0, 0, 0, 17));
+        initialize();
     }
 }
 
@@ -67,7 +70,6 @@ void PoseGraph::odometryCallback(int idx0, int idx1, Eigen::Matrix4d T_align){
 
 void PoseGraph::surfaceCallback(int state_idx, const Eigen::Vector4d& plane_coeffs){
     surface_correction_.setPlaneCoeffs(plane_coeffs);
-
     if (init_){
         factors_.add(surface_correction_.getAltitudeFactor(X(state_idx)));
     }

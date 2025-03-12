@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Find packages ##
 find_package(GTSAM REQUIRED)
 find_package(Open3D REQUIRED)
+find_package(PCL REQUIRED)
 find_package(PROJ REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(OpenCV REQUIRED)  # Added OpenCV
@@ -34,6 +35,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/icetrack
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}  # Include OpenCV headers
+  ${PCL_INCLUDE_DIRS}  # Include OpenCV headers
 )
 
 ## Define navigation library ##
@@ -55,6 +57,7 @@ target_link_libraries(licetrack
   Open3D::Open3D
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}  # Link OpenCV libraries
+  ${PCL_LIBRARIES}
 )
 
 ## Executables ##
