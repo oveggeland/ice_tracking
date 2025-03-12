@@ -5,6 +5,7 @@
 #include <sensor_msgs/point_cloud2_iterator.h>
 
 #include <gtsam/geometry/Pose3.h>
+#include <open3d/geometry/PointCloud.h>
 
 #include "utils/calibration.h"
 #include "utils/ros_params.h"
@@ -22,6 +23,9 @@ public:
 
     // Interface
     void addPoints(const sensor_msgs::PointCloud2::ConstPtr& msg);
+
+    // Get cloud from interval
+    std::shared_ptr<open3d::geometry::PointCloud> getCloud(const double t0, const double t1) const;
 
     // Accessors
     double head() const { return ts_head_; }

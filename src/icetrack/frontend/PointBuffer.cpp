@@ -55,3 +55,18 @@ inline bool PointBuffer::acceptPoint(double ts, float x, float y, float z, float
 
     return true;
 }
+
+std::shared_ptr<open3d::geometry::PointCloud> PointBuffer::getCloud(const double t0, const double t1) const{
+    auto cloud = std::make_shared<open3d::geometry::PointCloud>();
+
+    const auto it0 = lowerBound(t0);
+    const auto it1 = lowerBound(t1);
+    const int num_points = it0.distance_to(it1);
+    cloud->points_.reserve(num_points);
+
+    for (auto it = it0; it != it1; ++it){
+        cloud->points_.emplace_back(it->x, it->y, it->z);
+    }
+
+    return cloud;
+}
