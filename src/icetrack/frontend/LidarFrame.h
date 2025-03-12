@@ -4,7 +4,7 @@
 
 #include <gtsam/geometry/Pose3.h>
 
-#include "PointBuffer.h" // For point definition
+#include "point_types.h" // For point definition
 
 /*
 LidarFrame is the set of points acquired between pose0 and pose1. 

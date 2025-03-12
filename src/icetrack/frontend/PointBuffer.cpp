@@ -55,20 +55,3 @@ inline bool PointBuffer::acceptPoint(double ts, float x, float y, float z, float
 
     return true;
 }
-
-// Accessors
-PointCloudPtr PointBuffer::getPointCloud(double t0, double t1) const{
-    // Find bounds in point buffer
-    auto start = lowerBound(t0);
-    auto end = lowerBound(t1);
-
-    // Generate point cloud
-    open3d::geometry::PointCloud cloud;
-    cloud.points_.reserve(start.distance_to(end));
-
-    for (auto it = start; it != end; ++it){
-        cloud.points_.emplace_back(it->x, it->y, it->z);
-    }
-
-    return std::make_shared<PointCloud>(cloud);
-};

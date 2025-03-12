@@ -4,7 +4,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 
-#include <open3d/t/geometry/PointCloud.h>
+#include <Eigen/Dense>
 
 #include "point_types.h"
 
