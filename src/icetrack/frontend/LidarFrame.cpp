@@ -67,3 +67,15 @@ void LidarFrame::undistort(const double t0, const double t1, const gtsam::Pose3&
         undistorted_points_.emplace_back(T_align.transformFrom(p_dist).cast<float>());
     }
 }
+
+std::shared_ptr<open3d::geometry::PointCloud> LidarFrame::toCloud(bool undistorted) const {
+    auto cloud = std::make_shared<open3d::geometry::PointCloud>();
+    
+    const std::vector<Eigen::Vector3f>& points = (undistorted) ? undistorted_points_ : distorted_points_;
+
+    cloud->points_.reserve(points.size());
+    for (const auto& p : points)
+        cloud->points_.emplace_back(p.cast<double>());
+
+    return cloud;
+}

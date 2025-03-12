@@ -3,6 +3,7 @@
 #include <ros/ros.h>
 
 #include <gtsam/geometry/Pose3.h>
+#include <open3d/geometry/PointCloud.h>
 
 #include "point_types.h" // For point definition
 
@@ -19,6 +20,8 @@ public:
     void undistort(const double t0, const double t1, const gtsam::Pose3& pose0, const gtsam::Pose3& pose1);
     void undistortFirstOrder(const double t0, const double t1, const gtsam::Pose3& pose0, const gtsam::Pose3& pose1);
 
+    // Generate open3d::geometry::pointcloud from frame
+    std::shared_ptr<open3d::geometry::PointCloud> toCloud(bool undistorted=true) const;
 
     // Accessors
     int id() const { return id_; }
