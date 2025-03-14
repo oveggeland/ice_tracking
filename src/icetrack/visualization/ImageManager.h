@@ -7,6 +7,8 @@
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 
+#include <open3d/Open3D.h>
+
 #include "backend/PoseGraph.h"
 #include "frontend/CloudManager.h"
 
@@ -25,6 +27,10 @@ public:
     void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
 
 private:
+    // Visualization stuff
+    open3d::visualization::Visualizer visualizer_;
+    open3d::camera::PinholeCameraParameters pinhole_params_;
+
     // Required module references
     const PoseGraph& pose_graph_;
     const CloudManager& cloud_manager_;

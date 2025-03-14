@@ -156,3 +156,17 @@ On new lidar measurements, we do the following steps:
 void CloudManager::lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg) {
     point_buffer_.addPoints(msg);
 }
+
+
+/*
+Return a open3d cloud based on the current map
+*/
+std::shared_ptr<open3d::geometry::PointCloud> CloudManager::getCloud() const{
+    auto cloud = std::make_shared<open3d::geometry::PointCloud>();
+    cloud->points_.reserve(points_.size());
+
+    for (const PointXYZI& p: points_)
+        cloud->points_.emplace_back(p.x, p.y, p.z);
+
+    return cloud;
+}

@@ -28,6 +28,8 @@ public:
     void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void lidarCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
+    // Query cloud (from visualizer)
+    std::shared_ptr<open3d::geometry::PointCloud> getCloud() const;
 private:
     // PoseGraph interface
     PoseGraph& pose_graph_;

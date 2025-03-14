@@ -47,6 +47,9 @@ public:
 
     inline void updateTransform(const gtsam::Pose3& wTb) { cTw_ = cTb_.compose(wTb.inverse()).matrix().cast<float>(); }
 
+    const Eigen::Matrix4f& getPose() const { return cTw_; }
+    const CameraIntrinsics& intrinsics() const { return intrinsics_; }
+
 private:
     // Calibration
     gtsam::Pose3 cTb_;

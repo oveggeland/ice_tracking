@@ -56,7 +56,7 @@ lidar_odometry/icp_min_fitness: 0.9
 
 
 # Image stuff
-image_generator/enabled: false
+image_generator/enabled: true
 image_generator/display: false
 image_generator/topic: "/viz/image"
 image_generator/delay: 5.0
