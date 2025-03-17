@@ -117,7 +117,7 @@ On new state events, we do the following steps:
 */
 void CloudManager::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
     const double ts = msg->header.stamp.toSec();
-    const int state_idx = pose_graph_.getCurrentStateIdx();
+    const int state_idx = pose_graph_.getCurrentState().idx;
 
     // Maintain buffer
     frame_buffer_.maintain();

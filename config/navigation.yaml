@@ -34,7 +34,7 @@ gyro_bias_rw_sigma: 1.0e-5
 # Surface estimation
 surface_estimation/buffer_size: 2.0 # Allocate memory for at least buffer_size seconds worth of points
 surface_estimation/lidar_point_interval: 5.0e-6   # Interval between each scan from lidar (put half if in dual-return mode)
-surface_estimation/lidar_min_intensity: 5.0
+surface_estimation/lidar_min_intensity: 0.0
 surface_estimation/lidar_min_dist: 15
 surface_estimation/lidar_max_dist: 100.0
 

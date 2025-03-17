@@ -44,6 +44,12 @@ int main(int argc, char** argv) {
     // Initialize nodes
     FixedLagMapper fixed_lag_mapper(nh);
 
+    // Enforce playback rate
+    double max_playback_rate = getParamOrThrow<double>(nh, "/max_playback_rate");
+
+    ros::Time last_ros_time = ros::Time::now();
+    auto last_real_time = std::chrono::steady_clock::now();    
+
     // Collect bag files
     std::vector<std::filesystem::path> files;
     std::copy(std::filesystem::directory_iterator(bagpath), std::filesystem::directory_iterator(), std::back_inserter(files));
@@ -74,9 +80,27 @@ int main(int argc, char** argv) {
             if (!ros::ok())
                 break;
 
+
+            const ros::Time messsage_time = m.getTime();
+            
+            // Ensure max playback rate is respected
+            if (last_ros_time.isZero()) {
+                last_ros_time = messsage_time;
+                last_real_time = std::chrono::steady_clock::now();
+            } else {
+                ros::Duration ros_time_diff = messsage_time - last_ros_time;
+                std::chrono::duration<double> real_time_diff = std::chrono::steady_clock::now() - last_real_time;
+                double required_sleep = ros_time_diff.toSec() / max_playback_rate - real_time_diff.count();
+                if (required_sleep > 0) {
+                    std::this_thread::sleep_for(std::chrono::duration<double>(required_sleep));
+                }
+                last_ros_time = messsage_time;
+                last_real_time = std::chrono::steady_clock::now();
+            }
+
             // Publish clock time
             rosgraph_msgs::Clock clock_msg;
-            clock_msg.clock = m.getTime();
+            clock_msg.clock = messsage_time;
             clock_pub.publish(clock_msg);
 
             // Publish the message to the appropriate topic
