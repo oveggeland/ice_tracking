@@ -1,47 +1,45 @@
-#include "visualization/ImageManager.h"
+#include "visualization/Visualizer.h"
 
-ImageManager::ImageManager(ros::NodeHandle& nh, const PoseGraph& pose_graph, const CloudManager& cloud_manager)
-    : nh_(nh), camera_(nh), output_(nh), pose_graph_(pose_graph), cloud_manager_(cloud_manager){
+Visualizer::Visualizer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const CloudManager& cloud_manager)
+    : nh_(nh), camera_(nh), pose_graph_(pose_graph), cloud_manager_(cloud_manager){
 
     // Load config
-    getParamOrThrow<bool>(nh, "/image_generator/enabled", enabled_);
-    getParamOrThrow<bool>(nh, "/image_generator/display", display_);
-    getParamOrThrow<double>(nh, "/image_generator/delay", delay_);
-    getParamOrThrow<double>(nh, "/image_generator/offset", offset_);
-
-    // Set visualizer from camera intrinsics
-    CameraIntrinsics intrinsics = camera_.intrinsics();
-    double w = intrinsics.w / 2.0;
-    double h = intrinsics.h / 2.0;
-    pinhole_params_.intrinsic_. SetIntrinsics(w, h, w/2, w/2, w/2 - 0.5, h/2 - 0.5);
-
-    visualizer_.CreateVisualizerWindow("Offscreen Render", intrinsics.w, intrinsics.h, 0, 0, false);
+    getParamOrThrow<bool>(nh, "/visualizer/enabled", enabled_);
+    getParamOrThrow<bool>(nh, "/visualizer/display", display_);
+    getParamOrThrow<double>(nh, "/visualizer/delay", delay_);
+    
+    // Ros topic publishing
+    getParamOrThrow<bool>(nh, "/visualizer/publish", publish_);
+    std::string topic = getParamOrThrow<std::string>(nh, "/visualizer/topic");
+    if (publish_)
+        publisher_ = nh.advertise<sensor_msgs::Image>(topic, 1);
 }
 
 
-void ImageManager::display(const std::string& window_name, const cv::Mat& img) const {
+void Visualizer::display(const std::string& window_name, const cv::Mat& img) const {
     cv::imshow(window_name, img);
 
-    // Wait for a key indefinitely if 'p' (ASCII 112) is pressed
+    // Pause or shut down?
     char key = cv::waitKey(1);  // Non-blocking wait
-    if (key == 'p' || key == ' ') {  // Pause on 'p' or spacebar
-        while (cv::waitKey(0) < 0);  // Wait indefinitely until any key is pressed
+    if (key == ' ') {  // Pause on spacebar
+        while (cv::waitKey(0) != ' ');  // Wait indefinitely until spacebar is pressed
     }
     else if (key == 'q')
         ros::shutdown();
 }
 
 
-void ImageManager::processImage(double t_img, const cv::Mat& img){
-    timer_buffer_.pop_front();
-
-    display("Raw image", img);
-    return;
-
+void Visualizer::visualize(double t_img, const cv::Mat& img){
+    // gtsam::Pose3 wTb;
+    // if (!pose_graph_.predictPose(t_img, wTb)){
+    //     ROS_ERROR("Visualizer::visualize - Pose prediction failed...");
+    //     return;
+    // }
+    // camera_.updateTransform(wTb);
     // // Query pose (world to camera transformation)
     // gtsam::Pose3 wTb;
     // if (!pose_graph_.poseQuery(t_img, wTb)){
-    //     ROS_ERROR_STREAM("ImageManager::processImage - Could not get pose at " << std::fixed << t_img);
+    //     ROS_ERROR_STREAM("Visualizer::processImage - Could not get pose at " << std::fixed << t_img);
     //     return;
     // }
     // camera_.updateTransform(wTb);
@@ -112,7 +110,7 @@ void ImageManager::processImage(double t_img, const cv::Mat& img){
     // const auto cloud = cloud_manager_.cloudQuery(false, t_img - offset_, t_img + offset_);
     // int num_points = cloud.IsEmpty()? 0: cloud.GetPointPositions().GetShape(0);
     // if (num_points == 0){
-    //     ROS_WARN_STREAM("ImageManager::processImage - No cloud points available at: " << std::fixed << t_img);
+    //     ROS_WARN_STREAM("ImageManager::visualize - No cloud points available at: " << std::fixed << t_img);
     // }
 
     // Generate augmented image
@@ -121,10 +119,11 @@ void ImageManager::processImage(double t_img, const cv::Mat& img){
     // auto img_imposed = img_frame.getImposedImage();
     // display("imposed", img_imposed);
     //output_.newImageFrame(img_frame);
+    display("Raw image", img);
 }
 
 // Main entry point. Unpack the image and schedule processing. 
-void ImageManager::imageCallback(const sensor_msgs::Image::ConstPtr& msg) {
+void Visualizer::imageCallback(const sensor_msgs::Image::ConstPtr& msg) {
     if (!enabled_)
         return;
 
@@ -132,10 +131,12 @@ void ImageManager::imageCallback(const sensor_msgs::Image::ConstPtr& msg) {
     double ts = msg->header.stamp.toSec();
     cv::Mat img = cv_bridge::toCvCopy(msg, "bgr8")->image;
 
-    // Schedule processing
-    timer_buffer_.push_back(nh_.createTimer(
-        ros::Duration(delay_), // Duration
-        boost::bind(&ImageManager::processImage, this, ts, img), // Callback
-        true // One-shot
-    ));
+    visualize(ts, img);
+
+    // // Schedule processing
+    // timer_buffer_.push_back(nh_.createTimer(
+    //     ros::Duration(delay_), // Duration
+    //     boost::bind(&Visualizer::visualize, this, ts, img), // Callback
+    //     true // One-shot
+    // ));
 }

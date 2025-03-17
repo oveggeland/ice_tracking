@@ -9,7 +9,7 @@
 
 #include "frontend/CloudManager.h"
 #include "backend/PoseGraph.h"
-#include "visualization/ImageManager.h"
+#include "visualization/Visualizer.h"
 
 #include "utils/CallbackSequencer.h"
 
@@ -24,7 +24,7 @@ private:
     // Main modules
     PoseGraph pose_graph_;
     CloudManager cloud_manager_;
-    ImageManager image_manager_;
+    Visualizer visualizer_;
 
     // Subscribers and callbacks
     ros::Subscriber imu_sub_;

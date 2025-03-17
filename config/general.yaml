@@ -6,34 +6,25 @@ exp: "test"
 int_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/int_right.yaml"
 ext_file: "/home/oskar/smooth_sailing/src/smooth_sailing/cfg/calib/ext_right.yaml"
 
-# Topic definitions
+# Input topics
 imu_topic: "/arduino_node/imu"
 gnss_topic: "/arduino_node/gnss"
 lidar_topic: "/livox_lidar_node/pointcloud2"
 image_topic: "/blackfly_node/image"
 
+# Output topics
 pose_topic: "/fixed_lag_mapper/pose"
-raw_cloud_topic: "/fixed_lag_mapper/raw_cloud"
-processed_cloud_topic: "/fixed_lag_mapper/processed_cloud"
-
-imu_queue_size: 2000
-gnss_queue_size: 10
-lidar_queue_size: 100
-image_queue_size: 10
-
-pose_queue_size: 10
-raw_cloud_queue_size_: 10
-processed_cloud_queue_size_: 10
+frame_topic: "/fixed_lag_mapper/frame"
+cloud_topic: "/fixed_lag_mapper/cloud"
 
 ### Clean up this later ###
-
 max_playback_rate: 50
 
 # Frame buffer
-frame_buffer/window_size: 5
+frame_buffer/window_size: 10
 
-# Surface estimator
-surface_estimator/update_interval: 10
+# Surface estimation
+surface_estimator/enabled: true
 surface_estimator/window_size: 0.1
 surface_estimator/voxel_size: 1.0
 surface_estimator/min_inlier_count: 25
@@ -55,18 +46,14 @@ lidar_odometry/icp_max_iter: 10
 
 lidar_odometry/icp_min_fitness: 0.9
 
+# Visualizer
+visualizer/enabled: true
 
-# Image stuff
-image_generator/enabled: true
-image_generator/display: false
-image_generator/topic: "/viz/image"
-image_generator/delay: 5.0
-image_generator/offset: 0.2
+visualizer/display: false
+visualizer/publish: true
+visualizer/topic: "/fixed_lag_mapper/viz"
 
-
-cloud/pub_queue_size: 10
-cloud/pub_topic: "/map/raw"
-
+visualizer/delay: 5.0
 
 # Point buffer
 point_buffer/buffer_size: 10.0

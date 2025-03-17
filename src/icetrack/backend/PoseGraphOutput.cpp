@@ -12,9 +12,8 @@ void PoseGraphOutput::setupBroadcaster(const ros::NodeHandle& nh){
 }
 
 void PoseGraphOutput::setupPublisher(ros::NodeHandle& nh){
-    int pose_queue_size = getParamOrThrow<int>(nh, "/pose_queue_size");
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
-    pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, pose_queue_size);
+    pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, 10);
 
     pose_msg_.header.frame_id = "map";
 }

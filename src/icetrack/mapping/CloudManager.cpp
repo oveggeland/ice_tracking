@@ -18,8 +18,7 @@ CloudManager2::CloudManager2(ros::NodeHandle nh) : cloud_generator_(nh), cloud_p
     lidar_sub_ = nh.subscribe(lidar_topic, lidar_queue_size, &CloudManager2::lidarCallback, this);
 
     std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
-    int pose_queue_size = getParamOrThrow<int>(nh, "/mapping/pose_queue_size");
-    pose_sub_ = nh.subscribe(pose_topic, pose_queue_size, &CloudManager2::poseCallback, this);
+    pose_sub_ = nh.subscribe(pose_topic, 10, &CloudManager2::poseCallback, this);
 }
 
 
