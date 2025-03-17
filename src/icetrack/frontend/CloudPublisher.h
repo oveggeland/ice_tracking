@@ -39,11 +39,3 @@ private:
     void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<Eigen::Vector3f>& positions, const std::vector<float>& intensities); 
     void fillCloudMessage(sensor_msgs::PointCloud2& msg, const std::vector<PointXYZI>& points); 
 };
-
-// Defines the memory map of a point in the cloud message
-#pragma pack(push, 1)
-struct PackedPointXYZI {
-    Eigen::Vector3f position;
-    float intensity;
-};
-#pragma pack(pop)

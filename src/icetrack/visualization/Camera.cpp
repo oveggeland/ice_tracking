@@ -9,89 +9,36 @@ Camera::Camera(const ros::NodeHandle& nh){
     loadIntrinsicsFromFile(intrinsics_file);
 }
 
-cv::Mat Camera::getUndistortedImage(const sensor_msgs::Image::ConstPtr& msg) const {
-    cv::Mat image = cv_bridge::toCvCopy(msg, "bgr8")->image;
-    cv::Mat K = (cv::Mat_<double>(3, 3) << intrinsics_.fx, 0, intrinsics_.cx,
-                                            0, intrinsics_.fy, intrinsics_.cy,
-                                            0, 0, 1);
-    cv::Mat distCoeffs = (cv::Mat_<double>(4, 1) << intrinsics_.k1, intrinsics_.k2,
-                                                    intrinsics_.p1, intrinsics_.p2); // Radtan (k1, k2, r1, r2)
-    cv::Mat undistorted_image;
-    cv::undistort(image, undistorted_image, K, distCoeffs);
-    return undistorted_image;
-}
-
-cv::Mat Camera::getDistortedImage(const sensor_msgs::Image::ConstPtr& msg) const {
-    return cv_bridge::toCvCopy(msg, "bgr8")->image;
-}
-
-
-Eigen::Matrix2Xf Camera::projectFromWorld(const Eigen::Matrix3Xf& r_world, bool undistort) const {
-    Eigen::Matrix3Xf r_cam = (cTw_.topLeftCorner<3, 3>() * r_world).colwise() + cTw_.topRightCorner<3, 1>();
-    return projectFromCam(r_cam, undistort);
-}
-
-
-Eigen::Matrix2Xf Camera::projectFromCam(const Eigen::Matrix3Xf& r_cam, bool undistort) const {
+Eigen::Vector2f Camera::projectPoint(const Eigen::Vector3f& r_cam, bool undistort) const {
     // Normalize to image plane
-    Eigen::Matrix2Xf xy_img = (r_cam.topRows<2>().array().rowwise() / r_cam.row(2).array()).matrix();
+   Eigen::Vector2f xy_img = r_cam.head<2>() / r_cam.z();
 
-    // Undistort if desired
+    // Undistortion
     if (undistort)
-        undistortPoints(xy_img);
+        xy_img = undistortPoint(xy_img);
 
     // Pixel projection
-    Eigen::Matrix2Xf uv = (xy_img.array().colwise() * Eigen::Array2f(intrinsics_.fx, intrinsics_.fy)).colwise() + Eigen::Array2f(intrinsics_.cx, intrinsics_.cy);
-    return uv;
+    return {
+        xy_img.x() * intrinsics_.fx + intrinsics_.cx,
+        xy_img.y() * intrinsics_.fy + intrinsics_.cy
+    };
 }
 
 
-std::vector<int> Camera::getInliers(const Eigen::Matrix2Xf& uv) const{
-    const int num_points = uv.cols();
+Eigen::Vector2f Camera::undistortPoint(const Eigen::Vector2f& xy) const {
+    const float x = xy.x();
+    const float y = xy.y();
 
-    std::vector<int> inliers;
-    inliers.reserve(num_points);
+    // Precompute radial factor
+    const float r2 = x * x + y * y;
+    const float r4 = r2 * r2;
+    const float radial_factor = (1 + intrinsics_.k1 * r2 + intrinsics_.k2 * r4);
 
-    for (int i = 0; i < num_points; ++i){
-        if (inBounds(uv.col(i)))
-            inliers.push_back(i);
-    }
-
-    return inliers;
-}
-
-std::vector<bool> Camera::getInlierMask(const Eigen::Matrix2Xf& uv) const{
-    const int num_points = uv.cols();
-
-    std::vector<bool> mask;
-    mask.reserve(num_points);
-
-    for (int i = 0; i < num_points; ++i){
-        mask.push_back(inBounds(uv.col(i)));
-    }
-    return mask;
-}
-
-void Camera::undistortPoints(Eigen::Matrix2Xf& xy) const {
-    const int n_points = xy.cols();
-    for (int i = 0; i < n_points; ++i) {
-        // Get point reference
-        float& x = xy(0, i);
-        float& y = xy(1, i);
-
-        // Precompute radial factor
-        const float r2 = x * x + y * y;
-        const float r4 = r2 * r2;
-        const float radial_factor = (1 + intrinsics_.k1 * r2 + intrinsics_.k2 * r4);
-
-        // Compute undistorted coordinates
-        const float x_dist = x * radial_factor + 2 * intrinsics_.p1 * x * y + intrinsics_.p2 * (r2 + 2 * x * x);
-        const float y_dist = y * radial_factor + 2 * intrinsics_.p2 * x * y + intrinsics_.p1 * (r2 + 2 * y * y);
-
-        // Write back to xy
-        x = x_dist;
-        y = y_dist;
-    }
+    // Compute undistorted coordinates
+    return {
+        x * radial_factor + 2 * intrinsics_.p1 * x * y + intrinsics_.p2 * (r2 + 2 * x * x),
+        y * radial_factor + 2 * intrinsics_.p2 * x * y + intrinsics_.p1 * (r2 + 2 * y * y)
+    };
 }
 
 

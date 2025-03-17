@@ -7,11 +7,11 @@ CloudPublisher::CloudPublisher(ros::NodeHandle& nh){
 
 void CloudPublisher::setupPublishers(ros::NodeHandle& nh) {
     // Frame pub
-    std::string frame_topic = getParamOrThrow<std::string>(nh, "/cloud_publisher/frame_topic");
+    std::string frame_topic = getParamOrThrow<std::string>(nh, "/frame_topic");
     frame_pub_ = nh.advertise<sensor_msgs::PointCloud2>(frame_topic, 10);
 
     // Cloud pub
-    std::string cloud_topic = getParamOrThrow<std::string>(nh, "/cloud_publisher/cloud_topic");
+    std::string cloud_topic = getParamOrThrow<std::string>(nh, "/cloud_topic");
     cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_topic, 10);
 }
 
@@ -83,10 +83,12 @@ void CloudPublisher::fillCloudMessage(sensor_msgs::PointCloud2& msg,
     msg.data.resize(msg.row_step);
 
     // Iterate over the cloud and fill message
-    sensor_msgs::PointCloud2Iterator<PackedPointXYZI> msg_it(msg, "x");
+    sensor_msgs::PointCloud2Iterator<PointXYZI> msg_it(msg, "x");
     for (size_t i = 0; i < msg.width; ++i, ++msg_it) {
-        *msg_it = PackedPointXYZI{
-            positions[i],
+        *msg_it = PointXYZI{
+            positions[i].x(),
+            positions[i].y(),
+            positions[i].z(),
             intensities[i]
         };
     }

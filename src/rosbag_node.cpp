@@ -14,6 +14,7 @@
 
 #include "icetrack/utils/ros_params.h"
 #include "icetrack/FixedLagMapper.h"
+#include "icetrack/visualization/Visualizer.h"
 
 int main(int argc, char** argv) {
     // Initialize node
@@ -43,6 +44,7 @@ int main(int argc, char** argv) {
 
     // Initialize nodes
     FixedLagMapper fixed_lag_mapper(nh);
+    Visualizer visualizer(nh);
 
     // Enforce playback rate
     double max_playback_rate = getParamOrThrow<double>(nh, "/max_playback_rate");

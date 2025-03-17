@@ -18,10 +18,10 @@ frame_topic: "/fixed_lag_mapper/frame"
 cloud_topic: "/fixed_lag_mapper/cloud"
 
 ### Clean up this later ###
-max_playback_rate: 50
+max_playback_rate: -1
 
 # Frame buffer
-frame_buffer/window_size: 10
+frame_buffer/window_size: 5
 
 # Surface estimation
 surface_estimator/enabled: true
@@ -49,11 +49,12 @@ lidar_odometry/icp_min_fitness: 0.9
 # Visualizer
 visualizer/enabled: true
 
-visualizer/display: false
+visualizer/display: true
 visualizer/publish: true
 visualizer/topic: "/fixed_lag_mapper/viz"
 
 visualizer/delay: 5.0
+visualizer/scale: 0.5
 
 # Point buffer
 point_buffer/buffer_size: 10.0
@@ -70,7 +71,7 @@ cloud_processor/smoothing_window_size: 3
 cloud_processor/deformation_window_size: 5
 
 # Cloud manager
-cloud_manager/refine_frames: true
+cloud_manager/refine_frames: false
 cloud_manager/publish_frames: false
 cloud_manager/publish_cloud: true
 

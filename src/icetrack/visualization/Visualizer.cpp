@@ -1,18 +1,35 @@
 #include "visualization/Visualizer.h"
 
-Visualizer::Visualizer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const CloudManager& cloud_manager)
-    : nh_(nh), camera_(nh), pose_graph_(pose_graph), cloud_manager_(cloud_manager){
+Visualizer::Visualizer(ros::NodeHandle& nh) : camera_(nh){
+
+    // Assert enabled
+    bool enabled = getParamOrThrow<bool>(nh, "/visualizer/enabled");
+    if (!enabled)
+        return;
 
     // Load config
-    getParamOrThrow<bool>(nh, "/visualizer/enabled", enabled_);
     getParamOrThrow<bool>(nh, "/visualizer/display", display_);
-    getParamOrThrow<double>(nh, "/visualizer/delay", delay_);
-    
-    // Ros topic publishing
     getParamOrThrow<bool>(nh, "/visualizer/publish", publish_);
-    std::string topic = getParamOrThrow<std::string>(nh, "/visualizer/topic");
-    if (publish_)
+    getParamOrThrow<double>(nh, "/visualizer/delay", delay_);
+
+    getParamOrThrow<double>(nh, "/visualizer/scale", scale_);
+    frame_ = ImageFrame(scale_);
+
+    // Publisher
+    if (publish_){
+        std::string topic = getParamOrThrow<std::string>(nh, "/visualizer/topic");
         publisher_ = nh.advertise<sensor_msgs::Image>(topic, 1);
+    }
+
+    // Setup subscribers
+    std::string cloud_topic = getParamOrThrow<std::string>(nh, "/cloud_topic");
+    cloud_sub_ = nh.subscribe(cloud_topic, 1, &Visualizer::cloudCallback, this);
+
+    std::string image_topic = getParamOrThrow<std::string>(nh, "/image_topic");
+    image_sub_ = nh.subscribe(image_topic, 1, &Visualizer::imageCallback, this);
+
+    std::string pose_topic = getParamOrThrow<std::string>(nh, "/pose_topic");
+    pose_sub_ = nh.subscribe(pose_topic, 1, &Visualizer::poseCallback, this);
 }
 
 
@@ -30,113 +47,132 @@ void Visualizer::display(const std::string& window_name, const cv::Mat& img) con
 
 
 void Visualizer::visualize(double t_img, const cv::Mat& img){
-    // gtsam::Pose3 wTb;
-    // if (!pose_graph_.predictPose(t_img, wTb)){
-    //     ROS_ERROR("Visualizer::visualize - Pose prediction failed...");
-    //     return;
-    // }
-    // camera_.updateTransform(wTb);
-    // // Query pose (world to camera transformation)
-    // gtsam::Pose3 wTb;
-    // if (!pose_graph_.poseQuery(t_img, wTb)){
-    //     ROS_ERROR_STREAM("Visualizer::processImage - Could not get pose at " << std::fixed << t_img);
-    //     return;
-    // }
-    // camera_.updateTransform(wTb);
+    // Update image
+    frame_.setImage(img);
 
-    // // Get cloud
-    // std::shared_ptr<open3d::geometry::PointCloud> cloud = cloud_manager_.getCloud();
-    // if (cloud->points_.size() == 0)
-    //     return;
+    // Find new pose
+    gtsam::Pose3 wTb = getPose(t_img);
+    camera_.updateTransform(wTb);
 
-    // // Create a visualizer
+    // Add points from cloud
+    processLatestCloud();
 
-
-    // // Update visualizer with new cloud
-    // visualizer_.ClearGeometries();
-    // visualizer_.AddGeometry(cloud);
-    // visualizer_.UpdateGeometry(cloud);
-    // visualizer_.UpdateRender();
-
-    // // Set camera parameters using pinhole model
-    // pinhole_params_.extrinsic_ = camera_.getPose().cast<double>();
-    // visualizer_.GetViewControl().ConvertFromPinholeCameraParameters(pinhole_params_, true);
-
-    // // Capture rendered image
-    // auto render_image = visualizer_.CaptureScreenFloatBuffer();
-
-    // // Convert Open3D image to OpenCV format
-    // cv::Mat cv_image(render_image->height_, render_image->width_, CV_32FC3, render_image->data_.data());
-    // cv_image.convertTo(cv_image, CV_8UC3, 255.0);
-    // cv::cvtColor(cv_image, cv_image, cv::COLOR_RGB2BGR);
+    // Generate elevation image
+    cv::Mat img_elev = frame_.getImposedElevationImage();
     
-    // display("test", cv_image);
-    // Process the generated image (e.g., save or publish it)
-    //cv::imwrite("output.png", cv_image);
-    // Create a visualizer with an offscreen renderer
-    //open3d::visualization::rendering::OffscreenRenderer renderer(640, 480);
-    
-    // // Create a scene and add the cloud
-    // open3d::visualization::rendering::Scene scene;
-    // scene.AddGeometry("point_cloud", cloud, nullptr);
-
-    // // Convert wTb to Open3D camera parameters
-    // Eigen::Matrix4d cam_transform = camera_.getPose().cast<double>();
-    // open3d::visualization::rendering::Camera camera;
-    // camera.SetModelMatrix(cam_transform);
-
-    // // Set the camera view
-    // renderer.SetCamera(camera);
-
-    // // Render the scene to an image
-    // auto rendered_image = renderer.RenderToImage();
-
-    // // Convert Open3D image to OpenCV format
-    // cv::Mat cv_image(rendered_image->height_, rendered_image->width_, CV_8UC3, rendered_image->data_.data());
-    // cv::cvtColor(cv_image, cv_image, cv::COLOR_RGB2BGR);
-    
-    // display("test", cv_image);
-    /*
-    TODO:
-    - Create visualizer object, 
-    - Add cloud
-    - Set camera view
-    - Generate image from view (in opencv format)
-    */
-
-
-
-    // Query cloud (in world frame)
-    // const auto cloud = cloud_manager_.cloudQuery(false, t_img - offset_, t_img + offset_);
-    // int num_points = cloud.IsEmpty()? 0: cloud.GetPointPositions().GetShape(0);
-    // if (num_points == 0){
-    //     ROS_WARN_STREAM("ImageManager::visualize - No cloud points available at: " << std::fixed << t_img);
-    // }
-
-    // Generate augmented image
-    // ImageFrame img_frame(t_img, img, cloud, camera_);
-    
-    // auto img_imposed = img_frame.getImposedImage();
-    // display("imposed", img_imposed);
-    //output_.newImageFrame(img_frame);
-    display("Raw image", img);
+    // Output
+    if (display_)
+        display("Raw image", img_elev);
+    if (publish_)
+        publish(img_elev);
 }
 
-// Main entry point. Unpack the image and schedule processing. 
+
+void Visualizer::publish(const cv::Mat& img){
+    try{
+        sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
+        publisher_.publish(img_msg);
+    }catch (cv_bridge::Exception& e) {
+        ROS_ERROR("cv_bridge conversion failed: %s", e.what());
+    }    
+}
+
+
+void Visualizer::checkImageBuffer(){
+    auto it = image_buffer_.begin();
+
+    while (it != image_buffer_.end()) {
+        const double t_img = it->first;
+
+        if (t_img > t1_) {
+            return;  // Stop processing as all future timestamps are too new
+        } else if (t_img >= t0_) {
+            visualize(t_img, it->second);  // Process valid images
+        }
+
+        // Erase the processed element and get the next iterator safely
+        it = image_buffer_.erase(it);
+    }
+}
+
+
+// Main entry for image used to visualize the clouds
 void Visualizer::imageCallback(const sensor_msgs::Image::ConstPtr& msg) {
-    if (!enabled_)
+    try {
+        // Get timestamp and image
+        double ts = msg->header.stamp.toSec();
+        cv::Mat img = cv_bridge::toCvCopy(msg, "bgr8")->image;
+    
+        image_buffer_[ts] = img;
+        checkImageBuffer();
+    } catch (cv_bridge::Exception& e) {
+        ROS_ERROR("cv_bridge conversion failed: %s", e.what());
+    }    
+}
+
+
+void Visualizer::processLatestCloud(){
+    if (!cloud_msg_ || cloud_msg_->data.empty()){
+        ROS_WARN("Received empty PointCloud2 message.");
         return;
+    }
 
-    // Get timestamp and image
-    double ts = msg->header.stamp.toSec();
-    cv::Mat img = cv_bridge::toCvCopy(msg, "bgr8")->image;
+    // Ensure good cloud format
+    if (cloud_msg_->point_step != 16){
+        ROS_ERROR("PointCloud format is not 4xfloat...");
+        return;
+    }
 
-    visualize(ts, img);
+    // Allocate memory in frame
+    frame_.reset(cloud_msg_->width);
 
-    // // Schedule processing
-    // timer_buffer_.push_back(nh_.createTimer(
-    //     ros::Duration(delay_), // Duration
-    //     boost::bind(&Visualizer::visualize, this, ts, img), // Callback
-    //     true // One-shot
-    // ));
+    // Pre-compute transformation 
+    const Eigen::Matrix4f& transform = camera_.transform();
+    const Eigen::Matrix3f& R = transform.topLeftCorner<3, 3>();
+    const Eigen::Vector3f& t = transform.topRightCorner<3, 1>();
+
+    // Iterate over cloud and push to frame if inlier
+    sensor_msgs::PointCloud2ConstIterator<PointXYZI> cloud_it(*cloud_msg_, "x");
+    for (; cloud_it != cloud_it.end(); ++cloud_it) {
+        // Dereference iterator
+        const PointXYZI& point = *cloud_it;
+
+        // Get cam frame representation
+        const Eigen::Vector3f p_world(point.x, point.y, point.z);
+        Eigen::Vector3f p_cam = R * p_world + t;
+
+        if (p_cam.z() < 0)
+            continue;   // Behind the camera
+        
+        Eigen::Vector2f uv = camera_.projectPoint(p_cam, true); // Project and undistort
+        if (camera_.inBounds(uv))
+            frame_.addPoint(-p_world.z(), point.i, uv);
+    }
+}
+
+
+/*
+Save shared pointer, for later processing (avoids copying data)
+*/
+void Visualizer::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg){
+    cloud_msg_ = msg;
+}
+
+/*
+Estimate pose by interpolating the last two poses.
+*/
+gtsam::Pose3 Visualizer::getPose(const double ts){
+    const double alpha = (ts - t0_) / (t1_ - t0_);
+    return pose0_.interpolateRt(pose1_, alpha);
+}
+
+/*
+Reset prev pose to current pose
+*/
+void Visualizer::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
+    t0_ = t1_;
+    pose0_ = pose1_;
+
+    t1_ = msg->header.stamp.toSec();
+    pose1_ = poseRosToGtsam(msg->pose);
 }

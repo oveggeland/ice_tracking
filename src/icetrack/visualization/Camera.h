@@ -29,25 +29,17 @@ class Camera {
 public:
     Camera(const ros::NodeHandle& nh);
 
-    // Image from ROS message
-    cv::Mat getDistortedImage(const sensor_msgs::Image::ConstPtr& msg) const;
-    cv::Mat getUndistortedImage(const sensor_msgs::Image::ConstPtr& msg) const;
-
     // Point projections
-    Eigen::Matrix2Xf projectFromCam(const Eigen::Matrix3Xf& r_cam, bool undistort) const; // Cam frame point projection
-    Eigen::Matrix2Xf projectFromWorld(const Eigen::Matrix3Xf& points, bool distort) const; // World frame point projection
+    Eigen::Vector2f undistortPoint(const Eigen::Vector2f& xy) const;
+    Eigen::Vector2f projectPoint(const Eigen::Vector3f& r_cam, bool undistort) const;
     
-    void undistortPoints(Eigen::Matrix2Xf& uv) const;
-
-    std::vector<int> getInliers(const Eigen::Matrix2Xf& uv) const;
-    std::vector<bool> getInlierMask(const Eigen::Matrix2Xf& uv) const;
     inline bool inBounds(const Eigen::Vector2f& uv) const {
         return uv.x() >= 0 && uv.y() >= 0 && uv.x() < intrinsics_.w && uv.y() < intrinsics_.h;
     }
 
     inline void updateTransform(const gtsam::Pose3& wTb) { cTw_ = cTb_.compose(wTb.inverse()).matrix().cast<float>(); }
 
-    const Eigen::Matrix4f& getPose() const { return cTw_; }
+    const Eigen::Matrix4f& transform() const { return cTw_; }
     const CameraIntrinsics& intrinsics() const { return intrinsics_; }
 
 private:

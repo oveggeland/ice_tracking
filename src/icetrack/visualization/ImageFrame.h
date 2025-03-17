@@ -2,56 +2,56 @@
 
 #include <ros/ros.h>
 
-#include <open3d/t/geometry/PointCloud.h>
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 
-#include "Camera.h"
+#include <algorithm>
+
 
 class ImageFrame{
 public:
-    ImageFrame(const double ts, const cv::Mat& img, const open3d::t::geometry::PointCloud& pcd, const Camera& camera);
+    ImageFrame() : scale_(1.0) {};
+    ImageFrame(const double scale) : scale_(scale) {};
 
-    // Resize image and pixel coordinates with some scaling factor 's'
-    void scale(double s); 
+    void reset(const size_t capacity){
+        elevation_.resize(0);
+        intensity_.resize(0);
+        uv_.resize(0);
 
-    // Accessors
-    int pointCount() const { return elevation_.size(); }
+        elevation_.reserve(capacity);
+        intensity_.reserve(capacity);
+        uv_.reserve(capacity);
+    }
 
-    // Return image with imposed pointcloud
-    double getStamp() const { return ts_; }
-    const cv::Mat& getRawImage() const { return img_; }
+    // Setters
+    void setImage(const cv::Mat& img) {
+        cv::resize(img, img_, cv::Size(), scale_, scale_);
+    };
 
-    // Impose image
-    cv::Mat getImposedImage(const Eigen::VectorXf& values, int color_map, float min = NAN, float max = NAN) const;
-    cv::Mat getImposedImage(const cv::Mat& colors) const;                       // From color map
-    cv::Mat getImposedImage(const cv::Scalar c = cv::Scalar(0, 255, 0)) const;  // From constant color
+    void addPoint(const float elevation, const float intensity, const Eigen::Vector2f& uv){
+        elevation_.push_back(elevation);
+        intensity_.push_back(intensity);
+        uv_.push_back(uv*scale_);
+    };
+    // Functionality to generate useful projections
+    int size() const { return uv_.size(); }
+    cv::Mat getImposedImage(const cv::Scalar& c = cv::Scalar(0, 255, 0)) const;
+    cv::Mat getImposedElevationImage(int color_map = cv::COLORMAP_JET, float v_min=-1, float v_max=3) const;
+    cv::Mat getImposedIntensityImage(int color_map = cv::COLORMAP_COOL, float v_min=0, float v_max=50) const;
 
-    cv::Mat getImposedElevationImage() const { return getImposedImage(elevation_, cv::COLORMAP_JET, -1.0f, 3.0f); };
-    cv::Mat getImposedIntensityImage() const { return getImposedImage(intensity_, cv::COLORMAP_JET, 0.0f, 50.0f); };
-    cv::Mat getImposedDeformationImage() const { return getImposedImage(deformation_, cv::COLORMAP_MAGMA, 0.0f, 0.2f); };
-    cv::Mat getImposedTimeDeltaImage() const { return getImposedImage(dt_, cv::COLORMAP_SPRING); };
-
-    // Accessors
-    const Eigen::VectorXf& elevation() const { return elevation_; }
-    const Eigen::VectorXf& intensity() const { return intensity_; }
-    const Eigen::VectorXf& deformation() const { return deformation_; }
-    const Eigen::VectorXf& dt() const { return dt_; }
-
-    const Eigen::Matrix2Xf& uv() const { return uv_; }
-    const std::vector<int>& inliers() const { return inliers_; }
 private:
-    // Image    
-    double ts_;
+    double scale_ = 1.0;
+    
+    // Image data
     cv::Mat img_;
 
-    // Cloud
-    Eigen::VectorXf elevation_;
-    Eigen::VectorXf intensity_;
-    Eigen::VectorXf deformation_;
-    Eigen::VectorXf dt_;
+    // Cloud data
+    std::vector<float> elevation_;
+    std::vector<float> intensity_;
+    std::vector<Eigen::Vector2f> uv_;
 
-    // Projection
-    Eigen::Matrix2Xf uv_;
-    std::vector<int> inliers_;
+    // Helpers
+    void drawPoint(const cv::Mat& img, const cv::Scalar& c) const;
+    cv::Mat getImposedImage(const cv::Mat& colors) const;
+    cv::Mat getImposedImage(const std::vector<float>& values, int color_map, float v_min, float v_max) const;
 };

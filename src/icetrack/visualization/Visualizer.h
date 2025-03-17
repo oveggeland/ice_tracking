@@ -1,54 +1,68 @@
 #pragma once
 
-#include <fstream>
-#include <iomanip>
 #include <ros/ros.h>
+
+#include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
+
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 
-#include <open3d/geometry/PointCloud.h>
-
-#include "backend/PoseGraph.h"
-#include "frontend/CloudManager.h"
-
 #include "ImageFrame.h"
+#include "Camera.h"
+#include "frontend/point_types.h"
 
 #include "utils/ros_params.h"
-#include "utils/calibration.h"
-#include "utils/file_system.h"
+#include "utils/conversions.h"
 
 class Visualizer {
 public:
-    Visualizer(ros::NodeHandle& nh, const PoseGraph& pose_graph, const CloudManager& cloud_manager);
+    Visualizer(ros::NodeHandle& nh);
 
-    // Interface
-    void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
-
-private:
-    // Required module references
-    const PoseGraph& pose_graph_;
-    const CloudManager& cloud_manager_;
-    
+private:    
     // Camera object (dealing with intrisics, extrinsics, projection, etc.)
     Camera camera_;
-
-    // ROS
-    ros::NodeHandle nh_;
-    std::deque<ros::Timer> timer_buffer_;
+    ImageFrame frame_;
 
     // Helper functions for image visualization
     void visualize(double t_img, const cv::Mat& img);
     void display(const std::string& window_name, const cv::Mat& img) const;
     
-    // Config 
-    bool enabled_;              // Enable the visualizer
-
+    // Config
     bool display_;              // Display image
+    double delay_;              // Delay visualization
+    double scale_;              // Scale down original image resolution for visualization (reduced complexity)
 
     bool publish_;              // Publish as ros topic
     ros::Publisher publisher_;  // Publisher object
+    void publish(const cv::Mat& img);
 
-    double delay_;              // Delay visualization
-    double scale_;              // Scale down original image resolution for visualization (reduced complexity)
+
+
+    // Image callback
+    ros::Subscriber image_sub_;
+    void imageCallback(const sensor_msgs::Image::ConstPtr& msg);
+
+    std::map<double, cv::Mat> image_buffer_;
+    void checkImageBuffer();
+
+    // Cloud callback
+    ros::Subscriber cloud_sub_;
+    void cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+
+    sensor_msgs::PointCloud2::ConstPtr cloud_msg_;
+    void processLatestCloud();
+
+    ///// Pose subscribing and interpolation ///// 
+    ros::Subscriber pose_sub_;
+    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+
+    double t0_ = 0.0;
+    double t1_ = 0.0;
+    gtsam::Pose3 pose0_;
+    gtsam::Pose3 pose1_;
+
+    gtsam::Pose3 getPose(const double ts);
 };
