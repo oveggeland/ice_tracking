@@ -35,6 +35,7 @@ public:
     };
     // Functionality to generate useful projections
     int size() const { return uv_.size(); }
+    const cv::Mat& getRawImage() const { return img_; }
     cv::Mat getImposedImage(const cv::Scalar& c = cv::Scalar(0, 255, 0)) const;
     cv::Mat getImposedElevationImage(int color_map = cv::COLORMAP_JET, float v_min=-1, float v_max=3) const;
     cv::Mat getImposedIntensityImage(int color_map = cv::COLORMAP_COOL, float v_min=0, float v_max=50) const;

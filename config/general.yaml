@@ -50,7 +50,7 @@ lidar_odometry/icp_min_fitness: 0.9
 visualizer/enabled: true
 
 visualizer/display: true
-visualizer/publish: true
+visualizer/publish: false
 visualizer/topic: "/fixed_lag_mapper/viz"
 
 visualizer/delay: 5.0

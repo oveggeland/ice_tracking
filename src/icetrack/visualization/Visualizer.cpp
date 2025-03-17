@@ -37,7 +37,7 @@ void Visualizer::display(const std::string& window_name, const cv::Mat& img) con
     cv::imshow(window_name, img);
 
     // Pause or shut down?
-    char key = cv::waitKey(1);  // Non-blocking wait
+    char key = cv::waitKey(10);  // Non-blocking wait
     if (key == ' ') {  // Pause on spacebar
         while (cv::waitKey(0) != ' ');  // Wait indefinitely until spacebar is pressed
     }
@@ -58,13 +58,20 @@ void Visualizer::visualize(double t_img, const cv::Mat& img){
     processLatestCloud();
 
     // Generate elevation image
+    const cv::Mat& img_raw = frame_.getRawImage();
     cv::Mat img_elev = frame_.getImposedElevationImage();
+    cv::Mat img_intensity = frame_.getImposedIntensityImage();
+
+    // Concatenate images horizontally
+    cv::Mat img_out;
+    cv::hconcat(img_raw, img_elev, img_out);
+    cv::hconcat(img_out, img_intensity, img_out);
     
     // Output
     if (display_)
-        display("Raw image", img_elev);
+        display("Raw image", img_out);
     if (publish_)
-        publish(img_elev);
+        publish(img_out);
 }
 
 
