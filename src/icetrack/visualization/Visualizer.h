@@ -34,7 +34,13 @@ private:
     
     // Config
     bool display_;              // Display image
-    double delay_;              // Delay visualization
+
+    // Ranges for elevation and intensity
+    double z_min_;
+    double z_max_;
+    double i_min_;
+    double i_max_;
+
     double scale_;              // Scale down original image resolution for visualization (reduced complexity)
 
     bool publish_;              // Publish as ros topic

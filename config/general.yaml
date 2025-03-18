@@ -53,7 +53,11 @@ visualizer/display: true
 visualizer/publish: false
 visualizer/topic: "/fixed_lag_mapper/viz"
 
-visualizer/delay: 5.0
+visualizer/z_min: -0.5
+visualizer/z_max: 2.5
+visualizer/i_min: 5.0
+visualizer/i_max: 50.0
+
 visualizer/scale: 0.5
 
 # Point buffer

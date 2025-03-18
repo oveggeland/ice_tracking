@@ -10,11 +10,15 @@ Visualizer::Visualizer(ros::NodeHandle& nh) : camera_(nh){
     // Load config
     getParamOrThrow<bool>(nh, "/visualizer/display", display_);
     getParamOrThrow<bool>(nh, "/visualizer/publish", publish_);
-    getParamOrThrow<double>(nh, "/visualizer/delay", delay_);
+
+    getParamOrThrow<double>(nh, "/visualizer/z_min", z_min_);
+    getParamOrThrow<double>(nh, "/visualizer/z_max", z_max_);
+    getParamOrThrow<double>(nh, "/visualizer/i_min", i_min_);
+    getParamOrThrow<double>(nh, "/visualizer/i_max", i_max_);
 
     getParamOrThrow<double>(nh, "/visualizer/scale", scale_);
     frame_ = ImageFrame(scale_);
-
+    
     // Publisher
     if (publish_){
         std::string topic = getParamOrThrow<std::string>(nh, "/visualizer/topic");
@@ -71,9 +75,9 @@ void Visualizer::visualize(double t_img, const cv::Mat& img){
 
     // Generate elevation image
     const cv::Mat& img_raw = frame_.getRawImage();
-    cv::Mat img_elev = frame_.getImposedElevationImage();
-    cv::Mat img_intensity = frame_.getImposedIntensityImage();
-
+    cv::Mat img_elev = frame_.getImposedElevationImage(cv::COLORMAP_JET, z_min_, z_max_);
+    cv::Mat img_intensity = frame_.getImposedIntensityImage(cv::COLORMAP_COOL, i_min_, i_max_);
+    
     // Concatenate images horizontally
     cv::Mat img_out;
     cv::hconcat(img_raw, img_elev, img_out);
@@ -98,19 +102,17 @@ void Visualizer::publish(const cv::Mat& img){
 
 
 void Visualizer::checkImageBuffer(){
-    auto it = image_buffer_.begin();
-
-    while (it != image_buffer_.end()) {
+    for (auto it = image_buffer_.rbegin(); it != image_buffer_.rend(); ++it) {
         const double t_img = it->first;
 
-        if (t_img > t1_) {
-            return;  // Stop processing as all future timestamps are too new
-        } else if (t_img >= t0_) {
-            visualize(t_img, it->second);  // Process valid images
-        }
+        if (t_img > t1_)
+            continue;
+        else if (t_img >= t0_)
+            visualize(t_img, it->second);
 
-        // Erase the processed element and get the next iterator safely
-        it = image_buffer_.erase(it);
+        // Delete old images
+        image_buffer_.erase(image_buffer_.begin(), it.base());
+        return;
     }
 }
 
