@@ -2,8 +2,8 @@
 
 SurfaceCorrection::SurfaceCorrection(const ros::NodeHandle& nh){
     // Factor config
-    getParamOrThrow(nh, "/navigation/surface_estimation/sigma_altitude", sigma_altitude_);
-    getParamOrThrow(nh, "/navigation/surface_estimation/sigma_attitude", sigma_attitude_);
+    getParamOrThrow(nh, "/surface_estimation/sigma_altitude", sigma_altitude_);
+    getParamOrThrow(nh, "/surface_estimation/sigma_attitude", sigma_attitude_);
 }
 
 AltitudeFactor SurfaceCorrection::getAltitudeFactor(Key pose_key) const{

@@ -3,7 +3,7 @@
 PointBuffer::PointBuffer(const ros::NodeHandle& nh){
     // Initialize point buffer
     double buffer_size = getParamOrThrow<double>(nh, "/point_buffer/buffer_size");
-    getParamOrThrow(nh, "/lidar/point_interval", point_interval_);
+    getParamOrThrow(nh, "/point_buffer/point_interval", point_interval_);
     buffer_ = PointBufferType(buffer_size / point_interval_);
 
     // Extrinsic calibration
@@ -12,9 +12,9 @@ PointBuffer::PointBuffer(const ros::NodeHandle& nh){
     btl_ = bTl_.translation().cast<float>(); 
 
     // Point filtering configuration
-    getParamOrThrow(nh, "/lidar/min_intensity", min_intensity_);
-    min_dist_squared_ = pow(getParamOrThrow<double>(nh, "/lidar/min_dist"), 2);
-    max_dist_squared_ = pow(getParamOrThrow<double>(nh, "/lidar/max_dist"), 2);
+    getParamOrThrow(nh, "/point_buffer/min_intensity", min_intensity_);
+    min_dist_squared_ = pow(getParamOrThrow<double>(nh, "/point_buffer/min_dist"), 2);
+    max_dist_squared_ = pow(getParamOrThrow<double>(nh, "/point_buffer/max_dist"), 2);
 };
 
 

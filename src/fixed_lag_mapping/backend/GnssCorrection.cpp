@@ -1,15 +1,15 @@
 #include "GnssCorrection.h"
 
 GnssCorrection::GnssCorrection(ros::NodeHandle nh){
-    getParamOrThrow(nh, "/navigation/gnss/timeout_interval", timeout_interval_);
-    getParamOrThrow(nh, "/navigation/gnss/suspension_interval", suspension_interval_);
+    getParamOrThrow(nh, "/gnss/timeout_interval", timeout_interval_);
+    getParamOrThrow(nh, "/gnss/suspension_interval", suspension_interval_);
 
-    double sigma = getParamOrThrow<double>(nh, "/navigation/gnss/sigma_xy");
+    double sigma = getParamOrThrow<double>(nh, "/gnss/sigma_xy");
     correction_noise_ = noiseModel::Isotropic::Sigma(2, sigma);
 
     // Projection stuff
-    std::string crs_source = getParamOrThrow<std::string>(nh, "/navigation/crs_source");
-    std::string crs_target = getParamOrThrow<std::string>(nh, "/navigation/crs_target");
+    std::string crs_source = getParamOrThrow<std::string>(nh, "/gnss/crs_source");
+    std::string crs_target = getParamOrThrow<std::string>(nh, "/gnss/crs_target");
 
     projection_ = proj_create_crs_to_crs(proj_context_create(), crs_source.c_str(), crs_target.c_str(), NULL);
 }

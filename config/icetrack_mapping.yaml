@@ -1,0 +1,87 @@
+# Fixed lag mapper
+fixed_lag_mapper/safe_delay: 0.5             # Delay incoming data by this amount to ensure all data is available
+
+# Pose graph
+pose_graph/fixed_lag: 30               # Fixed lag for the pose graph  
+pose_graph/hot_start_delay: 10         # Delay before pose graph is optimized first time
+
+# Point buffer
+point_buffer/buffer_size: 10.0          # Allocate memory for at least buffer_size seconds worth of points
+point_buffer/point_interval: 5.0e-6     # Interval between each scan from lidar (put half if in dual-return mode)
+point_buffer/min_intensity: 5.0         # Minimum intensity of points to be considered
+point_buffer/min_dist: 20               # Minimum distance of points to be considered
+point_buffer/max_dist: 100              # Maximum distance of points to be considered
+
+# Frame buffer
+frame_buffer/window_size: 5             # Number of frames to keep in the buffer
+
+# Surface estimation
+surface_estimator/enabled: true         # Enable or disable surface estimation
+surface_estimator/window_size: 0.1      # Time window size for surface estimation
+surface_estimator/voxel_size: 1.0       # Voxel size for downsampling
+surface_estimator/min_inlier_count: 25  # Minimum number of inliers for a valid surface
+
+surface_estimator/ransac_threshold: 0.5     # RANSAC threshold for surface estimation
+surface_estimator/ransac_sample_size: 10    # Number of samples for RANSAC
+surface_estimator/ransac_iterations: 5      # Number of RANSAC iterations
+
+# Odometry
+lidar_odometry/enabled: true                # Enable or disable lidar odometry
+lidar_odometry/key_frame_interval: 5        # Interval between key frames
+lidar_odometry/min_frame_size: 500          # Minimum frame size for odometry
+lidar_odometry/voxel_size: 1.0              # Voxel size for downsampling
+
+lidar_odometry/icp_threshold: 2.0           # ICP threshold for odometry
+lidar_odometry/icp_relative_fitness: 1.0e-2 # ICP relative fitness threshold
+lidar_odometry/icp_relative_rmse: 1.0e-3    # ICP relative RMSE threshold
+lidar_odometry/icp_max_iter: 10             # Maximum number of ICP iterations
+
+lidar_odometry/icp_min_fitness: 0.9         # Minimum fitness score for ICP
+
+# Cloud manager
+cloud_manager/refine_frames: false          # Refine frames or not
+cloud_manager/publish_frames: false         # Publish frames or not
+cloud_manager/publish_cloud: true           # Publish cloud or not
+
+# Prior covariance
+imu/initial_acc_bias_sigma: 0.5                 # Initial accelerometer bias sigma
+imu/initial_gyro_bias_sigma: 0.01               # Initial gyroscope bias sigma
+
+# Lever arm stuff   
+lever_arm/norm_threshold: 25                    # Lever arm norm threshold
+lever_arm/norm_sigma: 0.1                       # Lever arm norm sigma
+lever_arm/altitude_sigma: 1                     # Lever arm altitude sigma
+
+# GNSS
+gnss/timeout_interval: 5.0                  # GNSS timeout interval
+gnss/suspension_interval: 10.0              # GNSS suspension interval
+gnss/sigma_xy: 2.0                          # GNSS sigma for XY coordinates
+gnss/crs_source: "EPSG:4326"     # Coordinate reference system of GNSS data
+gnss/crs_target: "EPSG:6052"     # Coordinate reference system used for navigation
+
+# IMU
+imu/gravity_norm: 9.831         # Norm of gravity vector
+
+imu/timeout_interval: 1.1                   # IMU timeout interval
+imu/attitude_sigma: 0.1                     # IMU attitude sigma
+
+imu/accel_noise_sigma: 1.0e-3                   # Accelerometer noise sigma
+imu/gyro_noise_sigma: 1.0e-4                    # Gyroscope noise sigma
+imu/accel_bias_rw_sigma: 1.0e-4                 # Accelerometer bias random walk sigma
+imu/gyro_bias_rw_sigma: 1.0e-5                  # Gyroscope bias random walk sigma
+
+# Surface estimation
+surface_estimation/buffer_size: 2.0         # Allocate memory for at least buffer_size seconds worth of points
+surface_estimation/lidar_point_interval: 5.0e-6   # Interval between each scan from lidar (put half if in dual-return mode)
+surface_estimation/lidar_min_intensity: 0.0       # Minimum intensity of lidar points to be considered
+surface_estimation/lidar_min_dist: 15             # Minimum distance of lidar points to be considered
+surface_estimation/lidar_max_dist: 100.0          # Maximum distance of lidar points to be considered
+
+surface_estimation/ransac_threshold: 0.5          # RANSAC threshold for surface estimation
+surface_estimation/ransac_sample_size: 10         # Number of samples for RANSAC
+surface_estimation/ransac_iterations: 5           # Number of RANSAC iterations
+surface_estimation/ransac_inlier_count: 25        # Minimum number of inliers for a valid surface
+surface_estimation/ransac_frame_size: 0.1         # Frame size for RANSAC
+
+surface_estimation/sigma_altitude: 1.0            # Sigma for altitude estimation
+surface_estimation/sigma_attitude: 0.2            # Sigma for attitude estimation

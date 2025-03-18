@@ -2,7 +2,7 @@
 
 FixedLagMapper::FixedLagMapper(ros::NodeHandle& nh) : pose_graph_(nh), cloud_manager_(nh, pose_graph_){
     // Setup callback sequencer
-    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/navigation/safe_delay"));
+    sequencer_ = CallbackSequencer(getParamOrThrow<double>(nh, "/fixed_lag_mapper/safe_delay"));
     
     // Setup subscribers
     setupSubscribers(nh);

@@ -5,21 +5,21 @@ PoseGraph::PoseGraph(ros::NodeHandle& nh)
     surface_correction_(nh), pose_graph_output_(nh){
 
     // Initialize smoother
-    double lag = getParamOrThrow<double>(nh, "/navigation/fixed_lag");
+    double lag = getParamOrThrow<double>(nh, "/pose_graph/fixed_lag");
     smoother_ = IncrementalFixedLagSmoother(lag);
 
     readParams(nh);
 }   
 
 void PoseGraph::readParams(const ros::NodeHandle& nh){
-    getParamOrThrow(nh, "/navigation/initial_acc_bias_sigma", initial_acc_bias_sigma_);
-    getParamOrThrow(nh, "/navigation/initial_gyro_bias_sigma", initial_gyro_bias_sigma_);
+    getParamOrThrow(nh, "/imu/initial_acc_bias_sigma", initial_acc_bias_sigma_);
+    getParamOrThrow(nh, "/imu/initial_gyro_bias_sigma", initial_gyro_bias_sigma_);
     
-    getParamOrThrow(nh, "/navigation/lever_norm_threshold", lever_norm_threshold_);
-    getParamOrThrow(nh, "/navigation/lever_norm_sigma", lever_norm_sigma_);
-    getParamOrThrow(nh, "/navigation/lever_altitude_sigma", lever_altitude_sigma_);
+    getParamOrThrow(nh, "/lever_arm/norm_threshold", lever_norm_threshold_);
+    getParamOrThrow(nh, "/lever_arm/norm_sigma", lever_norm_sigma_);
+    getParamOrThrow(nh, "/lever_arm/altitude_sigma", lever_altitude_sigma_);
 
-    getParamOrThrow(nh, "/navigation/hot_start_delay", hot_start_delay_);
+    getParamOrThrow(nh, "/pose_graph/hot_start_delay", hot_start_delay_);
 }
 
 void PoseGraph::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){

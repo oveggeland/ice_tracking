@@ -1,20 +1,9 @@
 <launch>
-    <!-- Define an argument to enable/disable RViz -->
-    <arg name="use_rviz" default="false"/>
-
     <!-- Load parameters from YAML -->
     <arg name="config_file" default="$(find icetrack_mapping)/config/general.yaml" />
     <rosparam file="$(arg config_file)" command="load"/>
 
-    <rosparam file="$(find icetrack_mapping)/config/navigation.yaml" command="load" ns="navigation"/>
-    <rosparam file="$(find icetrack_mapping)/config/mapping.yaml" command="load"/>
-
-    <!-- Conditionally launch RViz -->
-    <group if="$(arg use_rviz)">
-        <node 
-            name="rviz" pkg="rviz" type="rviz" output="screen" 
-            args="-d /home/oskar/icetrack/src/icetrack_mapping/config/rviz.rviz" />
-    </group>
+    <rosparam file="$(find icetrack_mapping)/config/icetrack_mapping.yaml" command="load"/>
 
     <!-- Rosbag node requres sim time -->
     <param name="use_sim_time" value="true" />

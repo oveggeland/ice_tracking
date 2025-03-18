@@ -2,15 +2,15 @@
 
 ImuIntegration::ImuIntegration(ros::NodeHandle nh){
     // Get config
-    getParamOrThrow(nh, "/navigation/gravity_norm", gravity_norm_);
-    getParamOrThrow(nh, "/navigation/imu_timeout_interval", timeout_interval_);
+    getParamOrThrow(nh, "/imu/gravity_norm", gravity_norm_);
+    getParamOrThrow(nh, "/imu/timeout_interval", timeout_interval_);
 
-    getParamOrThrow(nh, "/navigation/accel_noise_sigma", accel_noise_sigma_);
-    getParamOrThrow(nh, "/navigation/gyro_noise_sigma", gyro_noise_sigma_);
-    getParamOrThrow(nh, "/navigation/accel_bias_rw_sigma", accel_bias_rw_sigma_);
-    getParamOrThrow(nh, "/navigation/gyro_bias_rw_sigma", gyro_bias_rw_sigma_);
+    getParamOrThrow(nh, "/imu/accel_noise_sigma", accel_noise_sigma_);
+    getParamOrThrow(nh, "/imu/gyro_noise_sigma", gyro_noise_sigma_);
+    getParamOrThrow(nh, "/imu/accel_bias_rw_sigma", accel_bias_rw_sigma_);
+    getParamOrThrow(nh, "/imu/gyro_bias_rw_sigma", gyro_bias_rw_sigma_);
 
-    getParamOrThrow(nh, "/navigation/imu_attitude_sigma", imu_attitude_sigma_);
+    getParamOrThrow(nh, "/imu/attitude_sigma", imu_attitude_sigma_);
 
     // Preintegration module (NB: Must be initialized after params above!!!)
     auto p = getPreintegrationParams();
