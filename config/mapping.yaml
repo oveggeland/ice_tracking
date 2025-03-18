@@ -1,26 +1,62 @@
+# Frame buffer
+frame_buffer/window_size: 5
+
+# Surface estimation
+surface_estimator/enabled: true
+surface_estimator/window_size: 0.1
+surface_estimator/voxel_size: 1.0
+surface_estimator/min_inlier_count: 25
+    
+surface_estimator/ransac_threshold: 0.5
+surface_estimator/ransac_sample_size: 10
+surface_estimator/ransac_iterations: 5
+
+# Odometry
+lidar_odometry/enabled: true
+lidar_odometry/key_frame_interval: 5
+lidar_odometry/min_frame_size: 500
+lidar_odometry/voxel_size: 1.0
+
+lidar_odometry/icp_threshold: 2.0
+lidar_odometry/icp_relative_fitness: 1.0e-2
+lidar_odometry/icp_relative_rmse: 1.0e-3
+lidar_odometry/icp_max_iter: 10
+
+lidar_odometry/icp_min_fitness: 0.9
+
+# Visualizer
+visualizer/enabled: true
+
+visualizer/display: true
+visualizer/publish: false
+visualizer/topic: "/fixed_lag_mapper/viz"
+
+visualizer/z_min: -0.5
+visualizer/z_max: 2.5
+visualizer/i_min: 5.0
+visualizer/i_max: 50.0
+
+visualizer/scale: 0.5
+
+# Point buffer
+point_buffer/buffer_size: 10.0
+lidar/point_interval: 5.0e-6
+lidar/min_intensity: 5.0
+lidar/min_dist: 20
+lidar/max_dist: 100
+
+
+# Cloud processor
+cloud_processor/save_clouds: false
+cloud_processor/grid_size: 0.5
+cloud_processor/smoothing_window_size: 3
+cloud_processor/deformation_window_size: 5
+
 # Cloud manager
-enabled: false               # Use this do disbale/enable the cloud manager (useful to debug navigation)
-safe_delay: 1.0             # Wait this period for possible message lag (e.g. from sensor latency or navigation processing)
-window_size: 60.0
-save_clouds: true
+cloud_manager/refine_frames: false
+cloud_manager/publish_frames: false
+cloud_manager/publish_cloud: true
 
-# Processing parameters
-min_elevation: -1
-max_elevation: 4
-min_intensity: 0
-
-grid_size: 1.0            # Down sample point cloud to grid_size*grid_size tiles (in xy-plane)
-smoothing_radius: 2.5     # Elevation is smoothed withing smoothing radius
-deformation_radius: 5.0   # Deformation is calculated for each point by searchin in deformation_radius
-
-point_buffer_size: 10.0
-point_interval: 5.0e-6
-shift_cloud: true
-
-min_dist: 20
-max_dist: 100
-
-lidar_queue_size: 100
-pose_queue_size: 10
-
-save_stats: true
+# Cloud publisher
+cloud_publisher/cloud_topic: "/icetrack/raw_cloud"
+cloud_publisher/frame_topic: "/icetrack/frame"

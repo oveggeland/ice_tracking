@@ -1,9 +1,9 @@
 <launch>
     <!-- Load parameters from YAML -->
-    <rosparam file="$(find icetrack)/config/general.yaml" command="load"/>
+    <rosparam file="$(find icetrack_mapping)/config/general.yaml" command="load"/>
 
     <!-- Launch node -->
     <node 
-        name="profile_node" pkg="icetrack" type="profile" output="screen" required="true">
+        name="profile_node" pkg="icetrack_mapping" type="profile" output="screen" required="true">
     </node>
 </launch>

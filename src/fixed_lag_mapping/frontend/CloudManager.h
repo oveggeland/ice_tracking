@@ -4,7 +4,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 
-#include "backend/PoseGraph.h"
+#include "fixed_lag_mapping/backend/PoseGraph.h"
 
 #include "frontend/PointBuffer.h"
 #include "frontend/FrameBuffer.h"

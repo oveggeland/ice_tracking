@@ -12,13 +12,12 @@
 #include <filesystem>
 #include <gperftools/profiler.h>
 
-#include "icetrack/utils/ros_params.h"
-#include "icetrack/FixedLagMapper.h"
-#include "icetrack/visualization/Visualizer.h"
+#include "fixed_lag_mapping/FixedLagMapper.h"
+#include "fixed_lag_mapping/utils/ros_params.h"
 
 int main(int argc, char** argv) {
     // Initialize node
-    ros::init(argc, argv, "rosbag_icetrack_node");
+    ros::init(argc, argv, "rosbag_mapping_node");
     ros::NodeHandle nh;
 
     // Start profiler
@@ -44,7 +43,6 @@ int main(int argc, char** argv) {
 
     // Initialize nodes
     FixedLagMapper fixed_lag_mapper(nh);
-    Visualizer visualizer(nh);
 
     // Enforce playback rate
     double max_playback_rate = getParamOrThrow<double>(nh, "/max_playback_rate");

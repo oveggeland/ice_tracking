@@ -7,11 +7,11 @@ CloudPublisher::CloudPublisher(ros::NodeHandle& nh){
 
 void CloudPublisher::setupPublishers(ros::NodeHandle& nh) {
     // Frame pub
-    std::string frame_topic = getParamOrThrow<std::string>(nh, "/frame_topic");
+    std::string frame_topic = getParamOrThrow<std::string>(nh, "/lidar_frame_topic");
     frame_pub_ = nh.advertise<sensor_msgs::PointCloud2>(frame_topic, 10);
 
     // Cloud pub
-    std::string cloud_topic = getParamOrThrow<std::string>(nh, "/cloud_topic");
+    std::string cloud_topic = getParamOrThrow<std::string>(nh, "/raw_cloud_topic");
     cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>(cloud_topic, 10);
 }
 

@@ -1,0 +1,18 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/oskar/icewatch/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/oskar/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork",
+        "/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork",
+        "/home/oskar/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork",
+        "/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/oskar/icewatch/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/oskar/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork",
+        "/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork",
+        "/home/oskar/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork",
+        "/home/oskar/Calibration/direct_visual_lidar/dependencies/SuperGluePretrainedNetwork"
+    ]
+}
