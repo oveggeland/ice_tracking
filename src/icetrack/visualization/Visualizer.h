@@ -7,6 +7,8 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 
+#include "open3d/Open3D.h"
+
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 
@@ -53,6 +55,7 @@ private:
     void cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
     sensor_msgs::PointCloud2::ConstPtr cloud_msg_;
+    void drawCloud() const;
     void processLatestCloud();
 
     ///// Pose subscribing and interpolation ///// 

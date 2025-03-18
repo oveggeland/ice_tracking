@@ -32,6 +32,18 @@ Visualizer::Visualizer(ros::NodeHandle& nh) : camera_(nh){
     pose_sub_ = nh.subscribe(pose_topic, 1, &Visualizer::poseCallback, this);
 }
 
+void Visualizer::drawCloud() const{
+    auto cloud = std::make_shared<open3d::geometry::PointCloud>();
+    cloud->points_.reserve(cloud_msg_->width);
+
+    sensor_msgs::PointCloud2ConstIterator<PointXYZI> cloud_it(*cloud_msg_, "x");
+    for (; cloud_it != cloud_it.end(); ++cloud_it) {
+        const PointXYZI& point = *cloud_it;
+        cloud->points_.push_back(Eigen::Vector3d(point.x, point.y, point.z));
+    }
+
+    open3d::visualization::DrawGeometries({cloud});
+}
 
 void Visualizer::display(const std::string& window_name, const cv::Mat& img) const {
     cv::imshow(window_name, img);
@@ -39,7 +51,7 @@ void Visualizer::display(const std::string& window_name, const cv::Mat& img) con
     // Pause or shut down?
     char key = cv::waitKey(10);  // Non-blocking wait
     if (key == ' ') {  // Pause on spacebar
-        while (cv::waitKey(0) != ' ');  // Wait indefinitely until spacebar is pressed
+        drawCloud(); // Draw cloud during pause (continue when window is closed)
     }
     else if (key == 'q')
         ros::shutdown();
